@@ -152,53 +152,106 @@ export class ArchitectureAnalyzer {
       const path = node.path.toLowerCase();
       const name = node.name.toLowerCase();
 
+      // Data layer — check first (more specific patterns)
       if (
-        path.includes('/api/') ||
-        path.includes('/routes/') ||
-        path.includes('/controllers/') ||
-        name.includes('route') ||
-        name.includes('controller') ||
-        name.includes('handler')
-      ) {
-        apiFiles.push(node.path);
-      } else if (
-        path.includes('/service') ||
-        path.includes('/business') ||
-        path.includes('/logic') ||
-        name.includes('service') ||
-        name.includes('manager') ||
-        name.includes('facade')
-      ) {
-        serviceFiles.push(node.path);
-      } else if (
+        path.includes('/entities/') ||
+        path.includes('/entity/') ||
+        path.includes('/migrations/') ||
+        path.includes('/migration/') ||
+        path.includes('/seeds/') ||
+        path.includes('/seeders/') ||
         path.includes('/data/') ||
         path.includes('/db/') ||
         path.includes('/database/') ||
         path.includes('/models/') ||
         path.includes('/schema/') ||
+        path.includes('/subscribers/') ||
+        name.endsWith('.entity.ts') ||
+        name.endsWith('.entity.js') ||
+        name.endsWith('.model.ts') ||
+        name.endsWith('.model.js') ||
         name.includes('repository') ||
         name.includes('dao') ||
-        name.includes('mapper')
+        name.includes('mapper') ||
+        name.includes('migration') ||
+        name.includes('seed') ||
+        name.includes('subscriber')
       ) {
         dataFiles.push(node.path);
-      } else if (
+      }
+      // Infrastructure layer
+      else if (
+        path.includes('/config/') ||
+        path.includes('/infra/') ||
+        path.includes('/infrastructure/') ||
+        path.includes('/setup/') ||
+        path.includes('/guards/') ||
+        path.includes('/pipes/') ||
+        path.includes('/interceptors/') ||
+        path.includes('/filters/') ||
+        path.includes('/decorators/') ||
+        path.includes('/middleware/') ||
+        path.includes('/middlewares/') ||
+        path.includes('/common/') ||
+        path.includes('/shared/') ||
+        path.includes('docker') ||
+        path.includes('kubernetes') ||
+        name.endsWith('.guard.ts') ||
+        name.endsWith('.pipe.ts') ||
+        name.endsWith('.interceptor.ts') ||
+        name.endsWith('.filter.ts') ||
+        name.endsWith('.decorator.ts') ||
+        name.endsWith('.middleware.ts') ||
+        name.includes('.config.') ||
+        name.includes('.module.')
+      ) {
+        infraFiles.push(node.path);
+      }
+      // API layer
+      else if (
+        path.includes('/api/') ||
+        path.includes('/routes/') ||
+        path.includes('/controllers/') ||
+        name.endsWith('.controller.ts') ||
+        name.endsWith('.controller.js') ||
+        name.includes('route') ||
+        name.includes('controller') ||
+        name.includes('handler') ||
+        name.endsWith('.dto.ts') ||
+        name.endsWith('.dto.js')
+      ) {
+        apiFiles.push(node.path);
+      }
+      // Service layer
+      else if (
+        path.includes('/service') ||
+        path.includes('/business') ||
+        path.includes('/logic') ||
+        path.includes('/use-cases/') ||
+        path.includes('/usecases/') ||
+        name.endsWith('.service.ts') ||
+        name.endsWith('.service.js') ||
+        name.includes('service') ||
+        name.includes('manager') ||
+        name.includes('facade') ||
+        name.includes('usecase')
+      ) {
+        serviceFiles.push(node.path);
+      }
+      // UI layer
+      else if (
         path.includes('/ui/') ||
         path.includes('/components/') ||
         path.includes('/pages/') ||
         path.includes('/views/') ||
         path.includes('/screens/') ||
+        path.includes('/templates/') ||
         node.extension === '.tsx' ||
-        node.extension === '.jsx'
+        node.extension === '.jsx' ||
+        node.extension === '.vue' ||
+        node.extension === '.html'
       ) {
         uiFiles.push(node.path);
-      } else if (
-        path.includes('/config/') ||
-        path.includes('/infra/') ||
-        path.includes('/setup/') ||
-        path.includes('docker') ||
-        path.includes('kubernetes')
-      ) {
-        infraFiles.push(node.path);
       }
     }
 
