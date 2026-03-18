@@ -1,6 +1,6 @@
 {
   "name": "@girardelli/architect",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "AI-powered architecture analysis for Claude Code",
   "author": {
