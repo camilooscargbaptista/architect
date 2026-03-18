@@ -16,20 +16,67 @@ export class ProjectScanner {
   scan(): ProjectInfo {
     const files = this.scanDirectory();
     const fileTree = this.buildFileTree(files);
-    const frameworks = this.detectFrameworks(files);
+
+    // Detect frameworks from scanned files AND parent package.json
+    const parentPackageJsons = this.findParentPackageJsons();
+    const allFilesForDetection = [...files, ...parentPackageJsons];
+    const frameworks = this.detectFrameworks(allFilesForDetection);
 
     const languages = this.detectLanguages(files);
     const totalLines = this.countTotalLines(files);
+    const projectName = this.resolveProjectName(parentPackageJsons);
 
     return {
       path: this.projectPath,
-      name: this.projectPath.split('/').pop() || 'project',
+      name: projectName,
       frameworks: Array.from(frameworks),
       totalFiles: files.length,
       totalLines,
       primaryLanguages: languages,
       fileTree,
     };
+  }
+
+  /**
+   * Walk up directory tree to find package.json files for project name and framework detection
+   */
+  private findParentPackageJsons(): string[] {
+    const found: string[] = [];
+    let dir = this.projectPath;
+    const root = '/';
+    let depth = 0;
+
+    while (dir !== root && depth < 5) {
+      const pkgPath = join(dir, 'package.json');
+      try {
+        readFileSync(pkgPath, 'utf-8');
+        found.push(pkgPath);
+      } catch {
+        // no package.json here
+      }
+      dir = join(dir, '..');
+      depth++;
+    }
+
+    return found;
+  }
+
+  /**
+   * Resolve project name from nearest package.json or directory name
+   */
+  private resolveProjectName(packageJsonPaths: string[]): string {
+    for (const pkgPath of packageJsonPaths) {
+      try {
+        const content = readFileSync(pkgPath, 'utf-8');
+        const parsed = JSON.parse(content);
+        if (parsed.name) {
+          return parsed.name;
+        }
+      } catch {
+        // skip
+      }
+    }
+    return this.projectPath.split('/').pop() || 'project';
   }
 
   private scanDirectory(): string[] {
@@ -69,6 +116,8 @@ export class ProjectScanner {
       '.kt',
       '.scala',
       '.groovy',
+      '.sql',
+      '.graphql',
       '.json',
       '.yaml',
       '.yml',
@@ -122,32 +171,71 @@ export class ProjectScanner {
     const frameworks = new Set<string>();
 
     for (const file of files) {
-      if (file.includes('package.json')) {
-        const content = readFileSync(file, 'utf-8');
-        if (content.includes('react')) frameworks.add('React');
-        if (content.includes('angular')) frameworks.add('Angular');
-        if (content.includes('vue')) frameworks.add('Vue.js');
-        if (content.includes('express')) frameworks.add('Express.js');
-        if (content.includes('nestjs')) frameworks.add('NestJS');
-        if (content.includes('next')) frameworks.add('Next.js');
+      if (file.endsWith('package.json')) {
+        try {
+          const content = readFileSync(file, 'utf-8');
+          const parsed = JSON.parse(content);
+          const allDeps = {
+            ...parsed.dependencies,
+            ...parsed.devDependencies,
+          };
+
+          // Detect from actual dependency keys
+          if (allDeps['@nestjs/core'] || allDeps['@nestjs/common']) frameworks.add('NestJS');
+          if (allDeps['react'] || allDeps['react-dom']) frameworks.add('React');
+          if (allDeps['@angular/core']) frameworks.add('Angular');
+          if (allDeps['vue'] || allDeps['@vue/core']) frameworks.add('Vue.js');
+          if (allDeps['express']) frameworks.add('Express.js');
+          if (allDeps['next']) frameworks.add('Next.js');
+          if (allDeps['fastify']) frameworks.add('Fastify');
+          if (allDeps['typeorm']) frameworks.add('TypeORM');
+          if (allDeps['prisma'] || allDeps['@prisma/client']) frameworks.add('Prisma');
+          if (allDeps['sequelize']) frameworks.add('Sequelize');
+          if (allDeps['mongoose']) frameworks.add('Mongoose');
+        } catch {
+          // Fallback: simple string matching
+          try {
+            const content = readFileSync(file, 'utf-8');
+            if (content.includes('@nestjs')) frameworks.add('NestJS');
+            if (content.includes('react')) frameworks.add('React');
+            if (content.includes('angular')) frameworks.add('Angular');
+            if (content.includes('vue')) frameworks.add('Vue.js');
+            if (content.includes('express')) frameworks.add('Express.js');
+            if (content.includes('next')) frameworks.add('Next.js');
+          } catch {
+            // skip
+          }
+        }
       }
 
       if (file.includes('pom.xml')) {
-        const content = readFileSync(file, 'utf-8');
-        if (content.includes('spring-boot')) frameworks.add('Spring Boot');
-        if (content.includes('spring')) frameworks.add('Spring');
+        try {
+          const content = readFileSync(file, 'utf-8');
+          if (content.includes('spring-boot')) frameworks.add('Spring Boot');
+          if (content.includes('spring')) frameworks.add('Spring');
+        } catch {
+          // skip
+        }
       }
 
       if (file.includes('requirements.txt')) {
-        const content = readFileSync(file, 'utf-8');
-        if (content.includes('django')) frameworks.add('Django');
-        if (content.includes('flask')) frameworks.add('Flask');
-        if (content.includes('fastapi')) frameworks.add('FastAPI');
+        try {
+          const content = readFileSync(file, 'utf-8');
+          if (content.includes('django')) frameworks.add('Django');
+          if (content.includes('flask')) frameworks.add('Flask');
+          if (content.includes('fastapi')) frameworks.add('FastAPI');
+        } catch {
+          // skip
+        }
       }
 
       if (file.includes('Gemfile')) {
-        const content = readFileSync(file, 'utf-8');
-        if (content.includes('rails')) frameworks.add('Ruby on Rails');
+        try {
+          const content = readFileSync(file, 'utf-8');
+          if (content.includes('rails')) frameworks.add('Ruby on Rails');
+        } catch {
+          // skip
+        }
       }
 
       if (file.includes('go.mod')) {
@@ -163,7 +251,7 @@ export class ProjectScanner {
 
     for (const file of files) {
       const lang = this.detectLanguage(file);
-      if (lang) languages.add(lang);
+      if (lang && lang !== 'Unknown') languages.add(lang);
     }
 
     return Array.from(languages);
@@ -188,6 +276,8 @@ export class ProjectScanner {
       '.rs': 'Rust',
       '.kt': 'Kotlin',
       '.scala': 'Scala',
+      '.sql': 'SQL',
+      '.graphql': 'GraphQL',
     };
 
     return languageMap[ext] || 'Unknown';
