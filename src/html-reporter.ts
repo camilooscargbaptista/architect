@@ -1,7 +1,8 @@
 import { AnalysisReport, AntiPattern } from './types.js';
 
 /**
- * Gera relatórios HTML visuais premium a partir de AnalysisReport
+ * Generates premium visual HTML reports from AnalysisReport.
+ * Features: D3.js force graph, bubble charts, radar chart, animated counters.
  */
 export class HtmlReportGenerator {
   generateHtml(report: AnalysisReport): string {
@@ -15,22 +16,22 @@ export class HtmlReportGenerator {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Architect Report — ${this.escapeHtml(report.projectInfo.name)}</title>
 ${this.getStyles()}
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"><\/script>
 </head>
 <body>
 ${this.renderHeader(report)}
 <div class="container">
   ${this.renderScoreHero(report)}
+  ${this.renderRadarChart(report)}
   ${this.renderStats(report)}
   ${this.renderLayers(report)}
+  ${this.renderDependencyGraph(report)}
+  ${this.renderAntiPatternBubbles(report, grouped)}
   ${this.renderAntiPatterns(report, grouped)}
-  ${this.renderDiagram(report)}
   ${this.renderSuggestions(sugGrouped)}
 </div>
 ${this.renderFooter()}
-<script>
-  mermaid.initialize({ theme: 'default', startOnLoad: true });
-<\/script>
+${this.getScripts(report)}
 </body>
 </html>`;
   }
@@ -143,7 +144,7 @@ ${this.renderFooter()}
         stroke-dashoffset="${offset}" />
     </svg>
     <div class="score-value">
-      <div class="number" style="color: ${this.scoreColor(overall)}">${overall}</div>
+      <div class="number score-counter" data-target="${overall}" style="color: ${this.scoreColor(overall)}">0</div>
       <div class="label">/ 100</div>
       <div class="grade">${this.scoreLabel(overall)}</div>
     </div>
@@ -154,23 +155,35 @@ ${this.renderFooter()}
 </div>`;
   }
 
+  /**
+   * Radar chart for the 4 score components
+   */
+  private renderRadarChart(report: AnalysisReport): string {
+    const entries = Object.entries(report.score.breakdown);
+    return `
+<h2 class="section-title">🎯 Health Radar</h2>
+<div class="card" style="display: flex; justify-content: center;">
+  <svg id="radar-chart" width="350" height="350" viewBox="0 0 350 350"></svg>
+</div>`;
+  }
+
   private renderStats(report: AnalysisReport): string {
     return `
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="value">${report.projectInfo.totalFiles}</div>
+    <div class="value stat-counter" data-target="${report.projectInfo.totalFiles}">0</div>
     <div class="label">Files Scanned</div>
   </div>
   <div class="stat-card">
-    <div class="value">${report.projectInfo.totalLines.toLocaleString()}</div>
+    <div class="value stat-counter" data-target="${report.projectInfo.totalLines}">0</div>
     <div class="label">Lines of Code</div>
   </div>
   <div class="stat-card">
-    <div class="value">${report.antiPatterns.length}</div>
+    <div class="value stat-counter" data-target="${report.antiPatterns.length}">0</div>
     <div class="label">Anti-Patterns</div>
   </div>
   <div class="stat-card">
-    <div class="value">${report.dependencyGraph.edges.length}</div>
+    <div class="value stat-counter" data-target="${report.dependencyGraph.edges.length}">0</div>
     <div class="label">Dependencies</div>
   </div>
 </div>`;
@@ -204,7 +217,60 @@ ${this.renderFooter()}
 <div class="layers-grid">${cards}</div>`;
   }
 
-  private renderAntiPatterns(
+  /**
+   * Interactive D3.js force-directed dependency graph
+   */
+  private renderDependencyGraph(report: AnalysisReport): string {
+    if (report.dependencyGraph.edges.length === 0) return '';
+
+    // Build node data with connection counts
+    const connectionCount: Record<string, number> = {};
+    for (const edge of report.dependencyGraph.edges) {
+      connectionCount[edge.from] = (connectionCount[edge.from] || 0) + 1;
+      connectionCount[edge.to] = (connectionCount[edge.to] || 0) + 1;
+    }
+
+    const layerMap: Record<string, string> = {};
+    for (const layer of report.layers) {
+      for (const file of layer.files) {
+        layerMap[file] = layer.name;
+      }
+    }
+
+    const nodes = report.dependencyGraph.nodes.map(n => ({
+      id: n,
+      name: n.split('/').pop() || n,
+      connections: connectionCount[n] || 0,
+      layer: layerMap[n] || 'Other',
+    }));
+
+    const links = report.dependencyGraph.edges.map(e => ({
+      source: e.from,
+      target: e.to,
+    }));
+
+    return `
+<h2 class="section-title">🔗 Dependency Graph</h2>
+<div class="card graph-card">
+  <div class="graph-legend">
+    <span class="legend-item"><span class="legend-dot" style="background: #ec4899"></span> API</span>
+    <span class="legend-item"><span class="legend-dot" style="background: #3b82f6"></span> Service</span>
+    <span class="legend-item"><span class="legend-dot" style="background: #10b981"></span> Data</span>
+    <span class="legend-item"><span class="legend-dot" style="background: #f59e0b"></span> UI</span>
+    <span class="legend-item"><span class="legend-dot" style="background: #8b5cf6"></span> Infra</span>
+    <span class="legend-item"><span class="legend-dot" style="background: #64748b"></span> Other</span>
+  </div>
+  <div id="dep-graph" style="width:100%; min-height:400px;"></div>
+  <div class="graph-hint">🖱️ Drag nodes to explore • Node size = number of connections</div>
+</div>
+<script type="application/json" id="graph-nodes">${JSON.stringify(nodes)}<\/script>
+<script type="application/json" id="graph-links">${JSON.stringify(links)}<\/script>`;
+  }
+
+  /**
+   * Bubble chart for anti-patterns — bigger = more severe
+   */
+  private renderAntiPatternBubbles(
     report: AnalysisReport,
     grouped: Record<string, { count: number; severity: string; locations: string[]; suggestion: string }>
   ): string {
@@ -215,6 +281,36 @@ ${this.renderFooter()}
   <p>No significant anti-patterns detected. Excellent architecture!</p>
 </div>`;
     }
+
+    const severityWeight: Record<string, number> = {
+      CRITICAL: 80, HIGH: 60, MEDIUM: 40, LOW: 25,
+    };
+
+    const severityColor: Record<string, string> = {
+      CRITICAL: '#ef4444', HIGH: '#f59e0b', MEDIUM: '#60a5fa', LOW: '#22c55e',
+    };
+
+    const bubbles = Object.entries(grouped).map(([name, data]) => ({
+      name,
+      count: data.count,
+      severity: data.severity,
+      radius: (severityWeight[data.severity] || 30) + data.count * 8,
+      color: severityColor[data.severity] || '#64748b',
+    }));
+
+    return `
+<h2 class="section-title">🫧 Anti-Pattern Impact Map</h2>
+<div class="card" style="display:flex; justify-content:center;">
+  <div id="bubble-chart" style="width:100%; min-height:300px;"></div>
+</div>
+<script type="application/json" id="bubble-data">${JSON.stringify(bubbles)}<\/script>`;
+  }
+
+  private renderAntiPatterns(
+    report: AnalysisReport,
+    grouped: Record<string, { count: number; severity: string; locations: string[]; suggestion: string }>
+  ): string {
+    if (report.antiPatterns.length === 0) return '';
 
     const rows = Object.entries(grouped)
       .sort((a, b) => b[1].count - a[1].count)
@@ -234,7 +330,7 @@ ${this.renderFooter()}
       .join('');
 
     return `
-<h2 class="section-title">⚠️ Anti-Patterns (${report.antiPatterns.length})</h2>
+<h2 class="section-title">⚠️ Anti-Pattern Details (${report.antiPatterns.length})</h2>
 <div class="card">
   <table>
     <thead>
@@ -248,18 +344,6 @@ ${this.renderFooter()}
     </thead>
     <tbody>${rows}</tbody>
   </table>
-</div>`;
-  }
-
-  private renderDiagram(report: AnalysisReport): string {
-    if (!report.diagram.mermaid) return '';
-
-    return `
-<h2 class="section-title">📊 Architecture Diagram</h2>
-<div class="card">
-  <div class="mermaid-container">
-    <pre class="mermaid">${this.escapeHtml(report.diagram.mermaid)}</pre>
-  </div>
 </div>`;
   }
 
@@ -304,9 +388,264 @@ ${this.renderFooter()}
   private renderFooter(): string {
     return `
 <div class="footer">
-  <p>Generated by <a href="https://github.com/camilogivago/architect">🏗️ Architect</a> — AI-powered architecture analysis</p>
-  <p>By <strong>Camilo Girardelli</strong> · <a href="https://girardelli.tech">Girardelli Tecnologia</a></p>
+  <p>Generated by <a href="https://github.com/camilooscargbaptista/architect">🏗️ Architect</a> — AI-powered architecture analysis</p>
+  <p>By <strong>Camilo Girardelli</strong> · <a href="https://www.girardellitecnologia.com">Girardelli Tecnologia</a></p>
 </div>`;
+  }
+
+  /**
+   * All JavaScript for D3.js visualizations, animated counters, and radar chart
+   */
+  private getScripts(report: AnalysisReport): string {
+    const breakdown = report.score.breakdown;
+    return `<script>
+// ── Animated Counters ──
+document.addEventListener('DOMContentLoaded', () => {
+  const counters = document.querySelectorAll('.score-counter, .stat-counter');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const target = parseInt(el.dataset.target || '0');
+        animateCounter(el, target);
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  counters.forEach(c => observer.observe(c));
+});
+
+function animateCounter(el, target) {
+  const duration = 1500;
+  const start = performance.now();
+  const update = (now) => {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(target * ease).toLocaleString();
+    if (progress < 1) requestAnimationFrame(update);
+  };
+  requestAnimationFrame(update);
+}
+
+// ── Radar Chart ──
+(function() {
+  const data = [
+    { axis: 'Modularity', value: ${breakdown.modularity} },
+    { axis: 'Coupling', value: ${breakdown.coupling} },
+    { axis: 'Cohesion', value: ${breakdown.cohesion} },
+    { axis: 'Layering', value: ${breakdown.layering} },
+  ];
+
+  const svg = d3.select('#radar-chart');
+  const w = 350, h = 350, cx = w/2, cy = h/2, maxR = 120;
+  const levels = 5;
+  const total = data.length;
+  const angleSlice = (Math.PI * 2) / total;
+
+  // Grid circles
+  for (let i = 1; i <= levels; i++) {
+    const r = (maxR / levels) * i;
+    svg.append('circle')
+      .attr('cx', cx).attr('cy', cy).attr('r', r)
+      .attr('fill', 'none').attr('stroke', '#334155').attr('stroke-width', 0.5)
+      .attr('stroke-dasharray', '4,4');
+
+    svg.append('text')
+      .attr('x', cx + 4).attr('y', cy - r + 4)
+      .text(Math.round(100 / levels * i))
+      .attr('fill', '#475569').attr('font-size', '10px');
+  }
+
+  // Axis lines
+  data.forEach((d, i) => {
+    const angle = angleSlice * i - Math.PI/2;
+    const x = cx + Math.cos(angle) * (maxR + 20);
+    const y = cy + Math.sin(angle) * (maxR + 20);
+
+    svg.append('line')
+      .attr('x1', cx).attr('y1', cy).attr('x2', cx + Math.cos(angle) * maxR).attr('y2', cy + Math.sin(angle) * maxR)
+      .attr('stroke', '#334155').attr('stroke-width', 1);
+
+    svg.append('text')
+      .attr('x', x).attr('y', y)
+      .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+      .attr('fill', '#94a3b8').attr('font-size', '12px').attr('font-weight', '600')
+      .text(d.axis);
+  });
+
+  // Data polygon
+  const points = data.map((d, i) => {
+    const angle = angleSlice * i - Math.PI/2;
+    const r = (d.value / 100) * maxR;
+    return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
+  });
+
+  const pointsStr = points.map(p => p.join(',')).join(' ');
+
+  svg.append('polygon')
+    .attr('points', pointsStr)
+    .attr('fill', 'rgba(129, 140, 248, 0.15)')
+    .attr('stroke', '#818cf8').attr('stroke-width', 2);
+
+  // Data dots
+  points.forEach((p, i) => {
+    const color = data[i].value >= 70 ? '#22c55e' : data[i].value >= 50 ? '#f59e0b' : '#ef4444';
+    svg.append('circle')
+      .attr('cx', p[0]).attr('cy', p[1]).attr('r', 5)
+      .attr('fill', color).attr('stroke', '#0f172a').attr('stroke-width', 2);
+
+    svg.append('text')
+      .attr('x', p[0]).attr('y', p[1] - 12)
+      .attr('text-anchor', 'middle')
+      .attr('fill', color).attr('font-size', '12px').attr('font-weight', '700')
+      .text(data[i].value);
+  });
+})();
+
+// ── D3 Force Dependency Graph ──
+(function() {
+  const nodesEl = document.getElementById('graph-nodes');
+  const linksEl = document.getElementById('graph-links');
+  if (!nodesEl || !linksEl) return;
+
+  const nodes = JSON.parse(nodesEl.textContent || '[]');
+  const links = JSON.parse(linksEl.textContent || '[]');
+  if (nodes.length === 0) return;
+
+  const container = document.getElementById('dep-graph');
+  const width = container.clientWidth || 800;
+  const height = Math.max(400, nodes.length * 25);
+  container.style.height = height + 'px';
+
+  const layerColors = {
+    API: '#ec4899', Service: '#3b82f6', Data: '#10b981',
+    UI: '#f59e0b', Infrastructure: '#8b5cf6', Other: '#64748b',
+  };
+
+  const svg = d3.select('#dep-graph').append('svg')
+    .attr('width', width).attr('height', height)
+    .attr('viewBox', [0, 0, width, height]);
+
+  // Arrow marker
+  svg.append('defs').append('marker')
+    .attr('id', 'arrowhead').attr('viewBox', '-0 -5 10 10')
+    .attr('refX', 20).attr('refY', 0).attr('orient', 'auto')
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .append('path').attr('d', 'M 0,-5 L 10,0 L 0,5')
+    .attr('fill', '#475569');
+
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(80))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => Math.max(d.connections * 3 + 12, 15)));
+
+  const link = svg.append('g')
+    .selectAll('line').data(links).join('line')
+    .attr('stroke', '#334155').attr('stroke-width', 1.5)
+    .attr('stroke-opacity', 0.6).attr('marker-end', 'url(#arrowhead)');
+
+  const node = svg.append('g')
+    .selectAll('g').data(nodes).join('g')
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+    );
+
+  // Node circles — size based on connections
+  node.append('circle')
+    .attr('r', d => Math.max(d.connections * 3 + 6, 8))
+    .attr('fill', d => layerColors[d.layer] || '#64748b')
+    .attr('stroke', '#0f172a').attr('stroke-width', 2)
+    .attr('opacity', 0.85);
+
+  // Node labels
+  node.append('text')
+    .text(d => d.name.replace(/\\.[^.]+$/, ''))
+    .attr('x', 0).attr('y', d => -(Math.max(d.connections * 3 + 6, 8) + 6))
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#94a3b8').attr('font-size', '10px').attr('font-weight', '500');
+
+  // Tooltip on hover
+  node.append('title')
+    .text(d => d.id + '\\nConnections: ' + d.connections + '\\nLayer: ' + d.layer);
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+  });
+})();
+
+// ── Bubble Chart ──
+(function() {
+  const dataEl = document.getElementById('bubble-data');
+  if (!dataEl) return;
+
+  const bubbles = JSON.parse(dataEl.textContent || '[]');
+  if (bubbles.length === 0) return;
+
+  const container = document.getElementById('bubble-chart');
+  const width = container.clientWidth || 600;
+  const height = 300;
+
+  const svg = d3.select('#bubble-chart').append('svg')
+    .attr('width', width).attr('height', height)
+    .attr('viewBox', [0, 0, width, height]);
+
+  const simulation = d3.forceSimulation(bubbles)
+    .force('charge', d3.forceManyBody().strength(5))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collision', d3.forceCollide().radius(d => d.radius + 4))
+    .stop();
+
+  for (let i = 0; i < 120; i++) simulation.tick();
+
+  const g = svg.selectAll('g').data(bubbles).join('g')
+    .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+
+  // Glow effect
+  g.append('circle')
+    .attr('r', d => d.radius)
+    .attr('fill', d => d.color + '20')
+    .attr('stroke', d => d.color).attr('stroke-width', 2)
+    .attr('opacity', 0)
+    .transition().duration(800).delay((d, i) => i * 200)
+    .attr('opacity', 1);
+
+  // Inner circle
+  g.append('circle')
+    .attr('r', d => d.radius * 0.7)
+    .attr('fill', d => d.color + '30')
+    .attr('opacity', 0)
+    .transition().duration(800).delay((d, i) => i * 200)
+    .attr('opacity', 1);
+
+  // Name
+  g.append('text')
+    .text(d => d.name)
+    .attr('text-anchor', 'middle').attr('dy', '-0.3em')
+    .attr('fill', '#e2e8f0').attr('font-size', d => Math.max(d.radius / 4, 10) + 'px')
+    .attr('font-weight', '700');
+
+  // Count badge
+  g.append('text')
+    .text(d => '×' + d.count)
+    .attr('text-anchor', 'middle').attr('dy', '1.2em')
+    .attr('fill', d => d.color).attr('font-size', d => Math.max(d.radius / 5, 9) + 'px')
+    .attr('font-weight', '600');
+
+  // Severity label
+  g.append('text')
+    .text(d => d.severity)
+    .attr('text-anchor', 'middle').attr('dy', '2.5em')
+    .attr('fill', '#64748b').attr('font-size', '9px').attr('text-transform', 'uppercase');
+})();
+<\/script>`;
   }
 
   private getStyles(): string {
@@ -409,6 +748,20 @@ ${this.renderFooter()}
   }
   .success-card { border-color: #22c55e40; color: #22c55e; text-align: center; padding: 2rem; font-size: 1.1rem; }
 
+  /* ── Graph ── */
+  .graph-card { padding: 1rem; }
+  .graph-legend {
+    display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+    justify-content: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: #94a3b8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .graph-hint {
+    text-align: center; font-size: 0.75rem; color: #475569; margin-top: 0.5rem;
+    font-style: italic;
+  }
+  #dep-graph svg { background: rgba(0,0,0,0.2); border-radius: 12px; }
+
   /* ── Layers Grid ── */
   .layers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
   .layer-card {
@@ -449,11 +802,6 @@ ${this.renderFooter()}
   .locations { font-size: 0.75rem; color: #64748b; }
   .locations code { background: #0f172a; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem; }
 
-  /* ── Mermaid ── */
-  .mermaid-container {
-    background: #f8fafc; border-radius: 12px; padding: 2rem; text-align: center; color: #0f172a;
-  }
-
   /* ── Footer ── */
   .footer {
     text-align: center; padding: 2rem; color: #475569; font-size: 0.85rem;
@@ -478,7 +826,6 @@ ${this.renderFooter()}
     .card, .stat-card, .score-hero, .layer-card, .score-item {
       background: white; border-color: #e2e8f0;
     }
-    .mermaid-container { border: 1px solid #e2e8f0; }
   }
 </style>`;
   }
