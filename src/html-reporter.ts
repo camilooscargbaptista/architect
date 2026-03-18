@@ -21,17 +21,62 @@ ${this.getStyles()}
 </head>
 <body>
 ${this.renderHeader(report)}
-<div class="container">
-  ${this.renderScoreHero(report)}
-  ${this.renderRadarChart(report)}
-  ${this.renderStats(report)}
-  ${this.renderLayers(report)}
-  ${this.renderDependencyGraph(report)}
-  ${this.renderAntiPatternBubbles(report, grouped)}
-  ${this.renderAntiPatterns(report, grouped)}
-  ${this.renderSuggestions(sugGrouped)}
-  ${plan ? this.renderRefactoringPlan(plan) : ''}
-  ${agentSuggestion ? this.renderAgentSuggestions(agentSuggestion) : ''}
+<div class="report-layout">
+  <nav class="sidebar" id="reportSidebar">
+    <div class="sidebar-title">Navigation</div>
+    <a href="#score" class="sidebar-link active" data-section="score">📊 Score</a>
+    <a href="#layers" class="sidebar-link" data-section="layers">📐 Layers & Graph</a>
+    <a href="#anti-patterns" class="sidebar-link" data-section="anti-patterns">⚠️ Anti-Patterns (${report.antiPatterns.length})</a>
+    <a href="#suggestions" class="sidebar-link" data-section="suggestions">💡 Suggestions (${report.suggestions.length})</a>
+    ${plan ? `<a href="#refactoring" class="sidebar-link" data-section="refactoring">🔧 Refactoring (${plan.steps.length})</a>` : ''}
+    ${agentSuggestion ? `<a href="#agents" class="sidebar-link" data-section="agents">🤖 Agents</a>` : ''}
+  </nav>
+  <button class="sidebar-toggle" onclick="document.getElementById('reportSidebar').classList.toggle('sidebar-open')">☰</button>
+
+  <div class="container">
+    <div id="score">
+      ${this.renderScoreHero(report)}
+      ${this.renderRadarChart(report)}
+      ${this.renderStats(report)}
+    </div>
+
+    <details class="section-accordion" id="layers" open>
+      <summary class="section-accordion-header">📐 Layer Analysis & Dependencies</summary>
+      <div class="section-accordion-body">
+        ${this.renderLayers(report)}
+        ${this.renderDependencyGraph(report)}
+      </div>
+    </details>
+
+    <details class="section-accordion" id="anti-patterns" open>
+      <summary class="section-accordion-header">⚠️ Anti-Patterns (${report.antiPatterns.length})</summary>
+      <div class="section-accordion-body">
+        ${this.renderAntiPatternBubbles(report, grouped)}
+        ${this.renderAntiPatterns(report, grouped)}
+      </div>
+    </details>
+
+    <details class="section-accordion" id="suggestions">
+      <summary class="section-accordion-header">💡 Suggestions (${report.suggestions.length})</summary>
+      <div class="section-accordion-body">
+        ${this.renderSuggestions(sugGrouped)}
+      </div>
+    </details>
+
+    ${plan ? `<details class="section-accordion" id="refactoring" open>
+      <summary class="section-accordion-header">🔧 Refactoring Plan (${plan.steps.length} steps, ${plan.totalOperations} operations)</summary>
+      <div class="section-accordion-body">
+        ${this.renderRefactoringPlan(plan)}
+      </div>
+    </details>` : ''}
+
+    ${agentSuggestion ? `<details class="section-accordion" id="agents" open>
+      <summary class="section-accordion-header">🤖 Agent System</summary>
+      <div class="section-accordion-body">
+        ${this.renderAgentSuggestions(agentSuggestion)}
+      </div>
+    </details>` : ''}
+  </div>
 </div>
 ${this.renderFooter()}
 ${this.getScripts(report)}
@@ -226,13 +271,21 @@ ${this.getScripts(report)}
   private renderDependencyGraph(report: AnalysisReport): string {
     if (report.dependencyGraph.edges.length === 0) return '';
 
-    // Build node data with connection counts
+    // Build real file set — only files that appear as SOURCE in edges (these are real scanned files)
+    const realFiles = new Set(report.dependencyGraph.edges.map(e => e.from));
+
+    // Count connections only for real files
     const connectionCount: Record<string, number> = {};
     for (const edge of report.dependencyGraph.edges) {
-      connectionCount[edge.from] = (connectionCount[edge.from] || 0) + 1;
-      connectionCount[edge.to] = (connectionCount[edge.to] || 0) + 1;
+      if (realFiles.has(edge.from)) {
+        connectionCount[edge.from] = (connectionCount[edge.from] || 0) + 1;
+      }
+      if (realFiles.has(edge.to)) {
+        connectionCount[edge.to] = (connectionCount[edge.to] || 0) + 1;
+      }
     }
 
+    // Build layer map from report layers
     const layerMap: Record<string, string> = {};
     for (const layer of report.layers) {
       for (const file of layer.files) {
@@ -240,34 +293,55 @@ ${this.getScripts(report)}
       }
     }
 
-    const nodes = report.dependencyGraph.nodes.map(n => ({
+    // Create nodes only from real files
+    const allNodes = [...realFiles].map(n => ({
       id: n,
       name: n.split('/').pop() || n,
       connections: connectionCount[n] || 0,
       layer: layerMap[n] || 'Other',
     }));
 
-    const links = report.dependencyGraph.edges.map(e => ({
-      source: e.from,
-      target: e.to,
-    }));
+    // Build links only between real files
+    const allLinks = report.dependencyGraph.edges
+      .filter(e => realFiles.has(e.from) && realFiles.has(e.to))
+      .map(e => ({ source: e.from, target: e.to }));
+
+    // Limit to top N most-connected nodes for large projects
+    const maxNodes = 60;
+    const sortedNodes = [...allNodes].sort((a, b) => b.connections - a.connections);
+    const limitedNodes = sortedNodes.slice(0, maxNodes);
+    const limitedNodeIds = new Set(limitedNodes.map(n => n.id));
+    const limitedLinks = allLinks.filter(l => limitedNodeIds.has(l.source) && limitedNodeIds.has(l.target));
+    const isLimited = allNodes.length > maxNodes;
+
+    // Collect unique layers from limited nodes
+    const uniqueLayers = [...new Set(limitedNodes.map(n => n.layer))];
 
     return `
 <h2 class="section-title">🔗 Dependency Graph</h2>
 <div class="card graph-card">
-  <div class="graph-legend">
-    <span class="legend-item"><span class="legend-dot" style="background: #ec4899"></span> API</span>
-    <span class="legend-item"><span class="legend-dot" style="background: #3b82f6"></span> Service</span>
-    <span class="legend-item"><span class="legend-dot" style="background: #10b981"></span> Data</span>
-    <span class="legend-item"><span class="legend-dot" style="background: #f59e0b"></span> UI</span>
-    <span class="legend-item"><span class="legend-dot" style="background: #8b5cf6"></span> Infra</span>
-    <span class="legend-item"><span class="legend-dot" style="background: #64748b"></span> Other</span>
+  <div class="graph-controls">
+    <div class="graph-legend">
+      <span class="legend-item"><span class="legend-dot" style="background: #ec4899"></span> API</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #3b82f6"></span> Service</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #10b981"></span> Data</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #f59e0b"></span> UI</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #8b5cf6"></span> Infra</span>
+      <span class="legend-item"><span class="legend-dot" style="background: #64748b"></span> Other</span>
+    </div>
+    <div class="graph-filters">
+      <input type="text" id="graphSearch" class="graph-search" placeholder="🔍 Search node..." oninput="filterGraphNodes(this.value)">
+      <div class="graph-layer-filters">
+        ${uniqueLayers.map(l => `<label class="graph-filter-check"><input type="checkbox" checked data-layer="${l}" onchange="toggleGraphLayer('${l}', this.checked)"><span class="legend-dot" style="background: ${({'API': '#ec4899', 'Service': '#3b82f6', 'Data': '#10b981', 'UI': '#f59e0b', 'Infrastructure': '#8b5cf6'} as Record<string, string>)[l] || '#64748b'}"></span> ${l}</label>`).join('')}
+      </div>
+    </div>
+    ${isLimited ? `<div class="graph-limit-notice">Showing top ${maxNodes} of ${allNodes.length} source files (most connected) · ${limitedLinks.length} links</div>` : ''}
   </div>
-  <div id="dep-graph" style="width:100%; min-height:400px;"></div>
-  <div class="graph-hint">🖱️ Drag nodes to explore • Node size = number of connections</div>
+  <div id="dep-graph" style="width:100%; min-height:500px;"></div>
+  <div class="graph-hint">🖱️ Drag nodes • Scroll to zoom • Double-click to reset • Node size = connections</div>
 </div>
-<script type="application/json" id="graph-nodes">${JSON.stringify(nodes)}<\/script>
-<script type="application/json" id="graph-links">${JSON.stringify(links)}<\/script>`;
+<script type="application/json" id="graph-nodes">${JSON.stringify(limitedNodes)}<\\/script>
+<script type="application/json" id="graph-links">${JSON.stringify(limitedLinks)}<\\/script>`;
   }
 
   /**
@@ -534,10 +608,12 @@ ${this.getScripts(report)}
       </details>
     </div>
   </div>
-  <div class="rstep-ops">
-    <h4>📋 Operations (${step.operations.length})</h4>
-    ${operationsHtml}
-  </div>
+  <details class="rstep-ops-accordion">
+    <summary class="rstep-ops-toggle">📋 Operations (${step.operations.length})</summary>
+    <div class="rstep-ops">
+      ${operationsHtml}
+    </div>
+  </details>
   <div class="rstep-impact">
     <h4>📈 Score Impact</h4>
     <div class="rimpact-tags">${impactHtml}</div>
@@ -566,6 +642,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.5 });
 
   counters.forEach(c => observer.observe(c));
+
+  // ── Sidebar Active Section Tracking ──
+  const sectionIds = ['score', 'layers', 'anti-patterns', 'suggestions', 'refactoring', 'agents'];
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+        const link = document.querySelector('.sidebar-link[data-section="' + entry.target.id + '"]');
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '-80px 0px -60% 0px' });
+
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) sectionObserver.observe(el);
+  });
 });
 
 function animateCounter(el, target) {
@@ -668,7 +761,7 @@ function animateCounter(el, target) {
 
   const container = document.getElementById('dep-graph');
   const width = container.clientWidth || 800;
-  const height = 450;
+  const height = 500;
   container.style.height = height + 'px';
 
   const layerColors = {
@@ -680,28 +773,43 @@ function animateCounter(el, target) {
     .attr('width', width).attr('height', height)
     .attr('viewBox', [0, 0, width, height]);
 
+  // Zoom container
+  const g = svg.append('g');
+
+  // Zoom behavior
+  const zoom = d3.zoom()
+    .scaleExtent([0.2, 5])
+    .on('zoom', (event) => { g.attr('transform', event.transform); });
+  svg.call(zoom);
+
+  // Double-click to reset zoom
+  svg.on('dblclick.zoom', () => {
+    svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
+  });
+
   // Arrow marker
-  svg.append('defs').append('marker')
+  g.append('defs').append('marker')
     .attr('id', 'arrowhead').attr('viewBox', '-0 -5 10 10')
     .attr('refX', 20).attr('refY', 0).attr('orient', 'auto')
     .attr('markerWidth', 6).attr('markerHeight', 6)
     .append('path').attr('d', 'M 0,-5 L 10,0 L 0,5')
     .attr('fill', '#475569');
 
+  // Tuned simulation for better spread
   const simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id(d => d.id).distance(60))
-    .force('charge', d3.forceManyBody().strength(-150))
+    .force('link', d3.forceLink(links).id(d => d.id).distance(80))
+    .force('charge', d3.forceManyBody().strength(-250))
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('x', d3.forceX(width / 2).strength(0.1))
-    .force('y', d3.forceY(height / 2).strength(0.1))
-    .force('collision', d3.forceCollide().radius(d => Math.max(d.connections * 3 + 12, 15)));
+    .force('x', d3.forceX(width / 2).strength(0.05))
+    .force('y', d3.forceY(height / 2).strength(0.05))
+    .force('collision', d3.forceCollide().radius(d => Math.max(d.connections * 2 + 16, 20)));
 
-  const link = svg.append('g')
+  const link = g.append('g')
     .selectAll('line').data(links).join('line')
-    .attr('stroke', '#334155').attr('stroke-width', 1.5)
-    .attr('stroke-opacity', 0.6).attr('marker-end', 'url(#arrowhead)');
+    .attr('stroke', '#334155').attr('stroke-width', 1)
+    .attr('stroke-opacity', 0.4).attr('marker-end', 'url(#arrowhead)');
 
-  const node = svg.append('g')
+  const node = g.append('g')
     .selectAll('g').data(nodes).join('g')
     .call(d3.drag()
       .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
@@ -709,37 +817,55 @@ function animateCounter(el, target) {
       .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
     );
 
-  // Node circles — size based on connections
+  // Node circles — color by layer
   node.append('circle')
-    .attr('r', d => Math.max(d.connections * 3 + 6, 8))
+    .attr('r', d => Math.max(d.connections * 2.5 + 5, 6))
     .attr('fill', d => layerColors[d.layer] || '#64748b')
-    .attr('stroke', '#0f172a').attr('stroke-width', 2)
-    .attr('opacity', 0.85);
+    .attr('stroke', '#0f172a').attr('stroke-width', 1.5)
+    .attr('opacity', 0.9);
 
-  // Node labels
-  node.append('text')
+  // Node labels — only show for nodes with enough connections
+  node.filter(d => d.connections >= 2).append('text')
     .text(d => d.name.replace(/\\.[^.]+$/, ''))
-    .attr('x', 0).attr('y', d => -(Math.max(d.connections * 3 + 6, 8) + 6))
+    .attr('x', 0).attr('y', d => -(Math.max(d.connections * 2.5 + 5, 6) + 4))
     .attr('text-anchor', 'middle')
-    .attr('fill', '#94a3b8').attr('font-size', '10px').attr('font-weight', '500');
+    .attr('fill', '#e2e8f0').attr('font-size', '9px').attr('font-weight', '500');
 
-  // Tooltip on hover
+  // Tooltip
   node.append('title')
     .text(d => d.id + '\\nConnections: ' + d.connections + '\\nLayer: ' + d.layer);
 
   simulation.on('tick', () => {
-    // Clamp nodes to stay within SVG bounds
-    nodes.forEach(d => {
-      const r = Math.max(d.connections * 3 + 6, 8) + 10;
-      d.x = Math.max(r, Math.min(width - r, d.x));
-      d.y = Math.max(r, Math.min(height - r, d.y));
-    });
-
     link
       .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
       .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
     node.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
   });
+
+  // Expose search and filter functions
+  window.filterGraphNodes = function(query) {
+    if (!query) {
+      node.attr('opacity', 1);
+      link.attr('opacity', 0.4);
+      return;
+    }
+    query = query.toLowerCase();
+    node.attr('opacity', d => d.id.toLowerCase().includes(query) || d.name.toLowerCase().includes(query) ? 1 : 0.1);
+    link.attr('opacity', d => {
+      const srcMatch = d.source.id.toLowerCase().includes(query);
+      const tgtMatch = d.target.id.toLowerCase().includes(query);
+      return (srcMatch || tgtMatch) ? 0.6 : 0.05;
+    });
+  };
+
+  window.toggleGraphLayer = function(layer, visible) {
+    node.filter(d => d.layer === layer)
+      .transition().duration(300)
+      .attr('opacity', visible ? 1 : 0.05);
+    link.filter(d => d.source.layer === layer || d.target.layer === layer)
+      .transition().duration(300)
+      .attr('opacity', visible ? 0.4 : 0.02);
+  };
 })();
 
 // ── Bubble Chart ──
@@ -836,62 +962,69 @@ function animateCounter(el, target) {
       return '#60a5fa';
     };
 
+    // Status helpers
+    const statusBadge = (status: string): string => {
+      const map: Record<string, { icon: string; label: string; color: string }> = {
+        'KEEP': { icon: '✅', label: 'KEEP', color: '#22c55e' },
+        'MODIFY': { icon: '🔵', label: 'MODIFY', color: '#3b82f6' },
+        'CREATE': { icon: '🟡', label: 'NEW', color: '#f59e0b' },
+        'DELETE': { icon: '🔴', label: 'REMOVE', color: '#ef4444' },
+      };
+      const s = map[status] || map['CREATE'];
+      return `<span class="agent-status-badge" style="background:${s.color}20;color:${s.color};border:1px solid ${s.color}40">${s.icon} ${s.label}</span>`;
+    };
+
+    const statusBorder = (status: string): string => {
+      const map: Record<string, string> = {
+        'KEEP': '#22c55e', 'MODIFY': '#3b82f6', 'CREATE': '#f59e0b', 'DELETE': '#ef4444',
+      };
+      return map[status] || '#334155';
+    };
+
     const agentCards = s.suggestedAgents.map(a =>
-      `<label class="agent-toggle-card" data-category="agents" data-name="${a}">
-        <input type="checkbox" class="agent-check" checked data-type="agents" data-item="${a}">
-        <div class="agent-toggle-inner">
-          <div class="agent-toggle-icon">${roleIcon(a)}</div>
+      `<label class="agent-toggle-card" data-category="agents" data-name="${a.name}">
+        <input type="checkbox" class="agent-check" ${a.status !== 'DELETE' ? 'checked' : ''} data-type="agents" data-item="${a.name}">
+        <div class="agent-toggle-inner" style="border-color:${statusBorder(a.status)}">
+          <div class="agent-toggle-icon">${roleIcon(a.name)}</div>
           <div class="agent-toggle-info">
-            <span class="agent-toggle-name">${a}</span>
-            <span class="agent-toggle-role" style="color:${roleColor(a)}">${roleLabel(a)}</span>
+            <span class="agent-toggle-name">${a.name}</span>
+            <span class="agent-toggle-role" style="color:${roleColor(a.name)}">${roleLabel(a.name)}</span>
+            ${a.description ? `<span class="agent-toggle-desc">${a.description}</span>` : ''}
           </div>
+          ${statusBadge(a.status)}
           <div class="agent-toggle-check">\u2713</div>
         </div>
       </label>`
     ).join('\n');
 
-    const ruleCards = s.suggestedRules.map(r =>
-      `<label class="agent-toggle-card mini" data-category="rules">
-        <input type="checkbox" class="agent-check" checked data-type="rules" data-item="${r}">
-        <div class="agent-toggle-inner">
-          <span class="agent-toggle-icon">\u{1F4CF}</span>
-          <span class="agent-toggle-name">${r}.md</span>
+    const miniCard = (item: { name: string; status: string; description?: string }, icon: string, type: string): string =>
+      `<label class="agent-toggle-card mini" data-category="${type}">
+        <input type="checkbox" class="agent-check" ${item.status !== 'DELETE' ? 'checked' : ''} data-type="${type}" data-item="${item.name}">
+        <div class="agent-toggle-inner" style="border-color:${statusBorder(item.status)}">
+          <span class="agent-toggle-icon">${icon}</span>
+          <div class="agent-toggle-info">
+            <span class="agent-toggle-name">${item.name}.md</span>
+            ${item.description ? `<span class="agent-toggle-desc">${item.description}</span>` : ''}
+          </div>
+          ${statusBadge(item.status)}
           <div class="agent-toggle-check">\u2713</div>
         </div>
-      </label>`
-    ).join('\n');
+      </label>`;
 
-    const guardCards = s.suggestedGuards.map(g =>
-      `<label class="agent-toggle-card mini" data-category="guards">
-        <input type="checkbox" class="agent-check" checked data-type="guards" data-item="${g}">
-        <div class="agent-toggle-inner">
-          <span class="agent-toggle-icon">\u{1F6E1}\uFE0F</span>
-          <span class="agent-toggle-name">${g}.md</span>
-          <div class="agent-toggle-check">\u2713</div>
-        </div>
-      </label>`
-    ).join('\n');
-
-    const workflowCards = s.suggestedWorkflows.map(w =>
-      `<label class="agent-toggle-card mini" data-category="workflows">
-        <input type="checkbox" class="agent-check" checked data-type="workflows" data-item="${w}">
-        <div class="agent-toggle-inner">
-          <span class="agent-toggle-icon">\u26A1</span>
-          <span class="agent-toggle-name">${w}.md</span>
-          <div class="agent-toggle-check">\u2713</div>
-        </div>
-      </label>`
-    ).join('\n');
+    const ruleCards = s.suggestedRules.map(r => miniCard(r, '\u{1F4CF}', 'rules')).join('\n');
+    const guardCards = s.suggestedGuards.map(g => miniCard(g, '\u{1F6E1}\uFE0F', 'guards')).join('\n');
+    const workflowCards = s.suggestedWorkflows.map(w => miniCard(w, '\u26A1', 'workflows')).join('\n');
 
     const skillCards = s.suggestedSkills.map(sk =>
       `<label class="agent-toggle-card" data-category="skills">
         <input type="checkbox" class="agent-check" checked data-type="skills" data-item="${sk.source}">
-        <div class="agent-toggle-inner">
+        <div class="agent-toggle-inner" style="border-color:${statusBorder(sk.status)}">
           <span class="agent-toggle-icon">\u{1F9E0}</span>
           <div class="agent-toggle-info">
             <span class="agent-toggle-name">${sk.name}</span>
             <span class="agent-toggle-role" style="color:#34d399">${sk.description}</span>
           </div>
+          ${statusBadge(sk.status)}
           <div class="agent-toggle-check">\u2713</div>
         </div>
       </label>`
@@ -919,17 +1052,32 @@ function animateCounter(el, target) {
       `\u{1F527} ${s.stack.primary}`,
       `\u{1F4E6} ${s.stack.frameworks.length > 0 ? s.stack.frameworks.join(', ') : 'No framework'}`,
       s.hasExistingAgents ? '\u{1F4C1} Existing .agent/' : '\u{1F4C1} New .agent/',
-      [s.stack.hasBackend ? '\u{1F519} Backend' : '', s.stack.hasFrontend ? '\u{1F5A5}\uFE0F Frontend' : '', s.stack.hasMobile ? '\u{1F4F1} Mobile' : '', s.stack.hasDatabase ? '\u{1F5C4}\uFE0F DB' : ''].filter(Boolean).join('\n      ')
+      ...(s.stack.hasBackend ? ['\u{1F519} Backend'] : []),
+      ...(s.stack.hasFrontend ? ['\u{1F5A5}\uFE0F Frontend'] : []),
+      ...(s.stack.hasMobile ? ['\u{1F4F1} Mobile'] : []),
+      ...(s.stack.hasDatabase ? ['\u{1F5C4}\uFE0F Database'] : []),
     ];
 
     const totalItems = s.suggestedAgents.length + s.suggestedRules.length + s.suggestedGuards.length + s.suggestedWorkflows.length + s.suggestedSkills.length;
 
+    // Status summary counts
+    const allItems = [...s.suggestedAgents, ...s.suggestedRules, ...s.suggestedGuards, ...s.suggestedWorkflows];
+    const keepCount = allItems.filter(i => i.status === 'KEEP').length;
+    const modifyCount = allItems.filter(i => i.status === 'MODIFY').length;
+    const createCount = allItems.filter(i => i.status === 'CREATE').length;
+
     return `
-<h2 class="section-title">\u{1F916} Agent System (Suggested)</h2>
+<h2 class="section-title">\u{1F916} Agent System</h2>
 
 <div class="card agent-system-card">
   <div class="agent-stack-banner">
     ${stackPills.map(p => `<div class="stack-pill">${p}</div>`).join('\n    ')}
+  </div>
+
+  <div class="agent-status-legend">
+    <span class="status-legend-item"><span class="legend-dot" style="background:#22c55e"></span> KEEP (${keepCount})</span>
+    <span class="status-legend-item"><span class="legend-dot" style="background:#3b82f6"></span> MODIFY (${modifyCount})</span>
+    <span class="status-legend-item"><span class="legend-dot" style="background:#f59e0b"></span> NEW (${createCount})</span>
   </div>
 
   <div class="agent-controls">
@@ -979,18 +1127,22 @@ function animateCounter(el, target) {
 <style>
   .agent-system-card { padding: 1.5rem; }
   .agent-stack-banner { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-  .stack-pill { background: #1e293b; border: 1px solid #334155; border-radius: 99px; padding: 0.4rem 1rem; font-size: 0.8rem; color: #94a3b8; white-space: pre-line; }
+  .stack-pill { background: #1e293b; border: 1px solid #334155; border-radius: 99px; padding: 0.4rem 1rem; font-size: 0.8rem; color: #94a3b8; white-space: nowrap; }
+  .agent-status-legend { display: flex; gap: 1.5rem; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #1e293b; }
+  .status-legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: #94a3b8; }
+  .agent-status-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.15rem 0.5rem; border-radius: 99px; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; letter-spacing: 0.03em; }
+  .agent-toggle-desc { display: block; font-size: 0.65rem; color: #64748b; margin-top: 0.15rem; line-height: 1.3; }
   .agent-controls { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; }
   .agent-ctrl-btn { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
   .agent-ctrl-btn:hover { background: #334155; }
   .agent-count-label { color: #94a3b8; font-size: 0.85rem; margin-left: auto; }
   #agentSelectedCount { color: #c084fc; font-weight: 700; }
   .agent-section-subtitle { color: #e2e8f0; font-size: 1.05rem; font-weight: 700; margin: 1.25rem 0 0.75rem; }
-  .agent-toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; }
+  .agent-toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
   .agent-toggle-card { cursor: pointer; transition: all 0.3s; }
   .agent-toggle-card input { display: none; }
   .agent-toggle-inner { display: flex; align-items: center; gap: 0.75rem; background: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 0.75rem 1rem; transition: all 0.3s; }
-  .agent-toggle-card input:checked + .agent-toggle-inner { border-color: #818cf8; background: #1e1b4b; }
+  .agent-toggle-card input:checked + .agent-toggle-inner { background: #1e1b4b; }
   .agent-toggle-icon { font-size: 1.3rem; flex-shrink: 0; }
   .agent-toggle-info { flex: 1; min-width: 0; }
   .agent-toggle-name { display: block; color: #e2e8f0; font-weight: 600; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1062,7 +1214,50 @@ function animateCounter(el, target) {
     min-height: 100vh;
   }
 
-  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  html { scroll-behavior: smooth; }
+
+  /* ── Layout ── */
+  .report-layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    position: sticky; top: 0; height: 100vh; width: 220px; min-width: 220px;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    border-right: 1px solid #334155; padding: 1.5rem 0;
+    display: flex; flex-direction: column; gap: 0.25rem;
+    overflow-y: auto; z-index: 100;
+  }
+  .sidebar-title {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.15em; color: #475569; padding: 0 1.25rem; margin-bottom: 0.75rem;
+  }
+  .sidebar-link {
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.25rem;
+    color: #94a3b8; text-decoration: none; font-size: 0.8rem; font-weight: 500;
+    border-left: 3px solid transparent; transition: all 0.2s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sidebar-link:hover { color: #e2e8f0; background: #1e293b; border-left-color: #475569; }
+  .sidebar-link.active { color: #c084fc; background: #c084fc10; border-left-color: #c084fc; font-weight: 700; }
+
+  .sidebar-toggle {
+    display: none; position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 200;
+    width: 48px; height: 48px; border-radius: 50%; border: none;
+    background: #c084fc; color: #0f172a; font-size: 1.2rem; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(192,132,252,0.4); transition: all 0.2s;
+  }
+  .sidebar-toggle:hover { transform: scale(1.1); }
+
+  @media (max-width: 1024px) {
+    .sidebar {
+      position: fixed; left: -240px; top: 0; width: 240px; min-width: 240px;
+      transition: left 0.3s ease; box-shadow: none;
+    }
+    .sidebar.sidebar-open { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
+    .sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+    .report-layout { flex-direction: column; }
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; flex: 1; min-width: 0; }
 
   /* ── Header ── */
   .header {
@@ -1141,6 +1336,44 @@ function animateCounter(el, target) {
     display: flex; align-items: center; gap: 0.5rem;
   }
 
+  /* ── Section Accordion ── */
+  .section-accordion {
+    margin: 1.5rem 0; border: 1px solid #334155; border-radius: 16px;
+    background: transparent; overflow: hidden;
+  }
+  .section-accordion-header {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.75rem;
+    font-size: 1.3rem; font-weight: 700; color: #e2e8f0;
+    padding: 1.25rem 1.5rem; background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-bottom: 1px solid transparent; transition: all 0.3s; user-select: none;
+  }
+  .section-accordion-header:hover { background: linear-gradient(135deg, #334155, #1e293b); }
+  .section-accordion[open] > .section-accordion-header { border-bottom-color: #334155; }
+  .section-accordion-header::after {
+    content: '\\25B6'; margin-left: auto; font-size: 0.8rem; color: #818cf8;
+    transition: transform 0.3s;
+  }
+  .section-accordion[open] > .section-accordion-header::after { transform: rotate(90deg); }
+  .section-accordion-header::-webkit-details-marker { display: none; }
+  .section-accordion-body { padding: 0.5rem 0; }
+
+  /* ── Operations Accordion (inside refactoring steps) ── */
+  .rstep-ops-accordion {
+    margin: 0.75rem 0; border: 1px solid #1e293b; border-radius: 10px; overflow: hidden;
+  }
+  .rstep-ops-toggle {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.9rem; font-weight: 600; color: #94a3b8;
+    padding: 0.75rem 1rem; background: #0f172a; transition: all 0.2s;
+  }
+  .rstep-ops-toggle:hover { background: #1e293b; color: #e2e8f0; }
+  .rstep-ops-toggle::after {
+    content: '\\25B6'; margin-left: auto; font-size: 0.65rem; color: #818cf8;
+    transition: transform 0.3s;
+  }
+  .rstep-ops-accordion[open] > .rstep-ops-toggle::after { transform: rotate(90deg); }
+  .rstep-ops-toggle::-webkit-details-marker { display: none; }
+
   /* ── Cards ── */
   .card {
     background: #1e293b; border-radius: 16px; border: 1px solid #334155;
@@ -1150,17 +1383,42 @@ function animateCounter(el, target) {
 
   /* ── Graph ── */
   .graph-card { padding: 1rem; }
+  .graph-controls { margin-bottom: 0.75rem; }
   .graph-legend {
     display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;
     justify-content: center;
   }
   .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: #94a3b8; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .graph-filters {
+    display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;
+    justify-content: center; margin-top: 0.5rem;
+  }
+  .graph-search {
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 0.4rem 0.75rem; color: #e2e8f0; font-size: 0.8rem;
+    outline: none; width: 180px; transition: border-color 0.2s;
+  }
+  .graph-search:focus { border-color: #818cf8; }
+  .graph-layer-filters {
+    display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;
+  }
+  .graph-filter-check {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 0.75rem; color: #94a3b8; cursor: pointer;
+  }
+  .graph-filter-check input { width: 14px; height: 14px; accent-color: #818cf8; }
+  .graph-limit-notice {
+    text-align: center; font-size: 0.75rem; color: #f59e0b;
+    background: #f59e0b15; padding: 0.3rem 0.75rem; border-radius: 6px;
+    margin-top: 0.5rem;
+  }
   .graph-hint {
     text-align: center; font-size: 0.75rem; color: #475569; margin-top: 0.5rem;
     font-style: italic;
   }
-  #dep-graph svg { background: rgba(0,0,0,0.2); border-radius: 12px; }
+  #dep-graph svg { background: rgba(0,0,0,0.2); border-radius: 12px; cursor: grab; }
+  #dep-graph svg:active { cursor: grabbing; }
 
   /* ── Layers Grid ── */
   .layers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }

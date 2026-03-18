@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { AnalysisReport, RefactoringPlan } from './types.js';
 
@@ -29,16 +29,28 @@ export interface AgentAuditFinding {
 }
 
 /**
+ * Status of each agent system item relative to existing .agent/ directory.
+ */
+export type AgentItemStatus = 'KEEP' | 'MODIFY' | 'CREATE' | 'DELETE';
+
+export interface AgentItem {
+  name: string;
+  status: AgentItemStatus;
+  reason?: string;
+  description?: string;
+}
+
+/**
  * Result from suggest() — no files written, just recommendations.
  */
 export interface AgentSuggestion {
   stack: StackInfo;
   hasExistingAgents: boolean;
-  suggestedAgents: string[];
-  suggestedRules: string[];
-  suggestedGuards: string[];
-  suggestedWorkflows: string[];
-  suggestedSkills: { name: string; source: string; description: string }[];
+  suggestedAgents: AgentItem[];
+  suggestedRules: AgentItem[];
+  suggestedGuards: AgentItem[];
+  suggestedWorkflows: AgentItem[];
+  suggestedSkills: { name: string; source: string; description: string; status: AgentItemStatus }[];
   audit: AgentAuditFinding[];
   command: string;
 }
@@ -67,74 +79,187 @@ export class AgentGenerator {
     const agentDir = join(projectPath, '.agent');
     const isExisting = existsSync(agentDir);
 
-    const suggestedAgents: string[] = [];
-    // Always suggest core agents
-    suggestedAgents.push('AGENT-ORCHESTRATOR');
-    if (this.stack.hasBackend) suggestedAgents.push(`${this.stack.primary.toUpperCase()}-BACKEND-DEVELOPER`);
+    // Helper: scan existing files in a subdirectory
+    const existingFiles = (subdir: string): Set<string> => {
+      const dir = join(agentDir, subdir);
+      if (!existsSync(dir)) return new Set();
+      return new Set(readdirSync(dir).map(f => f.replace(/\.md$/, '')));
+    };
+
+    // Helper: determine status for an item
+    const itemStatus = (name: string, existingSet: Set<string>, auditFindings: AgentAuditFinding[]): AgentItemStatus => {
+      // Check if a matching file exists (case-insensitive comparison)
+      const found = [...existingSet].some(e => e.toLowerCase() === name.toLowerCase());
+      if (!found) return 'CREATE';
+
+      // Exists — check if audit flagged it for improvement
+      const hasImprovement = auditFindings.some(
+        f => f.file.toLowerCase().includes(name.toLowerCase()) && (f.type === 'IMPROVEMENT' || f.type === 'OUTDATED')
+      );
+      return hasImprovement ? 'MODIFY' : 'KEEP';
+    };
+
+    // Build suggested agents with descriptions
+    const agentDefs: { name: string; desc: string }[] = [
+      { name: 'AGENT-ORCHESTRATOR', desc: 'Coordena todos os agentes, decompõe requisições e consolida entregas' },
+    ];
+    if (this.stack.hasBackend) agentDefs.push({
+      name: `${this.stack.primary.toUpperCase()}-BACKEND-DEVELOPER`,
+      desc: `Especialista em arquitetura ${this.stack.primary}, APIs, serviços e lógica de negócio`,
+    });
     if (this.stack.hasFrontend) {
       const fw = this.stack.frameworks.find(f =>
         ['Angular', 'Vue', 'Next.js', 'React'].includes(f)) || 'FRONTEND';
-      suggestedAgents.push(`${fw.toUpperCase().replace('.', '')}-FRONTEND-DEVELOPER`);
+      agentDefs.push({
+        name: `${fw.toUpperCase().replace('.', '')}-FRONTEND-DEVELOPER`,
+        desc: `Desenvolve componentes ${fw}, gerencia estado e garante UX responsiva`,
+      });
     }
-    if (this.stack.hasMobile) suggestedAgents.push('FLUTTER-UI-DEVELOPER');
-    if (this.stack.hasDatabase) suggestedAgents.push('DATABASE-ENGINEER');
-    suggestedAgents.push('SECURITY-AUDITOR', 'QA-TEST-ENGINEER', 'TECH-DEBT-CONTROLLER');
+    if (this.stack.hasMobile) agentDefs.push({
+      name: 'FLUTTER-UI-DEVELOPER',
+      desc: 'Screens mobile, widgets, navegação e integração com APIs',
+    });
+    if (this.stack.hasDatabase) agentDefs.push({
+      name: 'DATABASE-ENGINEER',
+      desc: 'Schema design, migrations, indexação e performance de queries',
+    });
+    agentDefs.push(
+      { name: 'SECURITY-AUDITOR', desc: 'Análise de ameaças, compliance LGPD/OWASP e prevenção de vulnerabilidades' },
+      { name: 'QA-TEST-ENGINEER', desc: 'Planos de teste, cobertura mínima, BDD/TDD e testes de regressão' },
+      { name: 'TECH-DEBT-CONTROLLER', desc: 'Controle de débito técnico, priorização de refatorações e metas de score' },
+    );
 
-    const suggestedRules = ['00-general', '01-architecture', '02-security'];
-    if (this.stack.hasBackend) suggestedRules.push(`03-${this.stack.primary.toLowerCase()}`);
+    const ruleDefs: { name: string; desc: string }[] = [
+      { name: '00-general', desc: 'Convenções de código, nomenclatura, commits e princípios gerais' },
+      { name: '01-architecture', desc: 'Separação de camadas, dependency rules e padrões de módulo' },
+      { name: '02-security', desc: 'Sanitização de inputs, secrets management e validação de dados' },
+    ];
+    if (this.stack.hasBackend) ruleDefs.push({
+      name: `03-${this.stack.primary.toLowerCase()}`,
+      desc: `Padrões específicos de ${this.stack.primary}: framework conventions e anti-patterns`,
+    });
 
-    const suggestedGuards = ['PREFLIGHT', 'QUALITY-GATES', 'CODE-REVIEW-CHECKLIST'];
-    const suggestedWorkflows = ['develop', 'fix-bug', 'review'];
-
-    // Skills from skills.sh — mapped to detected stack
-    const suggestedSkills: { name: string; source: string; description: string }[] = [
-      // Universal skills
-      { name: 'test-driven-development', source: 'anthropic/courses/test-driven-development', description: 'TDD workflow: Red → Green → Refactor' },
-      { name: 'systematic-debugging', source: 'anthropic/courses/systematic-debugging', description: 'Structured debugging methodology' },
-      { name: 'code-review', source: 'anthropic/courses/requesting-code-review', description: 'Code review best practices' },
-      { name: 'security-best-practices', source: 'anthropic/courses/security-best-practices', description: 'Security patterns and vulnerability prevention' },
-      { name: 'performance-optimization', source: 'anthropic/courses/performance-optimization', description: 'Performance analysis and optimization' },
-      { name: 'git-workflow', source: 'anthropic/courses/git-workflow', description: 'Git branching, commits, and collaboration' },
+    const guardDefs: { name: string; desc: string }[] = [
+      { name: 'PREFLIGHT', desc: 'Checklist pré-ação: branch, build, testes antes de qualquer mudança' },
+      { name: 'QUALITY-GATES', desc: 'Score mínimo, cobertura, zero warnings e critérios de merge' },
+      { name: 'CODE-REVIEW-CHECKLIST', desc: 'Pontos obrigatórios de revisão: segurança, performance, legibilidade' },
     ];
 
-    // Stack-specific
-    if (this.stack.languages.includes('TypeScript') || this.stack.languages.includes('JavaScript')) {
-      suggestedSkills.push(
-        { name: 'next-best-practices', source: 'vercel-labs/skills/next-best-practices', description: 'Next.js patterns and performance' },
-        { name: 'api-design-principles', source: 'anthropic/courses/api-design-principles', description: 'REST/GraphQL API design' },
-      );
-    }
-    if (this.stack.frameworks.includes('Angular') || this.stack.frameworks.includes('Vue') || this.stack.frameworks.includes('React') || this.stack.frameworks.includes('Next.js')) {
-      suggestedSkills.push(
-        { name: 'frontend-design', source: 'anthropic/courses/frontend-design', description: 'Modern frontend patterns and UI/UX' },
-        { name: 'web-accessibility', source: 'anthropic/courses/web-accessibility', description: 'WCAG accessibility standards' },
-        { name: 'ui-ux-pro-max', source: 'anthropic/courses/ui-ux-pro-max', description: '50 styles, 21 palettes, 50 font pairings' },
-      );
-    }
-    if (this.stack.frameworks.includes('Vue')) {
-      suggestedSkills.push(
-        { name: 'vue-best-practices', source: 'anthropic/courses/vue-best-practices', description: 'Vue.js composition API and patterns' },
-      );
-    }
-    if (this.stack.languages.includes('Dart') || this.stack.frameworks.includes('Flutter')) {
-      suggestedSkills.push(
-        { name: 'flutter-animations', source: 'anthropic/courses/flutter-animations', description: 'Flutter animation patterns' },
-      );
-    }
-    if (this.stack.languages.includes('Python')) {
-      suggestedSkills.push(
-        { name: 'python-performance', source: 'anthropic/courses/python-performance-optimization', description: 'Python optimization and profiling' },
-      );
-    }
-    if (this.stack.hasDatabase) {
-      suggestedSkills.push(
-        { name: 'database-schema-design', source: 'anthropic/courses/database-schema-design', description: 'Schema design, indexing, migrations' },
-      );
-    }
+    const workflowDefs: { name: string; desc: string }[] = [
+      { name: 'develop', desc: 'Fluxo completo: branch → mockup → spec → code → test → review → merge' },
+      { name: 'fix-bug', desc: 'Diagnóstico → reprodução → root cause → fix → teste de regressão' },
+      { name: 'review', desc: 'Code review estruturado com checklist de qualidade e segurança' },
+    ];
 
+    // Run audit first to inform status
     let audit: AgentAuditFinding[] = [];
     if (isExisting) {
       audit = this.auditExisting(agentDir);
+    }
+
+    // Get existing files
+    const existingAgents = existingFiles('agents');
+    const existingRules = existingFiles('rules');
+    const existingGuards = existingFiles('guards');
+    const existingWorkflows = existingFiles('workflows');
+    const existingSkillsDir = join(agentDir, 'skills');
+    const existingSkillNames = existsSync(existingSkillsDir)
+      ? new Set(readdirSync(existingSkillsDir).filter(f => {
+          try { return statSync(join(existingSkillsDir, f)).isDirectory(); } catch { return false; }
+        }))
+      : new Set<string>();
+
+    // Build items with status and description
+    const suggestedAgents: AgentItem[] = agentDefs.map(({ name, desc }) => ({
+      name,
+      status: itemStatus(name, existingAgents, audit),
+      description: desc,
+    }));
+
+    // Detect files that exist but are NOT suggested → KEEP (custom)
+    for (const existing of existingAgents) {
+      if (!agentDefs.some(d => d.name.toLowerCase() === existing.toLowerCase())) {
+        suggestedAgents.push({ name: existing, status: 'KEEP', reason: 'Custom agent', description: 'Agente customizado do projeto' });
+      }
+    }
+
+    const suggestedRules: AgentItem[] = ruleDefs.map(({ name, desc }) => ({
+      name,
+      status: itemStatus(name, existingRules, audit),
+      description: desc,
+    }));
+    for (const existing of existingRules) {
+      if (!ruleDefs.some(d => d.name.toLowerCase() === existing.toLowerCase())) {
+        suggestedRules.push({ name: existing, status: 'KEEP', reason: 'Custom rule', description: 'Regra customizada do projeto' });
+      }
+    }
+
+    const suggestedGuards: AgentItem[] = guardDefs.map(({ name, desc }) => ({
+      name,
+      status: itemStatus(name, existingGuards, audit),
+      description: desc,
+    }));
+
+    const suggestedWorkflows: AgentItem[] = workflowDefs.map(({ name, desc }) => ({
+      name,
+      status: itemStatus(name, existingWorkflows, audit),
+      description: desc,
+    }));
+    for (const existing of existingWorkflows) {
+      if (!workflowDefs.some(d => d.name.toLowerCase() === existing.toLowerCase())) {
+        suggestedWorkflows.push({ name: existing, status: 'KEEP', reason: 'Custom workflow', description: 'Workflow customizado do projeto' });
+      }
+    }
+
+    // Skills
+    const skillEntries: { name: string; source: string; description: string; status: AgentItemStatus }[] = [
+      { name: 'test-driven-development', source: 'anthropic/courses/test-driven-development', description: 'TDD workflow: Red → Green → Refactor', status: 'CREATE' as AgentItemStatus },
+      { name: 'systematic-debugging', source: 'anthropic/courses/systematic-debugging', description: 'Structured debugging methodology', status: 'CREATE' as AgentItemStatus },
+      { name: 'code-review', source: 'anthropic/courses/requesting-code-review', description: 'Code review best practices', status: 'CREATE' as AgentItemStatus },
+      { name: 'security-best-practices', source: 'anthropic/courses/security-best-practices', description: 'Security patterns and vulnerability prevention', status: 'CREATE' as AgentItemStatus },
+      { name: 'performance-optimization', source: 'anthropic/courses/performance-optimization', description: 'Performance analysis and optimization', status: 'CREATE' as AgentItemStatus },
+      { name: 'git-workflow', source: 'anthropic/courses/git-workflow', description: 'Git branching, commits, and collaboration', status: 'CREATE' as AgentItemStatus },
+    ];
+
+    if (this.stack.languages.includes('TypeScript') || this.stack.languages.includes('JavaScript')) {
+      skillEntries.push(
+        { name: 'next-best-practices', source: 'vercel-labs/skills/next-best-practices', description: 'Next.js patterns and performance', status: 'CREATE' as AgentItemStatus },
+        { name: 'api-design-principles', source: 'anthropic/courses/api-design-principles', description: 'REST/GraphQL API design', status: 'CREATE' as AgentItemStatus },
+      );
+    }
+    if (this.stack.frameworks.includes('Angular') || this.stack.frameworks.includes('Vue') || this.stack.frameworks.includes('React') || this.stack.frameworks.includes('Next.js')) {
+      skillEntries.push(
+        { name: 'frontend-design', source: 'anthropic/courses/frontend-design', description: 'Modern frontend patterns and UI/UX', status: 'CREATE' as AgentItemStatus },
+        { name: 'web-accessibility', source: 'anthropic/courses/web-accessibility', description: 'WCAG accessibility standards', status: 'CREATE' as AgentItemStatus },
+        { name: 'ui-ux-pro-max', source: 'anthropic/courses/ui-ux-pro-max', description: '50 styles, 21 palettes, 50 font pairings', status: 'CREATE' as AgentItemStatus },
+      );
+    }
+    if (this.stack.frameworks.includes('Vue')) {
+      skillEntries.push(
+        { name: 'vue-best-practices', source: 'anthropic/courses/vue-best-practices', description: 'Vue.js composition API and patterns', status: 'CREATE' as AgentItemStatus },
+      );
+    }
+    if (this.stack.languages.includes('Dart') || this.stack.frameworks.includes('Flutter')) {
+      skillEntries.push(
+        { name: 'flutter-animations', source: 'anthropic/courses/flutter-animations', description: 'Flutter animation patterns', status: 'CREATE' as AgentItemStatus },
+      );
+    }
+    if (this.stack.languages.includes('Python')) {
+      skillEntries.push(
+        { name: 'python-performance', source: 'anthropic/courses/python-performance-optimization', description: 'Python optimization and profiling', status: 'CREATE' as AgentItemStatus },
+      );
+    }
+    if (this.stack.hasDatabase) {
+      skillEntries.push(
+        { name: 'database-schema-design', source: 'anthropic/courses/database-schema-design', description: 'Schema design, indexing, migrations', status: 'CREATE' as AgentItemStatus },
+      );
+    }
+
+    // Update skill status based on existing skills directory
+    for (const skill of skillEntries) {
+      if (existingSkillNames.has(skill.name)) {
+        skill.status = 'KEEP';
+      }
     }
 
     return {
@@ -144,7 +269,7 @@ export class AgentGenerator {
       suggestedRules,
       suggestedGuards,
       suggestedWorkflows,
-      suggestedSkills,
+      suggestedSkills: skillEntries,
       audit,
       command: `architect agents ${projectPath}`,
     };

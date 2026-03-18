@@ -29,6 +29,45 @@ interface CliOptions {
   output?: string;
 }
 
+/**
+ * CLI Progress Logger — mostra estágio atual e tempo decorrido
+ * Usa output síncrono (console.log) porque as operações do Architect bloqueiam o event loop.
+ */
+class ProgressLogger {
+  private startTime: number;
+  private stageStart: number;
+  private currentStage = '';
+
+  constructor() {
+    this.startTime = Date.now();
+    this.stageStart = Date.now();
+  }
+
+  start(stage: string): void {
+    this.currentStage = stage;
+    this.stageStart = Date.now();
+    // Print immediately so user sees it BEFORE the blocking operation
+    console.log(`⏳ ${stage}`);
+  }
+
+  complete(message?: string): void {
+    const elapsed = ((Date.now() - this.stageStart) / 1000).toFixed(1);
+    const total = ((Date.now() - this.startTime) / 1000).toFixed(1);
+    const displayMsg = message || this.currentStage;
+    console.log(`✅ ${displayMsg}  (${elapsed}s | total: ${total}s)`);
+  }
+
+  fail(message: string): void {
+    const elapsed = ((Date.now() - this.stageStart) / 1000).toFixed(1);
+    console.log(`⚠️  ${message}  (${elapsed}s)`);
+  }
+
+  summary(lines: string[]): void {
+    const total = ((Date.now() - this.startTime) / 1000).toFixed(1);
+    console.log(`\n⏱️  Completed in ${total}s`);
+    lines.forEach(l => console.log(l));
+  }
+}
 function parseArgs(args: string[]): CliOptions {
   const command = args[0] || 'analyze';
   const pathArg = args.find((a) => !a.startsWith('--') && a !== command) || '.';
@@ -87,44 +126,59 @@ async function main(): Promise<void> {
   try {
     switch (options.command) {
       case 'analyze': {
+        const progress = new ProgressLogger();
+
+        progress.start('Scanning files & analyzing architecture...');
         const report = await architect.analyze(options.path);
+        progress.complete(`Scanned ${report.projectInfo.totalFiles} files (${report.projectInfo.totalLines.toLocaleString()} lines)`);
+
+        progress.start('Generating refactoring plan...');
         const plan = architect.refactor(report, options.path);
+        progress.complete(`Refactoring plan: ${plan.steps.length} steps, ${plan.totalOperations} operations`);
+
+        progress.start('Analyzing agent system...');
         const agentSuggestion = architect.suggestAgents(report, plan, options.path);
+        progress.complete(`Agents: ${agentSuggestion.suggestedAgents.length} suggested${agentSuggestion.hasExistingAgents ? ' (existing .agent/ audited)' : ''}`);
+
         const projectName = report.projectInfo.name || basename(options.path);
 
         if (options.format === 'html') {
+          progress.start('Building HTML report...');
           const htmlGenerator = new HtmlReportGenerator();
           const html = htmlGenerator.generateHtml(report, plan, agentSuggestion);
           const outputPath = options.output || `architect-report-${projectName}.html`;
           writeFileSync(outputPath, html);
-          console.log(`✅ HTML report saved to: ${outputPath}`);
-          console.log(`📊 Score: ${report.score.overall}/100`);
-          console.log(`⚠️  Anti-patterns: ${report.antiPatterns.length}`);
-          console.log(`🔧 Refactoring steps: ${plan.steps.length}`);
-          console.log(`🤖 Suggested agents: ${agentSuggestion.suggestedAgents.length}`);
+          progress.complete(`HTML report saved: ${outputPath}`);
         } else if (options.format === 'markdown') {
+          progress.start('Building Markdown report...');
           const mdGenerator = new ReportGenerator();
           const markdown = mdGenerator.generateMarkdownReport(report);
           const outputPath = options.output || `architect-report-${projectName}.md`;
           writeFileSync(outputPath, markdown);
-          console.log(`✅ Markdown report saved to: ${outputPath}`);
+          progress.complete(`Markdown report saved: ${outputPath}`);
         } else {
+          progress.start('Building JSON report...');
           const outputPath = options.output || `architect-report-${projectName}.json`;
           writeFileSync(outputPath, JSON.stringify({ report, plan, agentSuggestion }, null, 2));
-          console.log(`✅ JSON report saved to: ${outputPath}`);
+          progress.complete(`JSON report saved: ${outputPath}`);
         }
 
-        // Print summary to console
-        console.log(`\n═══════════════════════════════════════`);
-        console.log(`  SCORE: ${report.score.overall}/100`);
-        console.log(`═══════════════════════════════════════`);
-        console.log(`├─ Modularity: ${report.score.breakdown.modularity}`);
-        console.log(`├─ Coupling:   ${report.score.breakdown.coupling}`);
-        console.log(`├─ Cohesion:   ${report.score.breakdown.cohesion}`);
-        console.log(`└─ Layering:   ${report.score.breakdown.layering}`);
-        console.log(`\n📁 Files: ${report.projectInfo.totalFiles} | 📝 Lines: ${report.projectInfo.totalLines.toLocaleString()}`);
-        console.log(`⚠️  Anti-patterns: ${report.antiPatterns.length}`);
-        console.log(`🤖 Agents: ${agentSuggestion.suggestedAgents.length} suggested | ${agentSuggestion.hasExistingAgents ? 'Existing .agent/ audited' : 'No .agent/ found'}`);
+        // Print summary
+        progress.summary([
+          ``,
+          `═══════════════════════════════════════`,
+          `  SCORE: ${report.score.overall}/100`,
+          `═══════════════════════════════════════`,
+          `├─ Modularity: ${report.score.breakdown.modularity}`,
+          `├─ Coupling:   ${report.score.breakdown.coupling}`,
+          `├─ Cohesion:   ${report.score.breakdown.cohesion}`,
+          `└─ Layering:   ${report.score.breakdown.layering}`,
+          ``,
+          `📁 Files: ${report.projectInfo.totalFiles} | 📝 Lines: ${report.projectInfo.totalLines.toLocaleString()}`,
+          `⚠️  Anti-patterns: ${report.antiPatterns.length}`,
+          `🔧 Refactoring: ${plan.steps.length} steps (${plan.totalOperations} ops)`,
+          `🤖 Agents: ${agentSuggestion.suggestedAgents.length} suggested`,
+        ]);
         break;
       }
 
