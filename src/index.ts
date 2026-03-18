@@ -5,12 +5,15 @@ import { ArchitectureScorer } from './scorer.js';
 import { DiagramGenerator } from './diagram.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
+import { RefactorEngine } from './refactor-engine.js';
+import { AgentGenerator, AgentSuggestion } from './agent-generator.js';
 import { ConfigLoader } from './config.js';
-import { AnalysisReport } from './types.js';
+import { AnalysisReport, RefactoringPlan } from './types.js';
 import { relative } from 'path';
 
 export interface ArchitectCommand {
   analyze: (path: string) => Promise<AnalysisReport>;
+  refactor: (report: AnalysisReport, projectPath: string) => RefactoringPlan;
   diagram: (path: string) => Promise<string>;
   score: (path: string) => Promise<{ overall: number; breakdown: Record<string, number> }>;
   antiPatterns: (path: string) => Promise<Array<{ name: string; severity: string; description: string }>>;
@@ -80,6 +83,40 @@ class Architect implements ArchitectCommand {
 
     // Normalize paths to be relative to project root
     return this.relativizePaths(report, projectPath);
+  }
+
+  /**
+   * Generate a refactoring plan from an analysis report.
+   * Uses Tier 1 (rule engine) and Tier 2 (AST) transforms.
+   */
+  refactor(report: AnalysisReport, projectPath: string): RefactoringPlan {
+    const engine = new RefactorEngine();
+    return engine.analyze(report, projectPath);
+  }
+
+  /**
+   * Generate or audit .agent/ directory for a project.
+   */
+  agents(
+    report: AnalysisReport,
+    plan: RefactoringPlan,
+    projectPath: string,
+    outputDir?: string
+  ): { generated: string[]; audit: Array<{ type: string; category: string; file: string; description: string; suggestion?: string }> } {
+    const generator = new AgentGenerator();
+    return generator.generate(report, plan, projectPath, outputDir);
+  }
+
+  /**
+   * Suggest agents without writing files — dry-run for unified report.
+   */
+  suggestAgents(
+    report: AnalysisReport,
+    plan: RefactoringPlan,
+    projectPath: string,
+  ): AgentSuggestion {
+    const generator = new AgentGenerator();
+    return generator.suggest(report, plan, projectPath);
   }
 
   private relativizePaths(report: AnalysisReport, basePath: string): AnalysisReport {
@@ -268,6 +305,7 @@ export {
   DiagramGenerator,
   ReportGenerator,
   HtmlReportGenerator,
+  AgentGenerator,
   ConfigLoader,
 };
 

@@ -16,6 +16,7 @@
 import { architect } from './index.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
+import { RefactorReportGenerator } from './refactor-reporter.js';
 import { writeFileSync } from 'fs';
 import { resolve, basename } from 'path';
 
@@ -48,6 +49,8 @@ Usage:
 
 Commands:
   analyze         Full architecture analysis (default)
+  refactor        Generate refactoring plan with actionable steps
+  agents          Generate/audit .agent/ directory with AI agents
   diagram         Generate architecture diagram only
   score           Calculate quality score only
   anti-patterns   Detect anti-patterns only
@@ -85,16 +88,20 @@ async function main(): Promise<void> {
     switch (options.command) {
       case 'analyze': {
         const report = await architect.analyze(options.path);
+        const plan = architect.refactor(report, options.path);
+        const agentSuggestion = architect.suggestAgents(report, plan, options.path);
         const projectName = report.projectInfo.name || basename(options.path);
 
         if (options.format === 'html') {
           const htmlGenerator = new HtmlReportGenerator();
-          const html = htmlGenerator.generateHtml(report);
+          const html = htmlGenerator.generateHtml(report, plan, agentSuggestion);
           const outputPath = options.output || `architect-report-${projectName}.html`;
           writeFileSync(outputPath, html);
           console.log(`✅ HTML report saved to: ${outputPath}`);
           console.log(`📊 Score: ${report.score.overall}/100`);
           console.log(`⚠️  Anti-patterns: ${report.antiPatterns.length}`);
+          console.log(`🔧 Refactoring steps: ${plan.steps.length}`);
+          console.log(`🤖 Suggested agents: ${agentSuggestion.suggestedAgents.length}`);
         } else if (options.format === 'markdown') {
           const mdGenerator = new ReportGenerator();
           const markdown = mdGenerator.generateMarkdownReport(report);
@@ -103,7 +110,7 @@ async function main(): Promise<void> {
           console.log(`✅ Markdown report saved to: ${outputPath}`);
         } else {
           const outputPath = options.output || `architect-report-${projectName}.json`;
-          writeFileSync(outputPath, JSON.stringify(report, null, 2));
+          writeFileSync(outputPath, JSON.stringify({ report, plan, agentSuggestion }, null, 2));
           console.log(`✅ JSON report saved to: ${outputPath}`);
         }
 
@@ -117,6 +124,80 @@ async function main(): Promise<void> {
         console.log(`└─ Layering:   ${report.score.breakdown.layering}`);
         console.log(`\n📁 Files: ${report.projectInfo.totalFiles} | 📝 Lines: ${report.projectInfo.totalLines.toLocaleString()}`);
         console.log(`⚠️  Anti-patterns: ${report.antiPatterns.length}`);
+        console.log(`🤖 Agents: ${agentSuggestion.suggestedAgents.length} suggested | ${agentSuggestion.hasExistingAgents ? 'Existing .agent/ audited' : 'No .agent/ found'}`);
+        break;
+      }
+
+      case 'refactor': {
+        const report = await architect.analyze(options.path);
+        const plan = architect.refactor(report, options.path);
+        const projectName = report.projectInfo.name || basename(options.path);
+
+        if (options.format === 'json') {
+          const outputPath = options.output || `refactor-plan-${projectName}.json`;
+          writeFileSync(outputPath, JSON.stringify(plan, null, 2));
+          console.log(`✅ JSON refactoring plan saved to: ${outputPath}`);
+        } else {
+          const refactorReporter = new RefactorReportGenerator();
+          const html = refactorReporter.generateHtml(plan);
+          const outputPath = options.output || `refactor-plan-${projectName}.html`;
+          writeFileSync(outputPath, html);
+          console.log(`✅ Refactoring plan saved to: ${outputPath}`);
+        }
+
+        console.log(`\n═══════════════════════════════════════`);
+        console.log(`  REFACTORING PLAN`);
+        console.log(`═══════════════════════════════════════`);
+        console.log(`├─ Steps:      ${plan.steps.length}`);
+        console.log(`├─ Operations: ${plan.totalOperations}`);
+        console.log(`├─ Tier 1:     ${plan.tier1Steps} (rule-based)`);
+        console.log(`├─ Tier 2:     ${plan.tier2Steps} (AST-based)`);
+        console.log(`├─ Current:    ${plan.currentScore.overall}/100`);
+        console.log(`└─ Estimated:  ${plan.estimatedScoreAfter.overall}/100 (+${plan.estimatedScoreAfter.overall - plan.currentScore.overall})`);
+        break;
+      }
+
+      case 'agents': {
+        const report = await architect.analyze(options.path);
+        const plan = architect.refactor(report, options.path);
+        const outputDir = options.output || undefined;
+        const result = architect.agents(report, plan, options.path, outputDir);
+
+        console.log(`\n═══════════════════════════════════════`);
+        console.log(`  🤖 AGENT SYSTEM`);
+        console.log(`═══════════════════════════════════════`);
+
+        if (result.generated.length > 0) {
+          console.log(`\n✅ Generated ${result.generated.length} files:`);
+          for (const file of result.generated) {
+            console.log(`   📄 ${file}`);
+          }
+        }
+
+        if (result.audit.length > 0) {
+          const missing = result.audit.filter(f => f.type === 'MISSING');
+          const improvements = result.audit.filter(f => f.type === 'IMPROVEMENT');
+          const ok = result.audit.filter(f => f.type === 'OK');
+
+          if (ok.length > 0) {
+            console.log(`\n✅ ${ok.length} checks passed`);
+          }
+          if (missing.length > 0) {
+            console.log(`\n❌ ${missing.length} missing (auto-generated):`);
+            for (const f of missing) {
+              console.log(`   📄 ${f.file} — ${f.description}`);
+            }
+          }
+          if (improvements.length > 0) {
+            console.log(`\n💡 ${improvements.length} improvement suggestions:`);
+            for (const f of improvements) {
+              console.log(`   ⚡ ${f.description}`);
+              if (f.suggestion) console.log(`      → ${f.suggestion}`);
+            }
+          }
+        }
+
+        console.log(`\n📊 Score: ${report.score.overall}/100`);
         break;
       }
 
