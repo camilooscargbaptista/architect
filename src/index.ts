@@ -4,8 +4,10 @@ import { AntiPatternDetector } from './anti-patterns.js';
 import { ArchitectureScorer } from './scorer.js';
 import { DiagramGenerator } from './diagram.js';
 import { ReportGenerator } from './reporter.js';
+import { HtmlReportGenerator } from './html-reporter.js';
 import { ConfigLoader } from './config.js';
 import { AnalysisReport } from './types.js';
+import { relative } from 'path';
 
 export interface ArchitectCommand {
   analyze: (path: string) => Promise<AnalysisReport>;
@@ -59,7 +61,7 @@ class Architect implements ArchitectCommand {
 
     const suggestions = this.generateSuggestions(antiPatterns, score);
 
-    return {
+    const report: AnalysisReport = {
       timestamp: new Date().toISOString(),
       projectInfo,
       score,
@@ -75,6 +77,38 @@ class Architect implements ArchitectCommand {
         type: 'layer',
       },
     };
+
+    // Normalize paths to be relative to project root
+    return this.relativizePaths(report, projectPath);
+  }
+
+  private relativizePaths(report: AnalysisReport, basePath: string): AnalysisReport {
+    const rel = (p: string): string => {
+      if (p.startsWith('/') || p.startsWith('\\')) {
+        return relative(basePath, p) || p;
+      }
+      return p;
+    };
+
+    report.antiPatterns = report.antiPatterns.map((p) => ({
+      ...p,
+      location: rel(p.location),
+      affectedFiles: p.affectedFiles?.map(rel),
+    }));
+
+    report.layers = report.layers.map((l) => ({
+      ...l,
+      files: l.files.map(rel),
+    }));
+
+    report.dependencyGraph.nodes = report.dependencyGraph.nodes.map(rel);
+    report.dependencyGraph.edges = report.dependencyGraph.edges.map((e) => ({
+      ...e,
+      from: rel(e.from),
+      to: rel(e.to),
+    }));
+
+    return report;
   }
 
   async diagram(projectPath: string): Promise<string> {
@@ -129,10 +163,10 @@ class Architect implements ArchitectCommand {
     antiPatterns: Array<{ name: string; severity: string; description: string; suggestion: string }>,
     score: { overall: number; breakdown: Record<string, number> }
   ) {
-    const suggestions: Array<{ priority: string; title: string; description: string; impact: string }> = [];
+    const suggestions: Array<{ priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'; title: string; description: string; impact: string }> = [];
 
     for (const pattern of antiPatterns) {
-      const priority = pattern.severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH';
+      const priority = pattern.severity === 'CRITICAL' ? 'CRITICAL' as const : 'HIGH' as const;
       suggestions.push({
         priority,
         title: pattern.name,
@@ -172,5 +206,7 @@ export {
   ArchitectureScorer,
   DiagramGenerator,
   ReportGenerator,
+  HtmlReportGenerator,
   ConfigLoader,
 };
+

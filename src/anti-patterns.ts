@@ -150,8 +150,22 @@ export class AntiPatternDetector {
         const externalMethodCalls = (dependencies.get(file.path) || new Set())
           .size;
         const internalMethods = this.countMethods(file.path);
+        const name = file.name.toLowerCase();
 
-        if (internalMethods > 0 && externalMethodCalls > internalMethods * 2) {
+        // Skip NestJS infrastructure files where external deps are by design
+        const isInfraFile =
+          name.endsWith('.module.ts') ||
+          name.endsWith('.dto.ts') ||
+          name.endsWith('.entity.ts') ||
+          name.endsWith('.guard.ts') ||
+          name.endsWith('.pipe.ts') ||
+          name.endsWith('.interceptor.ts') ||
+          name.endsWith('.filter.ts') ||
+          name.endsWith('.decorator.ts') ||
+          name.endsWith('.spec.ts') ||
+          name.endsWith('.test.ts');
+
+        if (!isInfraFile && internalMethods > 0 && externalMethodCalls > internalMethods * 3) {
           patterns.push({
             name: 'Feature Envy',
             severity: 'MEDIUM',
@@ -177,7 +191,7 @@ export class AntiPatternDetector {
     const patterns: AntiPattern[] = [];
     const threshold =
       this.config.antiPatterns?.shotgunSurgery
-        ?.changePropagationThreshold || 5;
+        ?.changePropagationThreshold || 8;
 
     for (const [file, dependents] of dependencies) {
       if (dependents.size >= threshold) {
@@ -202,9 +216,11 @@ export class AntiPatternDetector {
   private countMethods(filePath: string): number {
     try {
       const content = readFileSync(filePath, 'utf-8');
-      const methodRegex = /(?:function|public|private|protected)\s+\w+\s*\(/g;
+      const methodRegex = /(?:async\s+)?(?:function|public|private|protected|static)\s+\w+\s*\(/g;
+      const arrowMethodRegex = /(?:readonly\s+)?\w+\s*=\s*(?:async\s+)?\(/g;
       const matches = content.match(methodRegex);
-      return matches ? matches.length : 0;
+      const arrowMatches = content.match(arrowMethodRegex);
+      return (matches ? matches.length : 0) + (arrowMatches ? arrowMatches.length : 0);
     } catch {
       return 0;
     }

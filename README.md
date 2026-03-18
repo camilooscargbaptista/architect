@@ -1,91 +1,104 @@
 # Architect
 
-**AI-powered architecture analysis for Claude Code**
+**AI-powered architecture analysis tool**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-blueviolet.svg)](https://github.com/anthropics/claude-code)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Understand your codebase architecture in seconds. Detect anti-patterns, visualize dependencies, and get actionable refactoring suggestions — all from Claude Code.
+Understand your codebase architecture in seconds. Detect anti-patterns, visualize dependencies, and get actionable refactoring suggestions — all from a single command.
 
 ## Overview
 
-Architect is a Claude Code plugin that performs deep structural analysis of software projects. It generates visual architecture diagrams, calculates quality metrics, and identifies architectural anti-patterns that could indicate technical debt or design problems.
+Architect performs deep structural analysis of software projects. It generates visual architecture diagrams, calculates quality metrics, and identifies architectural anti-patterns that could indicate technical debt or design problems.
 
 ## Features
 
-- **Architecture Diagram Generation** - Mermaid diagrams showing components, layers, and dependencies
-- **Dependency Graph Analysis** - Visualize how modules and services interact
+- **Architecture Quality Score** — 0-100 score with weighted component breakdown (Modularity, Coupling, Cohesion, Layering)
+- **Premium HTML Reports** — Dark-themed visual reports with interactive Mermaid diagrams, score gauges, and responsive layout
 - **Anti-Pattern Detection**
   - God Class (excessive responsibilities and methods)
   - Circular Dependencies (mutual dependencies creating tight coupling)
   - Leaky Abstractions (internal implementation details exposed publicly)
   - Feature Envy (classes excessively using other class methods)
   - Shotgun Surgery (changes requiring scattered modifications)
-- **Architecture Quality Score** - 0-100 score with weighted component breakdown
-- **Layer Detection** - Automatically identifies architectural layers (API, Service, Data, UI, Infrastructure)
-- **Refactoring Suggestions** - Prioritized, actionable recommendations
-- **Multiple Export Formats** - Mermaid, JSON, and Markdown
+- **Layer Detection** — Automatically identifies architectural layers (API, Service, Data, UI, Infrastructure)
+- **Framework Detection** — Auto-detects NestJS, React, Angular, Vue.js, Express, Next.js, TypeORM, Prisma, Spring Boot, Django, and more
+- **Multi-Language Support** — TypeScript, JavaScript, Python, Java, Go, Ruby, PHP, Rust, SQL, and more
+- **Multiple Output Formats** — HTML, JSON, and Markdown
+- **NestJS-Aware** — Calibrated thresholds for NestJS module architecture (entities, DTOs, guards, pipes, interceptors)
 
 ## Quick Start
 
 ```bash
-claude install @girardelli/architect
-claude architect analyze /path/to/project
+# Run directly with npx (no install needed)
+npx @girardelli/architect analyze ./src
+
+# Or install globally
+npm install -g @girardelli/architect
+architect analyze ./src
 ```
 
-## Commands
+## CLI Commands
 
 ### `architect analyze [path]`
-Performs complete architecture analysis including diagram generation, quality scoring, and anti-pattern detection.
+Full architecture analysis with diagram generation, quality scoring, and anti-pattern detection.
 
 ```bash
-claude architect analyze ./src
+# Generate HTML report (default)
+architect analyze ./src
+
+# Generate specific format
+architect analyze ./src --format html --output report.html
+architect analyze ./src --format json --output report.json
+architect analyze ./src --format markdown --output report.md
 ```
 
 ### `architect diagram [path]`
-Generates architecture diagram in Mermaid format without full analysis.
+Generate architecture diagram in Mermaid format.
 
 ```bash
-claude architect diagram ./
+architect diagram ./src
 ```
 
 ### `architect score [path]`
-Calculates architecture quality score only, showing component breakdowns.
+Calculate architecture quality score with component breakdowns.
 
 ```bash
-claude architect score ./src
+architect score ./src
 ```
 
 ### `architect anti-patterns [path]`
-Detects and reports anti-patterns with severity levels and remediation suggestions.
+Detect and report anti-patterns with severity levels and remediation suggestions.
 
 ```bash
-claude architect anti-patterns ./
+architect anti-patterns ./src
 ```
 
 ### `architect layers [path]`
-Analyzes layer structure and shows distribution of code across architectural layers.
+Analyze layer structure and code distribution across architectural layers.
 
 ```bash
-claude architect layers ./src
+architect layers ./src
 ```
 
 ## How It Works
 
-Architect uses a 4-agent pipeline to analyze your codebase:
+Architect uses a multi-agent pipeline to analyze your codebase:
 
-1. **Scanner Agent** - Traverses project directory, identifies file types, counts lines of code, detects framework signatures, and builds a file tree structure.
+1. **Scanner** — Traverses project directory, identifies file types, counts lines of code, detects frameworks (including parent `package.json` files), and builds a file tree structure.
 
-2. **Analyzer Agent** - Parses import statements across JavaScript, TypeScript, Python, and Java. Builds a dependency graph and identifies architectural layers (API, Service, Data, UI, Infrastructure).
+2. **Analyzer** — Parses import statements across JavaScript, TypeScript, Python, and Java. Builds a dependency graph and identifies architectural layers (API, Service, Data, UI, Infrastructure) with NestJS-aware heuristics.
 
-3. **Scorer Agent** - Evaluates architecture quality across four dimensions:
-   - **Modularity (40%)** - Appropriate module boundaries and cohesion
-   - **Coupling (25%)** - Dependencies between modules minimized
-   - **Cohesion (20%)** - Related functionality grouped together
-   - **Layering Compliance (15%)** - Proper separation of concerns
+3. **Anti-Pattern Detector** — Scans for God Classes, Circular Dependencies, Leaky Abstractions, Feature Envy, and Shotgun Surgery with configurable thresholds calibrated for modern frameworks.
 
-4. **Reporter Agent** - Generates comprehensive markdown reports with diagrams, scores, findings, and suggestions.
+4. **Scorer** — Evaluates architecture quality across four dimensions:
+   - **Modularity (40%)** — Appropriate module boundaries and cohesion
+   - **Coupling (25%)** — Dependencies between modules minimized
+   - **Cohesion (20%)** — Related functionality grouped together
+   - **Layering Compliance (15%)** — Proper separation of concerns
+
+5. **Reporter** — Generates comprehensive reports in HTML, Markdown, or JSON with diagrams, scores, findings, and suggestions.
 
 ## Configuration
 
@@ -108,7 +121,7 @@ Create a `.architect.json` file in your project root to customize analysis:
       "methodsThreshold": 10
     },
     "shotgunSurgery": {
-      "changePropagationThreshold": 5
+      "changePropagationThreshold": 8
     }
   },
   "score": {
@@ -120,43 +133,100 @@ Create a `.architect.json` file in your project root to customize analysis:
 }
 ```
 
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Architecture Analysis
+on: [push, pull_request]
+
+jobs:
+  architect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npx @girardelli/architect analyze ./src --format html --output architect-report.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architect-report
+          path: architect-report.html
+```
+
+### As a Dev Dependency
+
+```bash
+npm install -D @girardelli/architect
+```
+
+Add to your `package.json` scripts:
+
+```json
+{
+  "scripts": {
+    "architect": "architect analyze ./src --format html --output docs/architect-report.html",
+    "architect:json": "architect analyze ./src --format json --output docs/architect-report.json"
+  }
+}
+```
+
+## Programmatic Usage
+
+```typescript
+import { architect, HtmlReportGenerator } from '@girardelli/architect';
+
+const report = await architect.analyze('./src');
+
+console.log(`Score: ${report.score.overall}/100`);
+console.log(`Anti-patterns: ${report.antiPatterns.length}`);
+console.log(`Frameworks: ${report.projectInfo.frameworks.join(', ')}`);
+
+// Generate HTML
+const htmlGenerator = new HtmlReportGenerator();
+const html = htmlGenerator.generateHtml(report);
+```
+
 ## Output Example
 
 ```
-ARCHITECT ANALYSIS REPORT
-=========================
+🏗️  Architect — Architecture Analysis
+📂 Path: /path/to/project/src
+📋 Command: analyze
+📄 Format: html
 
-Architecture Quality Score: 72/100
-├─ Modularity: 78/100
-├─ Coupling: 65/100
-├─ Cohesion: 72/100
-└─ Layering: 68/100
+✅ HTML report saved to: architect-report.html
+📊 Score: 59/100
 
-Files Scanned: 147
-Lines of Code: 24,583
-Frameworks Detected: React, Express.js
+═══════════════════════════════════════
+  SCORE: 59/100
+═══════════════════════════════════════
+├─ Modularity: 70
+├─ Coupling:   85
+├─ Cohesion:   30
+└─ Layering:   25
 
-ANTI-PATTERNS DETECTED (3)
-──────────────────────────
-✗ God Class - src/services/UserManager.ts (CRITICAL)
-  Lines: 834 | Methods: 16 | Suggestions: 2
-
-✗ Circular Dependency - src/utils ↔ src/services (HIGH)
-  Path: auth.ts → cache.ts → auth.ts
-
-◆ Leaky Abstraction - src/models/Database.ts (MEDIUM)
-  Exports 12 internal types publicly
-
-REFACTORING SUGGESTIONS
-───────────────────────
-1. (CRITICAL) Split UserManager into Repository, Service, and Manager
-2. (HIGH) Break circular dependency between auth and cache modules
-3. (MEDIUM) Hide internal database types behind facade pattern
+📁 Files: 1125 | 📝 Lines: 195,709
+⚠️  Anti-patterns: 463
 ```
 
-## Screenshot
+## Supported Frameworks
 
-[Example architecture diagram showing a microservices application with components, layers, and dependencies visualized in a clean hierarchical structure]
+| Framework | Detection Method |
+|-----------|-----------------|
+| NestJS | `@nestjs/core` in dependencies |
+| React | `react` in dependencies |
+| Angular | `@angular/core` in dependencies |
+| Vue.js | `vue` in dependencies |
+| Next.js | `next` in dependencies |
+| Express.js | `express` in dependencies |
+| TypeORM | `typeorm` in dependencies |
+| Prisma | `@prisma/client` in dependencies |
+| Spring Boot | `spring-boot` in pom.xml |
+| Django | `django` in requirements.txt |
+| Flask | `flask` in requirements.txt |
 
 ## Installation
 
@@ -168,19 +238,11 @@ npm test
 
 ## Development
 
-Build the project:
 ```bash
-npm run build
-```
-
-Run tests:
-```bash
-npm test
-```
-
-Watch mode:
-```bash
-npm run dev
+npm run build    # Compile TypeScript
+npm run dev      # Watch mode
+npm test         # Run tests
+npm run lint     # ESLint
 ```
 
 ## Author
@@ -202,12 +264,6 @@ MIT License - Copyright (c) 2026 Camilo Girardelli / Girardelli Tecnologia
 
 See [LICENSE](LICENSE) for details.
 
-## Support
-
-Found a bug or have a feature request? Open an issue on GitHub.
-
-Have questions? Reach out to the author or the community.
-
 ---
 
-**Architect** - Making software architecture analysis accessible to every developer.
+**Architect** — Making software architecture analysis accessible to every developer.

@@ -1,6 +1,6 @@
 {
   "name": "@girardelli/architect",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "AI-powered architecture analysis for Claude Code",
   "author": {
@@ -17,10 +17,14 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "bin": {
+    "architect": "./dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "tsc --watch",
+    "analyze": "node dist/cli.js analyze",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "lint": "eslint src --ext .ts",
