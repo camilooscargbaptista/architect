@@ -250,9 +250,9 @@ npm run lint     # ESLint
 **Camilo Girardelli**
 IEEE Senior Member | Senior Software Architect | CTO at Girardelli Tecnologia
 
-- GitHub: [@camilogivago](https://github.com/camilogivago)
-- LinkedIn: [Camilo Girardelli](https://www.linkedin.com/in/camilo-girardelli/)
-- Company: [Girardelli Tecnologia](https://girardelli.tech)
+- GitHub: [@camilooscargbaptista](https://github.com/camilooscargbaptista)
+- LinkedIn: [Camilo Girardelli](https://www.linkedin.com/in/camilooscargirardellibaptista/)
+- Company: [Girardelli Tecnologia](https://www.girardellitecnologia.com)
 
 ## Contributing
 
