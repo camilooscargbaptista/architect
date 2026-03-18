@@ -12,6 +12,7 @@ export class ArchitectureAnalyzer {
   }
 
   analyzeDependencies(fileTree: FileNode): DependencyEdge[] {
+    this.getProjectPackageNames(fileTree);
     this.buildDependencyGraph(fileTree);
     return this.buildEdgeList();
   }
@@ -82,6 +83,61 @@ export class ArchitectureAnalyzer {
     }
   }
 
+  /**
+   * Known Python standard library modules (partial list of most common ones)
+   */
+  private static readonly PYTHON_STDLIB: Set<string> = new Set([
+    'abc', 'aifc', 'argparse', 'array', 'ast', 'asynchat', 'asyncio', 'asyncore',
+    'atexit', 'base64', 'bdb', 'binascii', 'binhex', 'bisect', 'builtins',
+    'bz2', 'calendar', 'cgi', 'cgitb', 'chunk', 'cmath', 'cmd', 'code',
+    'codecs', 'codeop', 'collections', 'colorsys', 'compileall', 'concurrent',
+    'configparser', 'contextlib', 'contextvars', 'copy', 'copyreg', 'cProfile',
+    'crypt', 'csv', 'ctypes', 'curses', 'dataclasses', 'datetime', 'dbm',
+    'decimal', 'difflib', 'dis', 'distutils', 'doctest', 'email', 'encodings',
+    'enum', 'errno', 'faulthandler', 'fcntl', 'filecmp', 'fileinput', 'fnmatch',
+    'fractions', 'ftplib', 'functools', 'gc', 'getopt', 'getpass', 'gettext',
+    'glob', 'grp', 'gzip', 'hashlib', 'heapq', 'hmac', 'html', 'http',
+    'idlelib', 'imaplib', 'imghdr', 'imp', 'importlib', 'inspect', 'io',
+    'ipaddress', 'itertools', 'json', 'keyword', 'lib2to3', 'linecache',
+    'locale', 'logging', 'lzma', 'mailbox', 'mailcap', 'marshal', 'math',
+    'mimetypes', 'mmap', 'modulefinder', 'multiprocessing', 'netrc', 'nis',
+    'nntplib', 'numbers', 'operator', 'optparse', 'os', 'ossaudiodev',
+    'pathlib', 'pdb', 'pickle', 'pickletools', 'pipes', 'pkgutil', 'platform',
+    'plistlib', 'poplib', 'posix', 'posixpath', 'pprint', 'profile', 'pstats',
+    'pty', 'pwd', 'py_compile', 'pyclbr', 'pydoc', 'queue', 'quopri',
+    'random', 're', 'readline', 'reprlib', 'resource', 'rlcompleter', 'runpy',
+    'sched', 'secrets', 'select', 'selectors', 'shelve', 'shlex', 'shutil',
+    'signal', 'site', 'smtpd', 'smtplib', 'sndhdr', 'socket', 'socketserver',
+    'sqlite3', 'ssl', 'stat', 'statistics', 'string', 'stringprep', 'struct',
+    'subprocess', 'sunau', 'symtable', 'sys', 'sysconfig', 'syslog', 'tabnanny',
+    'tarfile', 'telnetlib', 'tempfile', 'termios', 'test', 'textwrap', 'threading',
+    'time', 'timeit', 'tkinter', 'token', 'tokenize', 'tomllib', 'trace',
+    'traceback', 'tracemalloc', 'tty', 'turtle', 'turtledemo', 'types',
+    'typing', 'unicodedata', 'unittest', 'urllib', 'uu', 'uuid', 'venv',
+    'warnings', 'wave', 'weakref', 'webbrowser', 'winreg', 'winsound',
+    'wsgiref', 'xdrlib', 'xml', 'xmlrpc', 'zipapp', 'zipfile', 'zipimport',
+    'zlib', '_thread',
+  ]);
+
+  /**
+   * Resolve the project's root Python package name from directory structure.
+   * E.g., for projectPath="/foo/src", if there's a "deepguard/" dir, the package is "deepguard".
+   */
+  private projectPackageNames: Set<string> | null = null;
+
+  private getProjectPackageNames(fileTree: FileNode): Set<string> {
+    if (this.projectPackageNames) return this.projectPackageNames;
+    this.projectPackageNames = new Set<string>();
+    if (fileTree.children) {
+      for (const child of fileTree.children) {
+        if (child.type === 'directory') {
+          this.projectPackageNames.add(child.name);
+        }
+      }
+    }
+    return this.projectPackageNames;
+  }
+
   private parseImports(filePath: string): string[] {
     try {
       const content = readFileSync(filePath, 'utf-8');
@@ -93,15 +149,28 @@ export class ArchitectureAnalyzer {
           /(?:import|require)\s*(?:\{[^}]+\}|[^\s]+)\s*from\s*['"]([^'"]+)['"]/g;
         let match;
         while ((match = importRegex.exec(content)) !== null) {
-          imports.push(match[1]);
+          const importPath = match[1];
+          // Only count relative imports (./  ../) as internal dependencies
+          if (importPath.startsWith('.')) {
+            imports.push(importPath);
+          }
         }
       } else if (ext === '.py') {
-        const importRegex =
-          /(?:from|import)\s+(?:[^\s]+)\s*(?:import\s+)?([^\n]+)?/g;
+        // Parse "from X import Y" — capture X (the module source)
+        const fromImportRegex = /^from\s+([\w.]+)\s+import\b/gm;
         let match;
-        while ((match = importRegex.exec(content)) !== null) {
-          if (match[1]) {
-            imports.push(match[1].trim());
+        while ((match = fromImportRegex.exec(content)) !== null) {
+          const moduleName = match[1];
+          if (this.isInternalPythonImport(moduleName)) {
+            imports.push(moduleName);
+          }
+        }
+        // Parse "import X" — capture X
+        const directImportRegex = /^import\s+([\w.]+)(?:\s+as\s+\w+)?$/gm;
+        while ((match = directImportRegex.exec(content)) !== null) {
+          const moduleName = match[1];
+          if (this.isInternalPythonImport(moduleName)) {
+            imports.push(moduleName);
           }
         }
       } else if (ext === '.java') {
@@ -116,6 +185,28 @@ export class ArchitectureAnalyzer {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * Check if a Python import is internal to the project.
+   * Internal imports: relative (starts with .) or matches project package names.
+   * External imports: stdlib, third-party (numpy, cv2, PIL, etc.)
+   */
+  private isInternalPythonImport(moduleName: string): boolean {
+    // Relative imports are always internal
+    if (moduleName.startsWith('.')) return true;
+
+    // Get the top-level module name (e.g., "deepguard" from "deepguard.cli")
+    const topLevel = moduleName.split('.')[0];
+
+    // Check against Python stdlib
+    if (ArchitectureAnalyzer.PYTHON_STDLIB.has(topLevel)) return false;
+
+    // Check if it matches a known project package directory
+    if (this.projectPackageNames && this.projectPackageNames.has(topLevel)) return true;
+
+    // Default: treat unknown imports as external (conservative approach)
+    return false;
   }
 
   private buildEdgeList(): DependencyEdge[] {
