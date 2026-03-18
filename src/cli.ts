@@ -16,6 +16,7 @@
 import { architect } from './index.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
+import { RefactorReportGenerator } from './refactor-reporter.js';
 import { writeFileSync } from 'fs';
 import { resolve, basename } from 'path';
 
@@ -28,6 +29,45 @@ interface CliOptions {
   output?: string;
 }
 
+/**
+ * CLI Progress Logger — mostra estágio atual e tempo decorrido
+ * Usa output síncrono (console.log) porque as operações do Architect bloqueiam o event loop.
+ */
+class ProgressLogger {
+  private startTime: number;
+  private stageStart: number;
+  private currentStage = '';
+
+  constructor() {
+    this.startTime = Date.now();
+    this.stageStart = Date.now();
+  }
+
+  start(stage: string): void {
+    this.currentStage = stage;
+    this.stageStart = Date.now();
+    // Print immediately so user sees it BEFORE the blocking operation
+    console.log(`⏳ ${stage}`);
+  }
+
+  complete(message?: string): void {
+    const elapsed = ((Date.now() - this.stageStart) / 1000).toFixed(1);
+    const total = ((Date.now() - this.startTime) / 1000).toFixed(1);
+    const displayMsg = message || this.currentStage;
+    console.log(`✅ ${displayMsg}  (${elapsed}s | total: ${total}s)`);
+  }
+
+  fail(message: string): void {
+    const elapsed = ((Date.now() - this.stageStart) / 1000).toFixed(1);
+    console.log(`⚠️  ${message}  (${elapsed}s)`);
+  }
+
+  summary(lines: string[]): void {
+    const total = ((Date.now() - this.startTime) / 1000).toFixed(1);
+    console.log(`\n⏱️  Completed in ${total}s`);
+    lines.forEach(l => console.log(l));
+  }
+}
 function parseArgs(args: string[]): CliOptions {
   const command = args[0] || 'analyze';
   const pathArg = args.find((a) => !a.startsWith('--') && a !== command) || '.';
@@ -48,6 +88,8 @@ Usage:
 
 Commands:
   analyze         Full architecture analysis (default)
+  refactor        Generate refactoring plan with actionable steps
+  agents          Generate/audit .agent/ directory with AI agents
   diagram         Generate architecture diagram only
   score           Calculate quality score only
   anti-patterns   Detect anti-patterns only
@@ -84,39 +126,132 @@ async function main(): Promise<void> {
   try {
     switch (options.command) {
       case 'analyze': {
+        const progress = new ProgressLogger();
+
+        progress.start('Scanning files & analyzing architecture...');
         const report = await architect.analyze(options.path);
+        progress.complete(`Scanned ${report.projectInfo.totalFiles} files (${report.projectInfo.totalLines.toLocaleString()} lines)`);
+
+        progress.start('Generating refactoring plan...');
+        const plan = architect.refactor(report, options.path);
+        progress.complete(`Refactoring plan: ${plan.steps.length} steps, ${plan.totalOperations} operations`);
+
+        progress.start('Analyzing agent system...');
+        const agentSuggestion = architect.suggestAgents(report, plan, options.path);
+        progress.complete(`Agents: ${agentSuggestion.suggestedAgents.length} suggested${agentSuggestion.hasExistingAgents ? ' (existing .agent/ audited)' : ''}`);
+
         const projectName = report.projectInfo.name || basename(options.path);
 
         if (options.format === 'html') {
+          progress.start('Building HTML report...');
           const htmlGenerator = new HtmlReportGenerator();
-          const html = htmlGenerator.generateHtml(report);
+          const html = htmlGenerator.generateHtml(report, plan, agentSuggestion);
           const outputPath = options.output || `architect-report-${projectName}.html`;
           writeFileSync(outputPath, html);
-          console.log(`✅ HTML report saved to: ${outputPath}`);
-          console.log(`📊 Score: ${report.score.overall}/100`);
-          console.log(`⚠️  Anti-patterns: ${report.antiPatterns.length}`);
+          progress.complete(`HTML report saved: ${outputPath}`);
         } else if (options.format === 'markdown') {
+          progress.start('Building Markdown report...');
           const mdGenerator = new ReportGenerator();
           const markdown = mdGenerator.generateMarkdownReport(report);
           const outputPath = options.output || `architect-report-${projectName}.md`;
           writeFileSync(outputPath, markdown);
-          console.log(`✅ Markdown report saved to: ${outputPath}`);
+          progress.complete(`Markdown report saved: ${outputPath}`);
         } else {
+          progress.start('Building JSON report...');
           const outputPath = options.output || `architect-report-${projectName}.json`;
-          writeFileSync(outputPath, JSON.stringify(report, null, 2));
-          console.log(`✅ JSON report saved to: ${outputPath}`);
+          writeFileSync(outputPath, JSON.stringify({ report, plan, agentSuggestion }, null, 2));
+          progress.complete(`JSON report saved: ${outputPath}`);
         }
 
-        // Print summary to console
+        // Print summary
+        progress.summary([
+          ``,
+          `═══════════════════════════════════════`,
+          `  SCORE: ${report.score.overall}/100`,
+          `═══════════════════════════════════════`,
+          `├─ Modularity: ${report.score.breakdown.modularity}`,
+          `├─ Coupling:   ${report.score.breakdown.coupling}`,
+          `├─ Cohesion:   ${report.score.breakdown.cohesion}`,
+          `└─ Layering:   ${report.score.breakdown.layering}`,
+          ``,
+          `📁 Files: ${report.projectInfo.totalFiles} | 📝 Lines: ${report.projectInfo.totalLines.toLocaleString()}`,
+          `⚠️  Anti-patterns: ${report.antiPatterns.length}`,
+          `🔧 Refactoring: ${plan.steps.length} steps (${plan.totalOperations} ops)`,
+          `🤖 Agents: ${agentSuggestion.suggestedAgents.length} suggested`,
+        ]);
+        break;
+      }
+
+      case 'refactor': {
+        const report = await architect.analyze(options.path);
+        const plan = architect.refactor(report, options.path);
+        const projectName = report.projectInfo.name || basename(options.path);
+
+        if (options.format === 'json') {
+          const outputPath = options.output || `refactor-plan-${projectName}.json`;
+          writeFileSync(outputPath, JSON.stringify(plan, null, 2));
+          console.log(`✅ JSON refactoring plan saved to: ${outputPath}`);
+        } else {
+          const refactorReporter = new RefactorReportGenerator();
+          const html = refactorReporter.generateHtml(plan);
+          const outputPath = options.output || `refactor-plan-${projectName}.html`;
+          writeFileSync(outputPath, html);
+          console.log(`✅ Refactoring plan saved to: ${outputPath}`);
+        }
+
         console.log(`\n═══════════════════════════════════════`);
-        console.log(`  SCORE: ${report.score.overall}/100`);
+        console.log(`  REFACTORING PLAN`);
         console.log(`═══════════════════════════════════════`);
-        console.log(`├─ Modularity: ${report.score.breakdown.modularity}`);
-        console.log(`├─ Coupling:   ${report.score.breakdown.coupling}`);
-        console.log(`├─ Cohesion:   ${report.score.breakdown.cohesion}`);
-        console.log(`└─ Layering:   ${report.score.breakdown.layering}`);
-        console.log(`\n📁 Files: ${report.projectInfo.totalFiles} | 📝 Lines: ${report.projectInfo.totalLines.toLocaleString()}`);
-        console.log(`⚠️  Anti-patterns: ${report.antiPatterns.length}`);
+        console.log(`├─ Steps:      ${plan.steps.length}`);
+        console.log(`├─ Operations: ${plan.totalOperations}`);
+        console.log(`├─ Tier 1:     ${plan.tier1Steps} (rule-based)`);
+        console.log(`├─ Tier 2:     ${plan.tier2Steps} (AST-based)`);
+        console.log(`├─ Current:    ${plan.currentScore.overall}/100`);
+        console.log(`└─ Estimated:  ${plan.estimatedScoreAfter.overall}/100 (+${plan.estimatedScoreAfter.overall - plan.currentScore.overall})`);
+        break;
+      }
+
+      case 'agents': {
+        const report = await architect.analyze(options.path);
+        const plan = architect.refactor(report, options.path);
+        const outputDir = options.output || undefined;
+        const result = architect.agents(report, plan, options.path, outputDir);
+
+        console.log(`\n═══════════════════════════════════════`);
+        console.log(`  🤖 AGENT SYSTEM`);
+        console.log(`═══════════════════════════════════════`);
+
+        if (result.generated.length > 0) {
+          console.log(`\n✅ Generated ${result.generated.length} files:`);
+          for (const file of result.generated) {
+            console.log(`   📄 ${file}`);
+          }
+        }
+
+        if (result.audit.length > 0) {
+          const missing = result.audit.filter(f => f.type === 'MISSING');
+          const improvements = result.audit.filter(f => f.type === 'IMPROVEMENT');
+          const ok = result.audit.filter(f => f.type === 'OK');
+
+          if (ok.length > 0) {
+            console.log(`\n✅ ${ok.length} checks passed`);
+          }
+          if (missing.length > 0) {
+            console.log(`\n❌ ${missing.length} missing (auto-generated):`);
+            for (const f of missing) {
+              console.log(`   📄 ${f.file} — ${f.description}`);
+            }
+          }
+          if (improvements.length > 0) {
+            console.log(`\n💡 ${improvements.length} improvement suggestions:`);
+            for (const f of improvements) {
+              console.log(`   ⚡ ${f.description}`);
+              if (f.suggestion) console.log(`      → ${f.suggestion}`);
+            }
+          }
+        }
+
+        console.log(`\n📊 Score: ${report.score.overall}/100`);
         break;
       }
 
