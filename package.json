@@ -1,8 +1,8 @@
 {
   "name": "@girardelli/architect",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "type": "module",
-  "description": "AI-powered architecture analysis for Claude Code",
+  "description": "AI-powered architecture analysis & enterprise agent framework generator for Claude Code",
   "author": {
     "name": "Camilo Girardelli",
     "email": "contact@girardelli.tech",
@@ -54,7 +54,12 @@
     "refactoring",
     "visualization",
     "dependency graph",
-    "mermaid"
+    "mermaid",
+    "agent-framework",
+    "ai-agents",
+    "workflow-automation",
+    "quality-gates",
+    "enterprise"
   ],
   "repository": {
     "type": "git",

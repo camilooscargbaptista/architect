@@ -1,5 +1,5 @@
-import { readFileSync } from 'fs';
-import { extname, relative, dirname } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { extname, relative, dirname, resolve, join } from 'path';
 import { DependencyEdge, Layer, FileNode } from './types.js';
 
 export class ArchitectureAnalyzer {
@@ -72,8 +72,9 @@ export class ArchitectureAnalyzer {
 
   private buildDependencyGraph(node: FileNode): void {
     if (node.type === 'file') {
-      const imports = this.parseImports(node.path);
-      this.dependencyGraph.set(node.path, new Set(imports));
+      const rawImports = this.parseImports(node.path);
+      const resolvedImports = rawImports.map(imp => this.resolveImportPath(node.path, imp));
+      this.dependencyGraph.set(node.path, new Set(resolvedImports));
     }
 
     if (node.children) {
@@ -81,6 +82,39 @@ export class ArchitectureAnalyzer {
         this.buildDependencyGraph(child);
       }
     }
+  }
+
+  /**
+   * Resolve a relative import path to an absolute file path.
+   * Tries common extensions (.ts, .tsx, .js, .jsx, /index.ts, etc.)
+   */
+  private resolveImportPath(fromFile: string, importPath: string): string {
+    // Non-relative imports (Python module names, etc.) — return as-is
+    if (!importPath.startsWith('.')) return importPath;
+
+    const dir = dirname(fromFile);
+    const base = resolve(dir, importPath);
+
+    // Common extensions to try
+    const extensions = ['.ts', '.tsx', '.js', '.jsx', '.py', '.dart', '.go', '.java', '.rb'];
+    const indexFiles = extensions.map(ext => join(base, `index${ext}`));
+
+    // Try exact match first
+    if (existsSync(base) && !existsSync(base + '/')) return base;
+
+    // Try with extensions
+    for (const ext of extensions) {
+      const candidate = base + ext;
+      if (existsSync(candidate)) return candidate;
+    }
+
+    // Try as directory with index file
+    for (const indexFile of indexFiles) {
+      if (existsSync(indexFile)) return indexFile;
+    }
+
+    // Fallback: return the resolved path even if file not found
+    return base;
   }
 
   /**

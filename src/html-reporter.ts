@@ -1,5 +1,5 @@
 import { AnalysisReport, AntiPattern, RefactoringPlan, RefactorStep } from './types.js';
-import { AgentSuggestion } from './agent-generator.js';
+import { AgentSuggestion } from './agent-generator/index.js';
 
 /**
  * Generates premium visual HTML reports from AnalysisReport.
@@ -25,6 +25,7 @@ ${this.renderHeader(report)}
   <nav class="sidebar" id="reportSidebar">
     <div class="sidebar-title">Navigation</div>
     <a href="#score" class="sidebar-link active" data-section="score">📊 Score</a>
+    ${report.projectSummary ? `<a href="#overview" class="sidebar-link" data-section="overview">📋 Overview</a>` : ''}
     <a href="#layers" class="sidebar-link" data-section="layers">📐 Layers & Graph</a>
     <a href="#anti-patterns" class="sidebar-link" data-section="anti-patterns">⚠️ Anti-Patterns (${report.antiPatterns.length})</a>
     <a href="#suggestions" class="sidebar-link" data-section="suggestions">💡 Suggestions (${report.suggestions.length})</a>
@@ -39,6 +40,8 @@ ${this.renderHeader(report)}
       ${this.renderRadarChart(report)}
       ${this.renderStats(report)}
     </div>
+
+    ${this.renderProjectOverview(report)}
 
     <details class="section-accordion" id="layers" open>
       <summary class="section-accordion-header">📐 Layer Analysis & Dependencies</summary>
@@ -161,6 +164,75 @@ ${this.getScripts(report)}
     <span>📅 <strong>${date}</strong></span>
   </div>
 </div>`;
+  }
+
+  private renderProjectOverview(report: AnalysisReport): string {
+    const summary = report.projectSummary;
+    if (!summary) return '';
+
+    const modulesHtml = summary.modules.length > 0
+      ? summary.modules.map(m => `
+        <div class="overview-module">
+          <div class="overview-module-name">${this.esc(m.name)}</div>
+          <div class="overview-module-desc">${this.esc(m.description)}</div>
+          <div class="overview-module-files">${m.files} file${m.files > 1 ? 's' : ''}</div>
+        </div>`).join('')
+      : '<div class="overview-empty">Nenhum módulo detectado</div>';
+
+    const techHtml = summary.techStack
+      .map(t => `<span class="overview-tag tech-tag">${this.esc(t)}</span>`)
+      .join('');
+
+    const keywordsHtml = summary.keywords
+      .map(k => `<span class="overview-tag keyword-tag">${this.esc(k)}</span>`)
+      .join('');
+
+    const entryHtml = summary.entryPoints.length > 0
+      ? summary.entryPoints.map(e => `<code class="overview-entry">${this.esc(e)}</code>`).join(' ')
+      : '<span class="overview-empty">—</span>';
+
+    return `
+    <details class="section-accordion" id="overview" open>
+      <summary class="section-accordion-header">📋 Project Overview</summary>
+      <div class="section-accordion-body">
+        <div class="overview-grid">
+          <div class="overview-card overview-main">
+            <div class="overview-label">O que é</div>
+            <div class="overview-description">${this.esc(summary.description)}</div>
+            <div class="overview-purpose-row">
+              <span class="overview-purpose-label">Tipo:</span>
+              <span class="overview-purpose-value">${this.esc(summary.purpose)}</span>
+            </div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">Tech Stack</div>
+            <div class="overview-tags">${techHtml || '<span class="overview-empty">—</span>'}</div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">Keywords</div>
+            <div class="overview-tags">${keywordsHtml || '<span class="overview-empty">—</span>'}</div>
+          </div>
+          <div class="overview-card">
+            <div class="overview-label">Entry Points</div>
+            <div class="overview-entries">${entryHtml}</div>
+          </div>
+        </div>
+        <div class="overview-modules-section">
+          <div class="overview-label">Módulos Detectados (${summary.modules.length})</div>
+          <div class="overview-modules-grid">
+            ${modulesHtml}
+          </div>
+        </div>
+      </div>
+    </details>`;
+  }
+
+  private esc(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   private renderScoreHero(report: AnalysisReport): string {
@@ -301,6 +373,42 @@ ${this.getScripts(report)}
       layer: layerMap[n] || 'Other',
     }));
 
+    // ── Fallback: color by module/directory when layer detection is weak ──
+    const otherCount = allNodes.filter(n => n.layer === 'Other').length;
+    const useModuleColoring = allNodes.length > 0 && (otherCount / allNodes.length) > 0.7;
+
+    // Palette for module-based coloring (10 distinct, vibrant colors)
+    const modulePalette = [
+      '#3b82f6', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6',
+      '#06b6d4', '#ef4444', '#84cc16', '#f97316', '#6366f1',
+    ];
+
+    let moduleColorMap: Record<string, string> = {};
+    if (useModuleColoring) {
+      // Extract module (first meaningful directory) from each node path
+      const getModule = (filePath: string): string => {
+        const parts = filePath.split('/');
+        if (parts.length < 2) return 'root';
+        const first = parts[0];
+        // If first dir is common source dir, use second level
+        if (['src', 'lib', 'app', 'packages', 'modules', 'features', 'apps'].includes(first)) {
+          return parts.length > 2 ? parts[1] : first;
+        }
+        return first;
+      };
+
+      // Assign colors to modules
+      const moduleNames = [...new Set(allNodes.map(n => getModule(n.id)))];
+      moduleNames.forEach((mod, i) => {
+        moduleColorMap[mod] = modulePalette[i % modulePalette.length];
+      });
+
+      // Reassign layer field to module name for coloring
+      for (const node of allNodes) {
+        node.layer = getModule(node.id);
+      }
+    }
+
     // Build links only between real files
     const allLinks = report.dependencyGraph.edges
       .filter(e => realFiles.has(e.from) && realFiles.has(e.to))
@@ -314,25 +422,38 @@ ${this.getScripts(report)}
     const limitedLinks = allLinks.filter(l => limitedNodeIds.has(l.source) && limitedNodeIds.has(l.target));
     const isLimited = allNodes.length > maxNodes;
 
-    // Collect unique layers from limited nodes
+    // Collect unique layers/modules from limited nodes
     const uniqueLayers = [...new Set(limitedNodes.map(n => n.layer))];
+
+    // Build dynamic color map for legend and D3
+    const colorMap: Record<string, string> = useModuleColoring
+      ? moduleColorMap
+      : { API: '#ec4899', Service: '#3b82f6', Data: '#10b981', UI: '#f59e0b', Infrastructure: '#8b5cf6', Other: '#64748b' };
+
+    const legendLabel = useModuleColoring ? 'Colored by module' : 'Colored by layer';
+
+    const legendHtml = uniqueLayers.map(l => {
+      const color = colorMap[l] || '#64748b';
+      return `<span class="legend-item"><span class="legend-dot" style="background: ${color}"></span> ${l}</span>`;
+    }).join('');
+
+    const filterHtml = uniqueLayers.map(l => {
+      const color = colorMap[l] || '#64748b';
+      return `<label class="graph-filter-check"><input type="checkbox" checked data-layer="${l}" onchange="toggleGraphLayer('${l}', this.checked)"><span class="legend-dot" style="background: ${color}"></span> ${l}</label>`;
+    }).join('');
 
     return `
 <h2 class="section-title">🔗 Dependency Graph</h2>
 <div class="card graph-card">
   <div class="graph-controls">
     <div class="graph-legend">
-      <span class="legend-item"><span class="legend-dot" style="background: #ec4899"></span> API</span>
-      <span class="legend-item"><span class="legend-dot" style="background: #3b82f6"></span> Service</span>
-      <span class="legend-item"><span class="legend-dot" style="background: #10b981"></span> Data</span>
-      <span class="legend-item"><span class="legend-dot" style="background: #f59e0b"></span> UI</span>
-      <span class="legend-item"><span class="legend-dot" style="background: #8b5cf6"></span> Infra</span>
-      <span class="legend-item"><span class="legend-dot" style="background: #64748b"></span> Other</span>
+      <span class="legend-label" style="color:#94a3b8;font-size:11px;margin-right:8px;">${legendLabel}:</span>
+      ${legendHtml}
     </div>
     <div class="graph-filters">
       <input type="text" id="graphSearch" class="graph-search" placeholder="🔍 Search node..." oninput="filterGraphNodes(this.value)">
       <div class="graph-layer-filters">
-        ${uniqueLayers.map(l => `<label class="graph-filter-check"><input type="checkbox" checked data-layer="${l}" onchange="toggleGraphLayer('${l}', this.checked)"><span class="legend-dot" style="background: ${({'API': '#ec4899', 'Service': '#3b82f6', 'Data': '#10b981', 'UI': '#f59e0b', 'Infrastructure': '#8b5cf6'} as Record<string, string>)[l] || '#64748b'}"></span> ${l}</label>`).join('')}
+        ${filterHtml}
       </div>
     </div>
     ${isLimited ? `<div class="graph-limit-notice">Showing top ${maxNodes} of ${allNodes.length} source files (most connected) · ${limitedLinks.length} links</div>` : ''}
@@ -340,8 +461,9 @@ ${this.getScripts(report)}
   <div id="dep-graph" style="width:100%; min-height:500px;"></div>
   <div class="graph-hint">🖱️ Drag nodes • Scroll to zoom • Double-click to reset • Node size = connections</div>
 </div>
-<script type="application/json" id="graph-nodes">${JSON.stringify(limitedNodes)}<\\/script>
-<script type="application/json" id="graph-links">${JSON.stringify(limitedLinks)}<\\/script>`;
+<script type="application/json" id="graph-nodes">${JSON.stringify(limitedNodes)}${'</'+'script>'}
+<script type="application/json" id="graph-links">${JSON.stringify(limitedLinks)}${'</'+'script>'}
+<script type="application/json" id="graph-colors">${JSON.stringify(colorMap)}${'</'+'script>'}`;
   }
 
   /**
@@ -465,7 +587,7 @@ ${this.getScripts(report)}
   private renderFooter(): string {
     return `
 <div class="footer">
-  <p>Generated by <a href="https://github.com/camilooscargbaptista/architect">🏗️ Architect v2.0</a> — AI-powered architecture analysis + refactoring engine</p>
+  <p>Generated by <a href="https://github.com/camilooscargbaptista/architect">⚡ Architect v3.0</a> — Enterprise Architecture Intelligence</p>
   <p>By <strong>Camilo Girardelli</strong> · <a href="https://www.girardellitecnologia.com">Girardelli Tecnologia</a></p>
 </div>`;
   }
@@ -764,7 +886,9 @@ function animateCounter(el, target) {
   const height = 500;
   container.style.height = height + 'px';
 
-  const layerColors = {
+  // Dynamic color map — loaded from JSON (supports both layer and module coloring)
+  const colorsEl = document.getElementById('graph-colors');
+  const layerColors = colorsEl ? JSON.parse(colorsEl.textContent || '{}') : {
     API: '#ec4899', Service: '#3b82f6', Data: '#10b981',
     UI: '#f59e0b', Infrastructure: '#8b5cf6', Other: '#64748b',
   };
@@ -1356,6 +1480,132 @@ function animateCounter(el, target) {
   .section-accordion[open] > .section-accordion-header::after { transform: rotate(90deg); }
   .section-accordion-header::-webkit-details-marker { display: none; }
   .section-accordion-body { padding: 0.5rem 0; }
+
+  /* ── Project Overview ── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .overview-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+  .overview-main {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+    border-color: #3b82f6;
+  }
+  .overview-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 0.75rem;
+  }
+  .overview-description {
+    font-size: 1.1rem;
+    color: #e2e8f0;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+  }
+  .overview-purpose-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .overview-purpose-label {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+  .overview-purpose-value {
+    font-size: 0.85rem;
+    color: #a78bfa;
+    font-weight: 600;
+    background: rgba(139,92,246,0.1);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+  }
+  .overview-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .overview-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .tech-tag {
+    background: rgba(59,130,246,0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.3);
+  }
+  .keyword-tag {
+    background: rgba(16,185,129,0.1);
+    color: #34d399;
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+  .overview-entry {
+    font-size: 0.8rem;
+    background: rgba(255,255,255,0.05);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    color: #e2e8f0;
+    font-family: 'SF Mono', monospace;
+  }
+  .overview-entries {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .overview-modules-section {
+    margin-top: 0.5rem;
+  }
+  .overview-modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  .overview-module {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.2s;
+  }
+  .overview-module:hover {
+    border-color: #3b82f6;
+  }
+  .overview-module-name {
+    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+  .overview-module-desc {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+  .overview-module-files {
+    color: #64748b;
+    font-size: 0.7rem;
+  }
+  .overview-empty {
+    color: #475569;
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+  @media (max-width: 768px) {
+    .overview-grid { grid-template-columns: 1fr; }
+  }
 
   /* ── Operations Accordion (inside refactoring steps) ── */
   .rstep-ops-accordion {

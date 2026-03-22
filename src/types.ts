@@ -82,6 +82,16 @@ export interface AnalysisReport {
     mermaid: string;
     type: 'component' | 'layer' | 'dependency';
   };
+  projectSummary?: ProjectSummary;
+}
+
+export interface ProjectSummary {
+  description: string;
+  purpose: string;
+  modules: { name: string; files: number; description: string }[];
+  techStack: string[];
+  entryPoints: string[];
+  keywords: string[];
 }
 
 export interface ArchitectConfig {
