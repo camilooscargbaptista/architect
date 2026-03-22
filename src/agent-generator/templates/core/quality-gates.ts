@@ -1,12 +1,17 @@
-import { TemplateContext } from '../../types.js';
+import { TemplateContext, EnrichedTemplateContext } from '../../types.js';
+import { getEnriched, depthAtLeast, complianceBadges, depthIndicator } from '../template-helpers.js';
 
 /**
  * Generates enterprise-grade QUALITY-GATES.md
  * 3-level gates (CRITICAL/IMPORTANT/DESIRABLE), per-layer checklists,
  * explicit blockers list, metrics table, 4-stage verification process.
+ *
+ * Context-aware: Adds compliance-specific gates, untested modules warnings,
+ * and domain-specific blockers when enriched data is available.
  */
-export function generateQualityGates(ctx: TemplateContext): string {
+export function generateQualityGates(ctx: TemplateContext | EnrichedTemplateContext): string {
   const { stack, projectName, config, report } = ctx;
+  const enriched = getEnriched(ctx);
 
   return `---
 antigravity:
@@ -70,6 +75,32 @@ antigravity:
 | Anti-patterns CRITICAL | 0 | 0 | > 0 |
 | Dependencies per file | — | < 5 | > 10 |
 
+${enriched.domain?.compliance?.length ? `---
+
+## 🔒 Compliance-Specific Gates
+
+${enriched.domain?.compliance?.map((comp: any) => {
+  const checks: Record<string, string> = {
+    'LGPD': '□ Dados pessoais anonimizados em logs/cache\n□ Direito ao esquecimento implementado\n□ Consentimento explícito documentado',
+    'HIPAA': '□ Criptografia AES-256 para PHI em repouso\n□ TLS 1.2+ para PHI em trânsito\n□ Auditoria de acesso a PHI registrada\n□ Business Associate Agreement (BAA) em vigor',
+    'PCI-DSS': '□ Criptografia de dados de cartão (nunca armazenar)\n□ WAF ativo em endpoints de pagamento\n□ Segmentation: rede de cartões isolada\n□ Logs de acesso retidos por 1+ ano\n□ Penetration testing anual documentado',
+    'SOX': '□ Trilha de auditoria completa para transações\n□ Controles de segregação de funções implementados\n□ Change management process documentado\n□ Acesso de usuário revogado em < 24h',
+    'GDPR': '□ DPIA (Data Protection Impact Assessment) completada\n□ Processamento baseado em legal basis documentado\n□ Data residency (EU) garantido\n□ DPO nomeado se aplicável',
+  };
+  return `### ${comp.name}
+${checks[comp.name] || `□ Verificar: ${comp.mandatoryChecks.join('\n□ Verificar: ')}`}`;
+}).join('\n\n')}` : ''}
+
+${enriched.untestedModules?.length ? `---
+
+## ⚠️ Módulos Sem Testes
+
+Os seguintes módulos **DEVEM TER** cobertura de testes antes de merge:
+
+${enriched.untestedModules.map((m: any) => `- ⚠️ \`${m}\``).join('\n')}
+
+**Ação Obrigatória:** Criar testes para cada módulo listado acima. Se a cobertura for impossível, documentar no BLOCKERS.` : ''}
+
 ---
 
 ## ⛔ BLOCKERS — Merge PROIBIDO se:
@@ -77,6 +108,24 @@ antigravity:
 \`\`\`
 ${config.blockers.map(b => `❌ ${b}`).join('\n')}
 \`\`\`
+
+${enriched.domain?.compliance?.length ? `
+
+### Domain-Specific Blockers (Compliance)
+
+\`\`\`
+${enriched.domain?.compliance?.map((comp: any) => {
+  const blockers: Record<string, string> = {
+    'LGPD': '❌ Senhas/tokens em logs (violação de privacidade)',
+    'HIPAA': '❌ PHI (Protected Health Information) em texto claro',
+    'PCI-DSS': '❌ Dados de cartão armazenados ou em logs',
+    'SOX': '❌ Transação sem trilha de auditoria',
+    'GDPR': '❌ Transferência de dados para fora da EU',
+  };
+  return blockers[comp.name] || `❌ Violação de ${comp.name}`;
+}).join('\n')}
+\`\`\`
+` : ''}
 
 ---
 
@@ -133,6 +182,20 @@ ${config.blockers.map(b => `❌ ${b}`).join('\n')}
 □ Impacto em queries existentes avaliado
 □ Sem ALTER TABLE em tabelas com milhões de rows sem plano
 \`\`\`
+
+${depthAtLeast(ctx, 'large') ? `---
+
+## 🏢 Governance Gates (Enterprise ${depthAtLeast(ctx, 'enterprise') ? '/ Large Projects' : 'Projects'})
+
+${depthAtLeast(ctx, 'large') ? `\`\`\`
+□ Change Advisory Board (CAB) review para temas de arquitetura
+□ Aprovação do Tech Lead antes de merge em release branches
+□ Documentação de decisões arquiteturais (ADR) para mudanças maiores
+□ Impacto em performance/segurança avaliado formalmente
+□ Backward compatibility verificado (database migrations, API versioning)
+□ SLA e disponibilidade confirmados (para features críticas)
+\`\`\`` : ''}
+` : ''}
 
 ---
 
