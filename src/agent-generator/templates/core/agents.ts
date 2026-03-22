@@ -1,4 +1,5 @@
 import { TemplateContext, EnrichedTemplateContext } from '../../types.js';
+import { crossRef, depthIndicator, depthAtLeast, getEnriched } from '../template-helpers.js';
 
 /**
  * Generates all specialist agent cards.
@@ -7,12 +8,6 @@ import { TemplateContext, EnrichedTemplateContext } from '../../types.js';
  * All functions support both TemplateContext (backward compat) and EnrichedTemplateContext.
  * Use getEnriched() to safely extract enriched fields when available.
  */
-
-/** Safely extract enriched context fields, returning defaults if not available */
-function getEnriched(ctx: TemplateContext): Partial<EnrichedTemplateContext> {
-  if ('domain' in ctx) return ctx as EnrichedTemplateContext;
-  return {};
-}
 
 export function generateBackendAgent(ctx: TemplateContext | EnrichedTemplateContext): string {
   const { stack, projectName, config, report } = ctx;
@@ -86,6 +81,8 @@ version: 3.0.0
 
 # 🔧 ${lang.toUpperCase()} BACKEND DEVELOPER
 
+${depthIndicator(ctx)}
+
 > Especialista em backend ${fw} para ${projectName}
 
 ## Stack
@@ -149,6 +146,8 @@ O documento deve conter:
 - Regras de negócio aplicadas
 - Headers necessários (auth, pagination, etc.)
 
+${crossRef('backend', ctx)}
+
 ---
 
 **Gerado por Architect v3.0**
@@ -202,6 +201,8 @@ version: 3.0.0
 
 # 🎨 ${fw.toUpperCase().replace('.', '')} FRONTEND DEVELOPER
 
+${depthIndicator(ctx)}
+
 > Especialista em frontend ${fw} para ${projectName}
 
 ## Stack Frontend
@@ -242,6 +243,8 @@ ${modulesGuide}${endpointsGuide}
 □ Lazy loading onde aplicável
 □ Cobertura ≥ ${config.coverageMinimum}%
 \`\`\`
+
+${crossRef('frontend', ctx)}
 
 ---
 
@@ -363,6 +366,8 @@ version: 3.0.0
 
 # 🛡️ SECURITY AUDITOR
 
+${depthIndicator(ctx)}
+
 > Análise de segurança para ${projectName}
 
 ## Checklist OWASP Top 10
@@ -394,6 +399,8 @@ ${complianceSection}${integrationsSection}${domainThreatsSection}
 1. Lista de findings com severidade (CRITICAL/HIGH/MEDIUM/LOW)
 2. Recomendações de mitigação
 3. Threat model (se aplicável)
+
+${crossRef('security-auditor', ctx)}
 
 ---
 
@@ -509,6 +516,8 @@ version: 3.0.0
 
 # 🧪 QA TEST ENGINEER
 
+${depthIndicator(ctx)}
+
 > Qualidade de testes para ${projectName}
 
 ## Metas Inegociáveis
@@ -549,6 +558,8 @@ ${testScenariosSection}${domainTestsSection}
 
 ${plan.steps.slice(0, 5).map((step, idx) => `${idx + 1}. ${step.description} (${step.priority || 'MEDIUM'})`).join('\n')}
 ${plan.steps.length > 5 ? `\n... e mais ${plan.steps.length - 5} steps.` : ''}
+
+${crossRef('qa-test', ctx)}
 
 ---
 
@@ -636,6 +647,8 @@ version: 3.0.0
 
 # 📊 TECH DEBT CONTROLLER
 
+${depthIndicator(ctx)}
+
 > Controle de débito técnico para ${projectName}
 
 ## Estado Atual
@@ -682,6 +695,8 @@ Mínimo Aceitável:       ${config.scoreThreshold}/100
 □ Médios: adicionar ao backlog técnico
 □ Verificar com: architect score ./src
 \`\`\`
+
+${crossRef('tech-debt', ctx)}
 
 ---
 
@@ -781,6 +796,8 @@ antigravity:
 
 # 🔍 CODE REVIEW CHECKLIST — ${projectName}
 
+${depthIndicator(ctx)}
+
 > **Todo PR deve ser verificado contra este checklist.**
 
 ## Obrigatório
@@ -823,6 +840,8 @@ antigravity:
 □ Dados sensíveis protegidos
 \`\`\`
 ${stackReviewItems}${domainReviewItems}${integrationReviewItems}
+
+${crossRef('code-review', ctx)}
 
 ---
 
@@ -1113,6 +1132,8 @@ version: 3.0.0
 
 # 🗄️ DATABASE ENGINEER
 
+${depthIndicator(ctx)}
+
 > Schema design, migrations, e performance para ${projectName}
 ${entitiesSection}${migrationStrategy}${indexingStrategy}${domainPatternsSection}${complianceSection}
 
@@ -1128,6 +1149,8 @@ ${entitiesSection}${migrationStrategy}${indexingStrategy}${domainPatternsSection
 □ Queries otimizadas (sem N+1, sem full scan)
 □ Performance de migrations testada em staging
 \`\`\`
+
+${crossRef('database-engineer', ctx)}
 
 ---
 
@@ -1238,6 +1261,8 @@ version: 3.0.0
 
 # 📱 FLUTTER UI DEVELOPER
 
+${depthIndicator(ctx)}
+
 > Screens mobile, widgets, navegação para ${projectName}
 
 ## Stack
@@ -1288,6 +1313,8 @@ lib/
 └── __tests__/
     └── [feature]_test.dart
 \`\`\`
+
+${crossRef('flutter', ctx)}
 
 ---
 
