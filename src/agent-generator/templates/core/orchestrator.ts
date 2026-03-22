@@ -1,11 +1,22 @@
-import { TemplateContext } from '../../types.js';
+import { TemplateContext, EnrichedTemplateContext } from '../../types.js';
+import {
+  getEnriched,
+  isEnriched,
+  depthScale,
+  depthAtLeast,
+  domainBadge,
+  complianceBadges,
+  depthIndicator,
+  modulesSummaryTable,
+  integrationsSummary,
+} from '../template-helpers.js';
 
 /**
  * Generates enterprise-grade AGENT-ORCHESTRATOR.md
  * ~800+ lines: 5-phase protocol, mandatory artifact gates, business interrogation,
  * parallel dispatch, C4/BDD/TDD inline templates, risk matrix, implementation order.
  */
-export function generateOrchestrator(ctx: TemplateContext): string {
+export function generateOrchestrator(ctx: TemplateContext | EnrichedTemplateContext): string {
   const { report, stack, projectName, stackLabel, plan, config } = ctx;
   const layers = report.layers.map(l => l.name).join(', ') || 'Not detected';
   const antiPatterns = report.antiPatterns.map(a => `${a.name} (${a.severity})`).join(', ') || 'None';
@@ -92,6 +103,8 @@ version: 3.0.0
 | **Linhas** | ${report.projectInfo.totalLines.toLocaleString()} |
 | **Cobertura Mínima** | ${config.coverageMinimum}% |
 | **Refatorações Pendentes** | ${plan.steps.length} steps |
+
+${depthAtLeast(ctx, 'medium') ? `\n---\n\n## 📍 Contexto Enriquecido\n\n${depthIndicator(ctx)}\n${domainBadge(ctx)}${modulesSummaryTable(ctx) ? `\n### 📦 Resumo de Módulos\n\n${modulesSummaryTable(ctx)}` : ''}${integrationsSummary(ctx)}${complianceBadges(ctx)}` : ''}
 
 ---
 
@@ -332,12 +345,18 @@ Quando dois agentes discordam:
 `;
 }
 
-function buildAgentDispatch(ctx: TemplateContext): string {
+function buildAgentDispatch(ctx: TemplateContext | EnrichedTemplateContext): string {
   const { stack } = ctx;
   let dispatch = '';
 
+  // Add module context if enriched
+  const enriched = isEnriched(ctx) ? ctx : null;
+  const moduleContext = enriched?.modules?.length
+    ? ` (${enriched.modules.slice(0, 3).map((m: any) => m.name).join(', ')})`
+    : '';
+
   if (stack.hasBackend) {
-    dispatch += `    ├──→ [${stack.primary.toUpperCase()}-BACKEND-DEVELOPER]\n`;
+    dispatch += `    ├──→ [${stack.primary.toUpperCase()}-BACKEND-DEVELOPER]${moduleContext}\n`;
     dispatch += `    │    • Arquitetura de serviços e APIs\n`;
     dispatch += `    │    • Lógica de negócio e validações\n`;
     dispatch += `    │    • Entities, DTOs, migrations\n`;
@@ -379,7 +398,7 @@ function buildAgentDispatch(ctx: TemplateContext): string {
   return dispatch;
 }
 
-function buildBusinessQuestions(ctx: TemplateContext): string {
+function buildBusinessQuestions(ctx: TemplateContext | EnrichedTemplateContext): string {
   const questions = [
     'Q1: Quem são os atores envolvidos? (personas)',
     'Q2: Qual o impacto em receita/negócio?',
@@ -393,19 +412,37 @@ function buildBusinessQuestions(ctx: TemplateContext): string {
     'Q10: Há integrações externas envolvidas?',
   ];
 
+  // Add domain-specific questions if enriched context available
+  const enriched = isEnriched(ctx) ? ctx : null;
+  if (enriched?.domain) {
+    const { domain } = enriched;
+    questions.push(`Q11: Como isso se alinha com o domínio ${domain.domain}?`);
+
+    if (domain.compliance?.length) {
+      const complianceNames = domain.compliance.map((c: any) => c.name).join(', ');
+      questions.push(`Q12: Como garantir conformidade com ${complianceNames}?`);
+    }
+
+    if (domain.integrations?.length) {
+      const integrationNames = domain.integrations.slice(0, 3).map((i: any) => i.name).join(', ');
+      questions.push(`Q13: Como essa mudança afeta as integrações com ${integrationNames}?`);
+    }
+  }
+
   if (ctx.stack.hasDatabase) {
+    const startIdx = enriched?.domain ? 14 : 11;
     questions.push(
-      'Q11: Volume estimado de dados?',
-      'Q12: Há picos de uso previsíveis?',
-      'Q13: Processamento síncrono ou assíncrono?',
+      `Q${startIdx}: Volume estimado de dados?`,
+      `Q${startIdx + 1}: Há picos de uso previsíveis?`,
+      `Q${startIdx + 2}: Processamento síncrono ou assíncrono?`,
     );
   }
 
   questions.push(
-    'Q14: Quem precisa de autenticação?',
-    'Q15: Quais permissões são necessárias?',
-    'Q16: Há dados sensíveis envolvidos?',
-    'Q17: Quais ameaças são relevantes?',
+    `Q${questions.length + 1}: Quem precisa de autenticação?`,
+    `Q${questions.length + 1}: Quais permissões são necessárias?`,
+    `Q${questions.length + 1}: Há dados sensíveis envolvidos?`,
+    `Q${questions.length + 1}: Quais ameaças são relevantes?`,
   );
 
   return questions.map(q => `- **${q}**`).join('\n');
