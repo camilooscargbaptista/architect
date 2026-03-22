@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200, height=630">
+<title>Architect v3.0 — LinkedIn Banner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0a0a0f;
+    color: #e2e8f0;
+    position: relative;
+  }
+
+  /* ── Animated grid background ── */
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+  }
+
+  /* ── Gradient orbs ── */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+  }
+  .orb-1 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.15), transparent 70%);
+    top: -100px; left: -50px;
+  }
+  .orb-2 {
+    width: 350px; height: 350px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 70%);
+    bottom: -80px; right: 200px;
+  }
+  .orb-3 {
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, rgba(236, 72, 153, 0.08), transparent 70%);
+    top: 100px; right: -50px;
+  }
+
+  /* ── Layout ── */
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    padding: 48px 56px;
+    gap: 48px;
+  }
+
+  /* ── Left column ── */
+  .left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .top-badges {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .badge-os {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #34d399;
+  }
+  .badge-new {
+    background: rgba(251, 146, 60, 0.15);
+    border: 1px solid rgba(251, 146, 60, 0.3);
+    color: #fb923c;
+  }
+  .badge-ai {
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: #a78bfa;
+  }
+
+  .title-block h1 {
+    font-size: 72px;
+    font-weight: 900;
+    letter-spacing: -3px;
+    line-height: 0.95;
+    background: linear-gradient(135deg, #e2e8f0 0%, #38bdf8 50%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+
+  .version-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(139, 92, 246, 0.2));
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 6px;
+    padding: 4px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+  }
+  .version-tag .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+  }
+
+  .subtitle {
+    font-size: 18px;
+    font-weight: 400;
+    color: #94a3b8;
+    line-height: 1.5;
+    max-width: 420px;
+    margin-bottom: 28px;
+  }
+  .subtitle strong {
+    color: #e2e8f0;
+    font-weight: 600;
+  }
+
+  /* ── Feature pills ── */
+  .features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .feature-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+  .feature-pill .icon {
+    font-size: 14px;
+  }
+  .feature-pill.highlight {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.2);
+    color: #7dd3fc;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .author {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+  .author span {
+    font-weight: 400;
+    color: #64748b;
+    font-size: 12px;
+  }
+  .github-link {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .github-link .gh-icon {
+    width: 16px; height: 16px;
+    background: #64748b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #0a0a0f;
+    font-weight: 800;
+  }
+
+  /* ── Right column: Terminal ── */
+  .right {
+    width: 500px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .terminal {
+    flex: 1;
+    background: #0f1219;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.03),
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      0 0 40px rgba(56, 189, 248, 0.05);
+  }
+
+  .terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  .terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ef4444; }
+  .dot-y { background: #f59e0b; }
+  .dot-g { background: #22c55e; }
+  .terminal-title {
+    flex: 1;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  .terminal-body {
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: #94a3b8;
+  }
+
+  .t-line { display: flex; align-items: baseline; gap: 0; margin-bottom: 1px; white-space: nowrap; }
+  .t-phase { display: flex; align-items: baseline; gap: 0; margin-bottom: 0; white-space: nowrap; }
+  .t-result { display: flex; align-items: baseline; gap: 0; margin-bottom: 4px; white-space: nowrap; padding-left: 30px; }
+
+  .t-dim { color: #334155; }
+  .t-idx { color: #475569; font-size: 10px; margin-right: 6px; }
+  .t-cyan { color: #22d3ee; }
+  .t-blue { color: #3b82f6; }
+  .t-magenta { color: #c084fc; }
+  .t-orange { color: #fb923c; }
+  .t-yellow { color: #fbbf24; }
+  .t-green { color: #4ade80; }
+  .t-red { color: #f87171; }
+  .t-white { color: #e2e8f0; font-weight: 600; }
+  .t-bold { font-weight: 700; }
+  .t-label { color: #e2e8f0; font-weight: 600; margin: 0 4px; }
+
+  .t-bar { letter-spacing: -1px; }
+  .t-check { color: #4ade80; margin-right: 4px; }
+  .t-dot { margin-right: 4px; }
+
+  /* Score section */
+  .score-section {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+  .score-title {
+    color: #e2e8f0;
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .score-meter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .meter-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    flex: 1;
+    background: #1e293b;
+  }
+  .meter-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+  }
+  .score-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #38bdf8;
+    min-width: 52px;
+    text-align: right;
+  }
+
+  .breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 16px;
+    font-size: 10.5px;
+  }
+  .breakdown-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .breakdown-label { color: #64748b; min-width: 70px; }
+  .breakdown-bar {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: #1e293b;
+    overflow: hidden;
+  }
+  .breakdown-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+  .fill-high { background: #4ade80; }
+  .fill-med { background: #fbbf24; }
+  .fill-low { background: #f87171; }
+  .breakdown-val { color: #94a3b8; font-weight: 600; min-width: 20px; text-align: right; }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 10px;
+    color: #64748b;
+  }
+  .stat { display: flex; align-items: center; gap: 3px; }
+  .stat-val { color: #e2e8f0; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="container">
+    <!-- LEFT -->
+    <div class="left">
+      <div>
+        <div class="top-badges">
+          <span class="badge badge-os">&#9679; Open Source</span>
+          <span class="badge badge-new">&#9733; v3.0</span>
+          <span class="badge badge-ai">&#9880; AI-Powered</span>
+        </div>
+
+        <div class="title-block">
+          <h1>Architect</h1>
+        </div>
+        <div class="version-tag">
+          <span class="dot"></span> v3.0 — Enterprise Architecture Intelligence
+        </div>
+
+        <p class="subtitle">
+          Analyze, score, and evolve your <strong>software architecture</strong> with AI.
+          Real-time pipeline, interactive reports, and agent generation.
+        </p>
+
+        <div class="features">
+          <span class="feature-pill highlight"><span class="icon">⚡</span> Real-time Pipeline</span>
+          <span class="feature-pill highlight"><span class="icon">🔒</span> Security Rules (OWASP)</span>
+          <span class="feature-pill"><span class="icon">📊</span> Score 0-100</span>
+          <span class="feature-pill"><span class="icon">🔗</span> D3 Dependency Graph</span>
+          <span class="feature-pill"><span class="icon">🤖</span> Agent Generation</span>
+          <span class="feature-pill"><span class="icon">🔧</span> Refactoring Engine</span>
+          <span class="feature-pill"><span class="icon">🐛</span> Anti-Pattern Detection</span>
+          <span class="feature-pill"><span class="icon">🏗️</span> 8+ Frameworks</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="author">
+          Camilo Girardelli <span>&nbsp;· IEEE Senior Member · girardellitecnologia.com</span>
+        </div>
+        <div class="github-link">
+          <span class="gh-icon">G</span> github.com/camilooscargbaptista/architect
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Terminal -->
+    <div class="right">
+      <div class="terminal">
+        <div class="terminal-header">
+          <div class="terminal-dot dot-r"></div>
+          <div class="terminal-dot dot-y"></div>
+          <div class="terminal-dot dot-g"></div>
+          <div class="terminal-title">architect analyze</div>
+        </div>
+        <div class="terminal-body">
+          <!-- Pipeline phases -->
+          <div class="t-phase">
+            <span class="t-idx">[1/7]</span>
+            <span class="t-cyan t-dot">◉</span>
+            <span class="t-label">FILE SCANNER</span>
+            <span class="t-dim">— Scanning filesystem...</span>
+          </div>
+          <div class="t-result">
+            <span class="t-check">✓</span>
+            <span class="t-dim">62ms │</span>
+            <span class="t-white"> 847</span><span class="t-dim"> files ·</span>
+            <span class="t-white"> 54,210</span><span class="t-dim"> lines ·</span>
+            <span class="t-white"> 3</span><span class="t-dim"> langs</span>
+          </div>
+
+          <div class="t-phase">
+            <span class="t-idx">[2/7]</span>
+            <span class="t-blue t-dot">◉</span>
+            <span class="t-label">DEPENDENCY MAPPER</span>
+            <span class="t-dim">— Mapping imports...</span>
+          </div>
+          <div class="t-result">
+            <span class="t-check">✓</span>
+            <span class="t-dim">285ms │</span>
+            <span class="t-white"> 312</span><span class="t-dim"> edges ·</span>
+            <span class="t-white"> 12</span><span class="t-dim"> modules</span>
+          </div>
+
+          <div class="t-phase">
+            <span class="t-idx">[3/7]</span>
+            <span class="t-magenta t-dot">◉</span>
+            <span class="t-label">LAYER DETECTOR</span>
+            <span class="t-dim">— Classifying arch...</span>
+          </div>
+          <div class="t-result">
+            <span class="t-check">✓</span>
+            <span class="t-dim">18ms │</span>
+            <span class="t-white"> 5</span><span class="t-dim"> layers ·</span>
+            <span class="t-white"> 203</span><span class="t-dim"> classified</span>
+          </div>
+
+          <div class="t-phase">
+            <span class="t-idx">[4/7]</span>
+            <span class="t-orange t-dot">◉</span>
+            <span class="t-label">PATTERN ANALYZER</span>
+            <span class="t-dim">— Anti-patterns...</span>
+          </div>
+          <div class="t-result">
+            <span class="t-check">✓</span>
+            <span class="t-dim">39ms │</span>
+            <span class="t-yellow"> 3</span><span class="t-dim"> found ·</span>
+            <span class="t-red"> 1 critical</span><span class="t-dim"> ·</span>
+            <span class="t-orange"> 2 high</span>
+          </div>
+
+          <div class="t-phase">
+            <span class="t-idx">[5/7]</span>
+            <span class="t-yellow t-dot">◉</span>
+            <span class="t-label">QUALITY ENGINE</span>
+            <span class="t-dim">— Computing metrics...</span>
+          </div>
+          <div class="t-result">
+            <span class="t-check">✓</span>
+            <span class="t-dim">12ms │</span>
+            <span class="t-cyan t-bold"> 78/100</span>
+            <span class="t-dim"> · M:95 C:62 Co:85 L:70</span>
+          </div>
+
+          <div class="t-phase">
+            <span class="t-idx">[6/7]</span>
+            <span class="t-dim t-dot">◉</span>
+            <span class="t-label" style="color:#94a3b8">AI SUMMARIZER</span>
+            <span class="t-dim">— Project summary...</span>
+          </div>
+          <div class="t-result">
+            <span class="t-check">✓</span>
+            <span class="t-dim">8ms │</span>
+            <span class="t-white"> 6</span><span class="t-dim"> modules ·</span>
+            <span class="t-white"> 4</span><span class="t-dim"> technologies</span>
+          </div>
+
+          <!-- Score visualization -->
+          <div class="score-section">
+            <div class="score-title">ARCHITECTURE SCORE</div>
+            <div class="score-meter">
+              <div class="meter-bar">
+                <div class="meter-fill" style="width: 78%"></div>
+              </div>
+              <div class="score-value">78<span style="font-size:11px;color:#64748b">/100</span></div>
+            </div>
+            <div class="breakdown">
+              <div class="breakdown-item">
+                <span class="breakdown-label">Modularity</span>
+                <div class="breakdown-bar"><div class="breakdown-fill fill-high" style="width:95%"></div></div>
+                <span class="breakdown-val">95</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Coupling</span>
+                <div class="breakdown-bar"><div class="breakdown-fill fill-med" style="width:62%"></div></div>
+                <span class="breakdown-val">62</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Cohesion</span>
+                <div class="breakdown-bar"><div class="breakdown-fill fill-high" style="width:85%"></div></div>
+                <span class="breakdown-val">85</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Layering</span>
+                <div class="breakdown-bar"><div class="breakdown-fill fill-med" style="width:70%"></div></div>
+                <span class="breakdown-val">70</span>
+              </div>
+            </div>
+            <div class="stats-row">
+              <span class="stat">📁 <span class="stat-val">847</span> files</span>
+              <span class="stat">📝 <span class="stat-val">54K</span> lines</span>
+              <span class="stat">⚠️ <span class="stat-val">3</span> patterns</span>
+              <span class="stat">🔧 <span class="stat-val">5</span> steps</span>
+              <span class="stat">🤖 <span class="stat-val">5</span> agents</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

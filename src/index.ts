@@ -6,13 +6,27 @@ import { DiagramGenerator } from './diagram.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorEngine } from './refactor-engine.js';
-import { AgentGenerator, AgentSuggestion } from './agent-generator.js';
+import { AgentGenerator, AgentSuggestion } from './agent-generator/index.js';
+import { ProjectSummarizer } from './project-summarizer.js';
 import { ConfigLoader } from './config.js';
 import { AnalysisReport, RefactoringPlan } from './types.js';
 import { relative } from 'path';
 
+export type ProgressPhase =
+  | 'scan' | 'dependencies' | 'layers' | 'antipatterns'
+  | 'scoring' | 'summarize' | 'normalize';
+
+export interface ProgressEvent {
+  phase: ProgressPhase;
+  status: 'start' | 'complete';
+  detail?: string;
+  metrics?: Record<string, number | string>;
+}
+
+export type ProgressCallback = (event: ProgressEvent) => void;
+
 export interface ArchitectCommand {
-  analyze: (path: string) => Promise<AnalysisReport>;
+  analyze: (path: string, onProgress?: ProgressCallback) => Promise<AnalysisReport>;
   refactor: (report: AnalysisReport, projectPath: string) => RefactoringPlan;
   diagram: (path: string) => Promise<string>;
   score: (path: string) => Promise<{ overall: number; breakdown: Record<string, number> }>;
@@ -21,19 +35,26 @@ export interface ArchitectCommand {
 }
 
 class Architect implements ArchitectCommand {
-  async analyze(projectPath: string): Promise<AnalysisReport> {
+  async analyze(projectPath: string, onProgress?: ProgressCallback): Promise<AnalysisReport> {
+    const emit = onProgress || (() => {});
     const config = ConfigLoader.loadConfig(projectPath);
 
+    // ── Phase 1: File Scanning ──
+    emit({ phase: 'scan', status: 'start' });
     const scanner = new ProjectScanner(projectPath, config);
     const projectInfo = scanner.scan();
-
     if (!projectInfo.fileTree) {
       throw new Error('Failed to scan project');
     }
+    emit({
+      phase: 'scan', status: 'complete',
+      metrics: { files: projectInfo.totalFiles, lines: projectInfo.totalLines, languages: projectInfo.primaryLanguages.length },
+    });
 
+    // ── Phase 2: Dependency Analysis ──
+    emit({ phase: 'dependencies', status: 'start' });
     const analyzer = new ArchitectureAnalyzer(projectPath);
     const dependencies = new Map();
-
     for (const [file, imports] of analyzer
       .analyzeDependencies(projectInfo.fileTree)
       .reduce(
@@ -49,19 +70,50 @@ class Architect implements ArchitectCommand {
       .entries()) {
       dependencies.set(file, imports);
     }
-
     const edges = analyzer.analyzeDependencies(projectInfo.fileTree);
-    const layers = analyzer.detectLayers(projectInfo.fileTree);
+    emit({
+      phase: 'dependencies', status: 'complete',
+      metrics: { edges: edges.length, modules: dependencies.size },
+    });
 
+    // ── Phase 3: Layer Detection ──
+    emit({ phase: 'layers', status: 'start' });
+    const layers = analyzer.detectLayers(projectInfo.fileTree);
+    emit({
+      phase: 'layers', status: 'complete',
+      metrics: { layers: layers.length, classified: layers.reduce((s, l) => s + l.files.length, 0) },
+    });
+
+    // ── Phase 4: Anti-Pattern Detection ──
+    emit({ phase: 'antipatterns', status: 'start' });
     const detector = new AntiPatternDetector(config);
     const antiPatterns = detector.detect(projectInfo.fileTree, dependencies);
+    emit({
+      phase: 'antipatterns', status: 'complete',
+      metrics: {
+        total: antiPatterns.length,
+        critical: antiPatterns.filter(p => p.severity === 'CRITICAL').length,
+        high: antiPatterns.filter(p => p.severity === 'HIGH').length,
+      },
+    });
 
+    // ── Phase 5: Architecture Scoring ──
+    emit({ phase: 'scoring', status: 'start' });
     const scorer = new ArchitectureScorer();
     const score = scorer.score(edges, antiPatterns, projectInfo.totalFiles);
+    emit({
+      phase: 'scoring', status: 'complete',
+      metrics: {
+        overall: score.overall,
+        modularity: score.breakdown.modularity,
+        coupling: score.breakdown.coupling,
+        cohesion: score.breakdown.cohesion,
+        layering: score.breakdown.layering,
+      },
+    });
 
     const diagramGenerator = new DiagramGenerator();
     const layerDiagram = diagramGenerator.generateLayerDiagram(layers);
-
     const suggestions = this.generateSuggestions(antiPatterns, score, edges);
 
     const report: AnalysisReport = {
@@ -81,8 +133,24 @@ class Architect implements ArchitectCommand {
       },
     };
 
-    // Normalize paths to be relative to project root
-    return this.relativizePaths(report, projectPath);
+    // ── Phase 6: Normalize Paths ──
+    emit({ phase: 'normalize', status: 'start' });
+    const normalized = this.relativizePaths(report, projectPath);
+    emit({ phase: 'normalize', status: 'complete' });
+
+    // ── Phase 7: Project Summary ──
+    emit({ phase: 'summarize', status: 'start' });
+    const summarizer = new ProjectSummarizer();
+    normalized.projectSummary = summarizer.summarize(projectPath, normalized);
+    emit({
+      phase: 'summarize', status: 'complete',
+      metrics: {
+        modules: normalized.projectSummary?.modules?.length || 0,
+        techStack: normalized.projectSummary?.techStack?.length || 0,
+      },
+    });
+
+    return normalized;
   }
 
   /**
