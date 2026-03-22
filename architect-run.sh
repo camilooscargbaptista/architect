@@ -152,6 +152,17 @@ check_prerequisites() {
   fi
   print_success "Node.js $(node -v)"
 
+  # Dependencies installed?
+  if [ ! -d "${SCRIPT_DIR}/node_modules" ]; then
+    print_warn "Dependências não instaladas. Instalando agora..."
+    (cd "$SCRIPT_DIR" && npm install --silent)
+    if [ $? -ne 0 ]; then
+      print_error "Falha ao instalar dependências. Rode: cd $SCRIPT_DIR && npm install"
+      exit 1
+    fi
+    print_success "Dependências instaladas"
+  fi
+
   # Architect built?
   if [ ! -f "$ARCHITECT_BIN" ]; then
     print_warn "Architect não compilado. Compilando agora..."
@@ -163,6 +174,19 @@ check_prerequisites() {
     print_success "Build concluído"
   else
     print_success "Architect compilado"
+  fi
+
+  # Register CLI globally (npm link) if 'architect' not in PATH
+  if ! command -v architect &>/dev/null; then
+    print_warn "Comando 'architect' não encontrado no PATH. Registrando via npm link..."
+    (cd "$SCRIPT_DIR" && npm link --silent 2>/dev/null) || true
+    if command -v architect &>/dev/null; then
+      print_success "Comando 'architect' disponível globalmente"
+    else
+      print_info "npm link falhou (talvez precise de sudo). Use: npx architect ou ./architect-run.sh"
+    fi
+  else
+    print_success "Comando 'architect' disponível"
   fi
 }
 
