@@ -76,6 +76,90 @@ export interface AgentGeneratorConfig {
   blockers: string[];
 }
 
+/**
+ * Domain classification inferred from project analysis.
+ */
+export interface DomainInsights {
+  /** Primary domain category (e.g., 'fintech', 'healthtech', 'e-commerce') */
+  domain: string;
+  /** Specific sub-domain (e.g., 'tax-processing', 'payment-gateway') */
+  subDomain: string;
+  /** Human-readable description of what the project does */
+  description: string;
+  /** Business entities detected from models/entities/schemas */
+  businessEntities: BusinessEntity[];
+  /** Regulatory/compliance requirements inferred from domain */
+  compliance: ComplianceRequirement[];
+  /** External integrations detected or inferred */
+  integrations: ExternalIntegration[];
+  /** Domain-specific keywords extracted from code */
+  keywords: string[];
+  /** Confidence level of domain inference (0-1) */
+  confidence: number;
+}
+
+export interface BusinessEntity {
+  name: string;
+  source: string; // file path where detected
+  fields: string[];
+  relationships: string[];
+  layer: 'model' | 'entity' | 'schema' | 'dto' | 'unknown';
+}
+
+export interface ComplianceRequirement {
+  name: string; // e.g., 'LGPD', 'HIPAA', 'PCI-DSS', 'SOX', 'GDPR'
+  reason: string;
+  mandatoryChecks: string[];
+}
+
+export interface ExternalIntegration {
+  name: string;
+  type: 'api' | 'database' | 'queue' | 'storage' | 'payment' | 'auth' | 'government' | 'other';
+  detectedFrom: string;
+}
+
+/**
+ * Detailed module information extracted from project analysis.
+ */
+export interface ModuleDetail {
+  name: string;
+  path: string;
+  files: string[];
+  fileCount: number;
+  lineCount: number;
+  description: string;
+  hasTests: boolean;
+  testFiles: string[];
+  entities: string[];
+  controllers: string[];
+  services: string[];
+  layer: string;
+}
+
+/**
+ * API endpoint detected from route/controller files.
+ */
+export interface DetectedEndpoint {
+  method: string; // GET, POST, PUT, DELETE, PATCH
+  path: string;
+  file: string;
+  handler: string;
+  hasAuth: boolean;
+  hasValidation: boolean;
+}
+
+/**
+ * Enriched template context with domain awareness.
+ */
+export interface EnrichedTemplateContext extends TemplateContext {
+  domain: DomainInsights;
+  modules: ModuleDetail[];
+  endpoints: DetectedEndpoint[];
+  untestedModules: string[];
+  criticalPaths: string[]; // files with highest coupling
+  projectDepth: 'small' | 'medium' | 'large' | 'enterprise'; // drives template verbosity
+}
+
 export const DEFAULT_AGENT_CONFIG: AgentGeneratorConfig = {
   coverageMinimum: 80,
   scoreThreshold: 70,
