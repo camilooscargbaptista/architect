@@ -54,6 +54,9 @@ import {
   generateThreatModelTemplate,
 } from './templates/domain/index.js';
 
+// ── Skills Generator ──
+import { generateProjectSkills } from './templates/core/skills-generator.js';
+
 // Re-export types for backward compatibility
 export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, EnrichedTemplateContext, DomainInsights, ModuleDetail, DetectedEndpoint, FrameworkInfo, DetectedToolchain };
 
@@ -338,6 +341,12 @@ export class AgentGenerator {
     coreFiles['templates/TDD.md'] = generateTddTemplate(ctx);
     coreFiles['templates/ADR.md'] = generateAdrTemplate(ctx);
     coreFiles['templates/THREAT-MODEL.md'] = generateThreatModelTemplate(ctx);
+
+    // ── Project Skills (padrões detectados) ──
+    const skillsContent = generateProjectSkills(ctx);
+    if (skillsContent) {
+      coreFiles['skills/PROJECT-PATTERNS.md'] = skillsContent;
+    }
 
     // ── Write all files ──
     for (const [path, content] of Object.entries(coreFiles)) {

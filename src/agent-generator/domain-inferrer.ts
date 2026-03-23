@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { AnalysisReport } from '../types.js';
 import {
   DomainInsights,
@@ -190,6 +192,13 @@ export class DomainInferrer {
    */
   infer(report: AnalysisReport, projectPath: string): DomainInsights {
     const allKeywords = this.extractAllKeywords(report);
+
+    // Boost keywords from project files (pyproject.toml, README, package.json)
+    const fileKeywords = this.extractKeywordsFromProjectFiles(projectPath);
+    for (const kw of fileKeywords) {
+      if (!allKeywords.includes(kw)) allKeywords.push(kw);
+    }
+
     const { domain, subDomain, confidence } = this.classifyDomain(allKeywords);
     const businessEntities = this.extractBusinessEntities(report);
     const compliance = this.inferCompliance(domain, subDomain, allKeywords);
@@ -301,7 +310,35 @@ export class DomainInferrer {
       }
     }
 
-    const confidence = bestScore > 0 ? Math.min(1, bestScore / Math.min(bestMaxPossible, 10)) : 0;
+    // Confidence formula:
+    // - Base: matched keywords / min(total possible, 8) (lower denominator = easier to reach high confidence)
+    // - Boost: +0.1 if sub-domain also matched (cross-validation)
+    // - Boost: +0.1 if multiple entities or integrations hint at the same domain
+    // - Cap at 0.95 (never 100% without manual confirmation)
+    let confidence = bestScore > 0 ? Math.min(1, bestScore / Math.min(bestMaxPossible, 8)) : 0;
+
+    // Sub-domain match boost
+    if (bestSubDomain !== 'general' && bestSubDomain !== bestDomain) {
+      confidence = Math.min(1, confidence + 0.1);
+    }
+
+    // Second-best domain gap boost (high gap = more certain)
+    let secondBestScore = 0;
+    for (const [domain, config] of Object.entries(DomainInferrer.DOMAIN_PATTERNS)) {
+      if (domain === bestDomain) continue;
+      const matchedKeywords = config.keywords.filter(kw =>
+        keywords.some(k => k.includes(kw) || kw.includes(k))
+      );
+      if (matchedKeywords.length > secondBestScore) {
+        secondBestScore = matchedKeywords.length;
+      }
+    }
+    if (bestScore > 0 && bestScore >= secondBestScore * 2) {
+      confidence = Math.min(1, confidence + 0.1);
+    }
+
+    // Cap at 0.95
+    confidence = Math.min(0.95, confidence);
 
     return { domain: bestDomain, subDomain: bestSubDomain, confidence };
   }
@@ -490,6 +527,94 @@ export class DomainInferrer {
   /**
    * Split camelCase, PascalCase, snake_case, kebab-case identifiers into parts.
    */
+  /**
+   * Extract keywords from project files on disk (pyproject.toml, README.md, package.json).
+   * These provide high-value domain signals that the scanner may miss.
+   */
+  private extractKeywordsFromProjectFiles(projectPath: string): string[] {
+    const keywords: string[] = [];
+
+    // pyproject.toml — description, classifiers, project name
+    const pyprojectPath = join(projectPath, 'pyproject.toml');
+    if (existsSync(pyprojectPath)) {
+      try {
+        const content = readFileSync(pyprojectPath, 'utf-8');
+
+        // Extract description
+        const descMatch = content.match(/description\s*=\s*"([^"]+)"/);
+        if (descMatch) {
+          const words = descMatch[1].toLowerCase().split(/\s+/);
+          for (const w of words) {
+            if (w.length > 3) keywords.push(w.replace(/[^a-z0-9]/g, ''));
+          }
+        }
+
+        // Extract classifiers (e.g., "Topic :: Office/Business :: Financial")
+        const classifiers = content.match(/classifiers\s*=\s*\[([\s\S]*?)\]/);
+        if (classifiers) {
+          const topics = classifiers[1].match(/"Topic\s*::\s*([^"]+)"/g);
+          if (topics) {
+            for (const topic of topics) {
+              const parts = topic.replace(/"/g, '').split('::').map(p => p.trim().toLowerCase());
+              for (const p of parts) {
+                if (p.length > 3 && p !== 'topic') keywords.push(p.replace(/[^a-z0-9]/g, ''));
+              }
+            }
+          }
+        }
+
+        // Extract project name
+        const nameMatch = content.match(/\[project\]\s*\n(?:[\s\S]*?)name\s*=\s*"([^"]+)"/);
+        if (nameMatch) {
+          for (const part of this.splitIdentifier(nameMatch[1])) {
+            keywords.push(part.toLowerCase());
+          }
+        }
+      } catch { /* ignore read errors */ }
+    }
+
+    // README.md — first 500 chars for domain keywords
+    const readmePaths = ['README.md', 'readme.md', 'README.rst'];
+    for (const readmeName of readmePaths) {
+      const readmePath = join(projectPath, readmeName);
+      if (existsSync(readmePath)) {
+        try {
+          const content = readFileSync(readmePath, 'utf-8').slice(0, 1500);
+          // Extract heading and first paragraph
+          const lines = content.split('\n').filter(l => l.trim().length > 0).slice(0, 10);
+          for (const line of lines) {
+            const words = line.replace(/[#*_`\[\]()]/g, '').toLowerCase().split(/\s+/);
+            for (const w of words) {
+              if (w.length > 3) keywords.push(w.replace(/[^a-z0-9]/g, ''));
+            }
+          }
+        } catch { /* ignore */ }
+        break;
+      }
+    }
+
+    // package.json — description and keywords
+    const pkgPath = join(projectPath, 'package.json');
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+        if (pkg.description) {
+          const words = pkg.description.toLowerCase().split(/\s+/);
+          for (const w of words) {
+            if (w.length > 3) keywords.push(w.replace(/[^a-z0-9]/g, ''));
+          }
+        }
+        if (Array.isArray(pkg.keywords)) {
+          for (const kw of pkg.keywords) {
+            keywords.push(kw.toLowerCase());
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    return keywords.filter(k => k.length > 0);
+  }
+
   private splitIdentifier(name: string): string[] {
     return name
       .replace(/([a-z])([A-Z])/g, '$1 $2')

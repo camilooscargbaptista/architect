@@ -373,14 +373,17 @@ export function generateQAAgent(ctx: TemplateContext | EnrichedTemplateContext):
   const { projectName, config, stack, plan } = ctx;
   const enriched = getEnriched(ctx);
 
-  // Build untested modules warning
-  const unterstedWarning = enriched.untestedModules && enriched.untestedModules.length > 0
+  // Build untested modules warning (reference canonical source)
+  const untestedCount = enriched.untestedModules?.length || 0;
+  const unterstedWarning = untestedCount > 0
     ? `
 ## ⚠️ MÓDULOS SEM COBERTURA DE TESTE
 
-**MISSING COVERAGE — Prioridade alta:**
+**${untestedCount} módulos sem testes detectados.**
 
-${enriched.untestedModules.map(m => `- \`${m}\` — Implementar testes imediatamente`).join('\n')}
+> 📋 Lista completa e priorização: ver [QUALITY-GATES.md](../guards/QUALITY-GATES.md) e [TECH-DEBT-CONTROLLER.md](./TECH-DEBT-CONTROLLER.md)
+
+**Ação:** Implementar testes para cada módulo listado, seguindo o workflow TDD.
 `
     : '';
 
@@ -580,14 +583,20 @@ ${enriched.criticalPaths.length > 10 ? `\n... e mais ${enriched.criticalPaths.le
 `
     : '';
 
-  // Untested modules as debt
-  const unterstedDebtSection = enriched.untestedModules && enriched.untestedModules.length > 0
+  // Untested modules as debt (reference canonical source)
+  const untestedDebtCount = enriched.untestedModules?.length || 0;
+  const unterstedDebtSection = untestedDebtCount > 0
     ? `
 ## Débito em Cobertura de Teste
 
-Módulos sem testes adequados — criar plano de cobertura:
+**${untestedDebtCount} módulos sem testes adequados detectados.**
 
-${enriched.untestedModules.map(m => `- \`${m}\` — Prioridade: ALTA`).join('\n')}
+> 📋 Lista canônica e gates de cobertura: ver [QUALITY-GATES.md](../guards/QUALITY-GATES.md#módulos-sem-testes)
+
+**Plano de ação:**
+1. Priorizar módulos com mais dependências
+2. Seguir workflow TDD para cada módulo
+3. Meta: reduzir lista a zero em ${Math.ceil(untestedDebtCount / 3)} sprints
 `
     : '';
 
