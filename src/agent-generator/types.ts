@@ -149,6 +149,42 @@ export interface DetectedEndpoint {
 }
 
 /**
+ * Detected framework with version, detected from dependency files.
+ */
+export interface FrameworkInfo {
+  /** Framework name (e.g., 'FastAPI', 'NestJS', 'Django', 'Spring Boot') */
+  name: string;
+  /** Detected version (e.g., '0.104.1') or null */
+  version: string | null;
+  /** Category of framework */
+  category: 'web' | 'orm' | 'test' | 'lint' | 'build' | 'other';
+  /** Confidence level (0-1) */
+  confidence: number;
+}
+
+/**
+ * Detected toolchain — build, test, lint, run commands.
+ */
+export interface DetectedToolchain {
+  /** Build command (e.g., 'npm run build', 'make build', 'mvn package') */
+  buildCmd: string;
+  /** Test command (e.g., 'pytest', 'npm test', 'go test ./...') */
+  testCmd: string;
+  /** Lint command (e.g., 'ruff check .', 'eslint .', 'golangci-lint run') */
+  lintCmd: string;
+  /** Run/dev command (e.g., 'uvicorn main:app', 'npm run dev') */
+  runCmd: string;
+  /** Coverage command */
+  coverageCmd: string;
+  /** Dependency install command */
+  installCmd: string;
+  /** Migration command (if applicable) */
+  migrateCmd: string | null;
+  /** Dependency file (e.g., 'requirements.txt', 'package.json') */
+  depsFile: string;
+}
+
+/**
  * Enriched template context with domain awareness.
  */
 export interface EnrichedTemplateContext extends TemplateContext {
@@ -158,6 +194,14 @@ export interface EnrichedTemplateContext extends TemplateContext {
   untestedModules: string[];
   criticalPaths: string[]; // files with highest coupling
   projectDepth: 'small' | 'medium' | 'large' | 'enterprise'; // drives template verbosity
+  /** Detected frameworks with versions */
+  detectedFrameworks: FrameworkInfo[];
+  /** Primary web framework (e.g., 'FastAPI', 'NestJS', 'Django') */
+  primaryFramework: FrameworkInfo | null;
+  /** Detected toolchain commands */
+  toolchain: DetectedToolchain;
+  /** Real project structure pattern detected */
+  projectStructure: 'clean-architecture' | 'mvc' | 'modular' | 'flat' | 'monorepo' | 'unknown';
 }
 
 export const DEFAULT_AGENT_CONFIG: AgentGeneratorConfig = {
