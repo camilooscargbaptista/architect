@@ -31,10 +31,10 @@ antigravity:
 
 | # | Gate | Critério | Verificação |
 |---|------|----------|-------------|
-| C1 | **Compilação** | Build completa sem erros | \`${stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'pub' ? 'flutter build' : 'make build'}\` |
-| C2 | **Testes** | 100% dos testes passam | \`${stack.testFramework === 'pytest' ? 'pytest' : stack.testFramework === 'flutter_test' ? 'flutter test' : 'npm run test'}\` |
-| C3 | **Lint** | Zero errors (warnings tolerados) | \`${stack.packageManager === 'npm' ? 'npm run lint' : stack.primary === 'Python' ? 'ruff check .' : 'dart analyze'}\` |
-| C4 | **Cobertura** | ≥ ${config.coverageMinimum}% | \`${stack.testFramework === 'pytest' ? 'pytest --cov' : 'npm run test -- --coverage'}\` |
+| C1 | **Compilação** | Build completa sem erros | \`${enriched.toolchain?.buildCmd || (stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'pub' ? 'flutter build' : 'make build')}\` |
+| C2 | **Testes** | 100% dos testes passam | \`${enriched.toolchain?.testCmd || (stack.testFramework === 'pytest' ? 'pytest' : stack.testFramework === 'flutter_test' ? 'flutter test' : 'npm run test')}\` |
+| C3 | **Lint** | Zero errors (warnings tolerados) | \`${enriched.toolchain?.lintCmd || (stack.packageManager === 'npm' ? 'npm run lint' : stack.primary === 'Python' ? 'ruff check .' : 'dart analyze')}\` |
+| C4 | **Cobertura** | ≥ ${config.coverageMinimum}% | \`${enriched.toolchain?.coverageCmd || (stack.testFramework === 'pytest' ? 'pytest --cov' : 'npm run test -- --coverage')}\` |
 | C5 | **Segurança** | Zero vulnerabilidades CRITICAL | SECURITY-AUDITOR review |
 | C6 | **Regras de Negócio** | Todos os critérios de aceite cobertos | BDD scenarios green |
 
@@ -240,8 +240,8 @@ Antes de qualquer PR, execute:
 
 \`\`\`bash
 # Quality gate completo
-${stack.packageManager === 'npm' ? 'npm run build' : 'make build'} && \\
-${stack.testFramework === 'pytest' ? 'pytest --cov' : stack.testFramework === 'flutter_test' ? 'flutter test --coverage' : 'npm run test -- --coverage'} && \\
+${enriched.toolchain?.buildCmd || (stack.packageManager === 'npm' ? 'npm run build' : 'make build')} && \\
+${enriched.toolchain?.coverageCmd || (stack.testFramework === 'pytest' ? 'pytest --cov' : stack.testFramework === 'flutter_test' ? 'flutter test --coverage' : 'npm run test -- --coverage')} && \\
 npx @girardelli/architect score . --format json
 \`\`\`
 

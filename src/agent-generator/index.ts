@@ -12,6 +12,8 @@ import {
   DomainInsights,
   ModuleDetail,
   DetectedEndpoint,
+  FrameworkInfo,
+  DetectedToolchain,
   AgentGeneratorConfig,
   DEFAULT_AGENT_CONFIG,
 } from './types.js';
@@ -53,7 +55,7 @@ import {
 } from './templates/domain/index.js';
 
 // Re-export types for backward compatibility
-export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, EnrichedTemplateContext, DomainInsights, ModuleDetail, DetectedEndpoint };
+export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, EnrichedTemplateContext, DomainInsights, ModuleDetail, DetectedEndpoint, FrameworkInfo, DetectedToolchain };
 
 /**
  * Agent Generator v3.0 — Enterprise-Grade
@@ -263,6 +265,19 @@ export class AgentGenerator {
       untestedModules: [],
       criticalPaths: [],
       projectDepth: 'small',
+      detectedFrameworks: [],
+      primaryFramework: null,
+      toolchain: {
+        buildCmd: 'echo "No build command detected"',
+        testCmd: 'echo "No test command detected"',
+        lintCmd: 'echo "No lint command detected"',
+        runCmd: 'echo "No run command detected"',
+        coverageCmd: 'echo "No coverage command detected"',
+        installCmd: 'echo "No install command detected"',
+        migrateCmd: null,
+        depsFile: 'unknown',
+      },
+      projectStructure: 'unknown',
     };
   }
 
