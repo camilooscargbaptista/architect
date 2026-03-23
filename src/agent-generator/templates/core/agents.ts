@@ -1,5 +1,5 @@
 import { TemplateContext, EnrichedTemplateContext } from '../../types.js';
-import { crossRef, depthIndicator, depthAtLeast, getEnriched } from '../template-helpers.js';
+import { crossRef, depthIndicator, depthAtLeast, getEnriched, frameworkBadge, frameworkModuleStructure, frameworkSecurityChecklist, toolchainCommands, projectStructureBadge } from '../template-helpers.js';
 
 /**
  * Generates all specialist agent cards.
@@ -13,9 +13,11 @@ export function generateBackendAgent(ctx: TemplateContext | EnrichedTemplateCont
   const { stack, projectName, config, report } = ctx;
   const enriched = getEnriched(ctx);
   const lang = stack.primary;
-  const fw = stack.frameworks.filter(f =>
+  // v3.1: Use detected primary framework instead of generic stack.frameworks
+  const primaryFw = enriched.primaryFramework;
+  const fw = primaryFw ? primaryFw.name : (stack.frameworks.filter(f =>
     ['Django', 'Flask', 'FastAPI', 'NestJS', 'Spring', 'Express', 'Fastify', 'Rails', 'Laravel'].includes(f)
-  ).join(', ') || lang;
+  ).join(', ') || lang);
 
   // Build module structure section if enriched data available
   const modulesSection = enriched.modules && enriched.modules.length > 0
@@ -24,8 +26,7 @@ export function generateBackendAgent(ctx: TemplateContext | EnrichedTemplateCont
 
 ${enriched.modules.map(m => `### ${m.name}
 - **Path:** \`${m.path}\`
-- **Arquivos:** ${m.fileCount}
-- **Linhas:** ${m.lineCount}
+- **Arquivos:** ${m.fileCount}${m.lineCount > 0 ? ` · **Linhas:** ${m.lineCount.toLocaleString()}` : ''}
 - **Descrição:** ${m.description}
 - **Testes:** ${m.hasTests ? '✅ Sim' : '❌ Não'}
 ${m.entities.length > 0 ? `- **Entidades:** ${m.entities.join(', ')}` : ''}
@@ -88,10 +89,13 @@ ${depthIndicator(ctx)}
 ## Stack
 
 - **Linguagem:** ${lang}
-- **Framework:** ${fw}
+- **Framework:** ${fw}${primaryFw?.version ? ` v${primaryFw.version}` : ''}
+- **Arquitetura:** ${projectStructureBadge(ctx)}
 - **Teste:** ${stack.testFramework}
 - **Package Manager:** ${stack.packageManager}
 - **Score Atual:** ${report.score.overall}/100
+
+${frameworkBadge(ctx)}
 ${domainSection}
 
 ## Princípios (SOLID + Clean Architecture)
@@ -103,22 +107,9 @@ ${domainSection}
 5. **D** — Dependency Inversion: Depender de abstrações, não de concretos
 ${modulesSection}
 
-## Estrutura de Módulo
+## Estrutura do Projeto (Detectada)
 
-\`\`\`
-src/modules/[nome]/
-├── [nome].module.${lang === 'Python' ? 'py' : 'ts'}
-├── [nome].controller.${lang === 'Python' ? 'py' : 'ts'}  → Endpoints (HTTP layer)
-├── [nome].service.${lang === 'Python' ? 'py' : 'ts'}     → Lógica de negócio
-├── dto/                                      → Request/Response shapes
-│   ├── create-[nome].dto.${lang === 'Python' ? 'py' : 'ts'}
-│   └── update-[nome].dto.${lang === 'Python' ? 'py' : 'ts'}
-├── entities/                                 → Database models
-│   └── [nome].entity.${lang === 'Python' ? 'py' : 'ts'}
-└── __tests__/                                → Testes do módulo
-    ├── [nome].service.spec.${lang === 'Python' ? 'py' : 'ts'}
-    └── [nome].controller.spec.${lang === 'Python' ? 'py' : 'ts'}
-\`\`\`
+${frameworkModuleStructure(ctx)}
 ${endpointsSection}
 
 ## Regras de Implementação
@@ -316,38 +307,8 @@ ${enriched.domain.domain === 'fintech' || enriched.domain.domain === 'payments'
 `
     : '';
 
-  // Stack-specific checks
-  const stackSecuritySection = `
-## Checklist Segurança Específico para ${stack.primary}
-
-${stack.primary === 'TypeScript' || stack.primary === 'JavaScript'
-  ? `□ \`npm audit\` sem vulnerabilidades críticas
-□ Dependencies atualizadas regularmente
-□ \`strict: true\` em tsconfig.json
-□ CORS configurado restritivamente
-□ Rate limiting em endpoints públicos
-□ Helmet.js (ou equivalente) habilitado`
-  : stack.primary === 'Python'
-  ? `□ Sem \`pickle\` para dados untrusted
-□ SQL Alchemy com \`text()\` parametrizado
-□ CORS via flask-cors com whitelist
-□ Rate limiting via Flask-Limiter
-□ Security headers via Flask-Talisman
-□ Senhas hasheadas com bcrypt/argon2`
-  : stack.primary === 'Go'
-  ? `□ Inputs validados via \`validator\` package
-□ Prepared statements para SQL
-□ TLS/mTLS para comunicação inter-serviços
-□ CORS headers explícitos
-□ Rate limiting implementado
-□ Logging de ações críticas`
-  : `□ Inputs sanitizados
-□ Queries parametrizadas obrigatoriamente
-□ CSRF tokens em formulários
-□ Rate limiting em APIs
-□ Secrets em variáveis de ambiente
-□ HTTPS obrigatório em produção`}
-`;
+  // v3.1: Framework-specific security checklist
+  const stackSecuritySection = frameworkSecurityChecklist(ctx);
 
   return `---
 antigravity:

@@ -1,4 +1,5 @@
 import { TemplateContext } from '../../types.js';
+import { getEnriched } from '../template-helpers.js';
 
 /**
  * Generates enterprise-grade 00-general.md rules.
@@ -7,6 +8,7 @@ import { TemplateContext } from '../../types.js';
  */
 export function generateGeneralRules(ctx: TemplateContext): string {
   const { stack, projectName, stackLabel, config, report } = ctx;
+  const enriched = getEnriched(ctx);
   const namingConventions = buildNamingConventions(ctx);
 
   return `---
@@ -45,7 +47,7 @@ ${config.goldenRules.map((r, i) => `║  ${i + 1}. ${r.padEnd(55)}║`).join('\n
 | **Stack** | ${stackLabel} |
 | **Score** | ${report.score.overall}/100 |
 | **Linguagens** | ${stack.languages.join(', ')} |
-| **Frameworks** | ${stack.frameworks.join(', ') || 'Nenhum detectado'} |
+| **Frameworks** | ${enriched.detectedFrameworks?.filter((f: any) => f.category === 'web' || f.category === 'orm').map((f: any) => `${f.name}${f.version ? ` v${f.version}` : ''}`).join(', ') || stack.frameworks.join(', ') || 'Nenhum detectado'} |
 | **Cobertura Mínima** | ${config.coverageMinimum}% |
 | **Score Mínimo** | ${config.scoreThreshold}/100 |
 
