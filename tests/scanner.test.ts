@@ -1,10 +1,9 @@
-import { fileURLToPath } from 'url';
 import path from 'path';
 import { ProjectScanner } from '../src/scanner.js';
 import { ArchitectConfig } from '../src/types.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Use path.resolve for Jest compatibility (import.meta.url not supported by ts-jest)
+const testDir = path.resolve(__dirname);
 
 describe('ProjectScanner', () => {
   const mockConfig: ArchitectConfig = {
@@ -14,11 +13,11 @@ describe('ProjectScanner', () => {
 
   describe('scan', () => {
     it('should scan a project directory and return project info', () => {
-      const scanner = new ProjectScanner(__dirname, mockConfig);
+      const scanner = new ProjectScanner(testDir, mockConfig);
       const info = scanner.scan();
 
       expect(info).toBeDefined();
-      expect(info.path).toBe(__dirname);
+      expect(info.path).toBe(testDir);
       expect(info.totalFiles).toBeGreaterThanOrEqual(0);
       expect(info.totalLines).toBeGreaterThanOrEqual(0);
       expect(Array.isArray(info.primaryLanguages)).toBe(true);
@@ -26,7 +25,7 @@ describe('ProjectScanner', () => {
     });
 
     it('should detect TypeScript files', () => {
-      const scanner = new ProjectScanner(__dirname, mockConfig);
+      const scanner = new ProjectScanner(testDir, mockConfig);
       const info = scanner.scan();
 
       if (info.totalFiles > 0) {
@@ -35,7 +34,7 @@ describe('ProjectScanner', () => {
     });
 
     it('should build a file tree structure', () => {
-      const scanner = new ProjectScanner(__dirname, mockConfig);
+      const scanner = new ProjectScanner(testDir, mockConfig);
       const info = scanner.scan();
 
       expect(info.fileTree).toBeDefined();
@@ -46,7 +45,7 @@ describe('ProjectScanner', () => {
 
   describe('framework detection', () => {
     it('should detect frameworks from configuration files', () => {
-      const scanner = new ProjectScanner(__dirname, mockConfig);
+      const scanner = new ProjectScanner(testDir, mockConfig);
       const info = scanner.scan();
 
       expect(Array.isArray(info.frameworks)).toBe(true);
