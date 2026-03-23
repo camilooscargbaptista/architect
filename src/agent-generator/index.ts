@@ -8,10 +8,17 @@ import {
   AgentItemStatus,
   AgentSuggestion,
   TemplateContext,
+  EnrichedTemplateContext,
+  DomainInsights,
+  ModuleDetail,
+  DetectedEndpoint,
+  FrameworkInfo,
+  DetectedToolchain,
   AgentGeneratorConfig,
   DEFAULT_AGENT_CONFIG,
 } from './types.js';
 import { StackDetector } from './stack-detector.js';
+import { ContextEnricher } from './context-enricher.js';
 
 // ── Core Templates (Enterprise-Grade) ──
 import { generateIndexMd } from './templates/core/index-md.js';
@@ -48,7 +55,7 @@ import {
 } from './templates/domain/index.js';
 
 // Re-export types for backward compatibility
-export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion };
+export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, EnrichedTemplateContext, DomainInsights, ModuleDetail, DetectedEndpoint, FrameworkInfo, DetectedToolchain };
 
 /**
  * Agent Generator v3.0 — Enterprise-Grade
@@ -59,6 +66,7 @@ export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSug
  */
 export class AgentGenerator {
   private stackDetector = new StackDetector();
+  private contextEnricher = new ContextEnricher();
 
   /**
    * Suggest agents without writing files — for unified report.
@@ -83,6 +91,8 @@ export class AgentGenerator {
       audit = this.auditExisting(agentDir, stack, report, plan);
     }
 
+    const ctx = this.buildContext(report, plan, stack, projectPath);
+
     const existingAgents = existingFiles('agents');
     const existingRules = existingFiles('rules');
     const existingGuards = existingFiles('guards');
@@ -102,8 +112,6 @@ export class AgentGenerator {
       );
       return hasImprovement ? 'MODIFY' : 'KEEP';
     };
-
-    const ctx = this.buildContext(report, plan, stack);
 
     // ── Agent definitions ──
     const agentDefs: { name: string; desc: string }[] = [
@@ -220,17 +228,21 @@ export class AgentGenerator {
 
     if (isExisting) {
       const audit = this.auditExisting(agentDir, stack, report, plan);
-      const generated = this.generateMissing(agentDir, audit, report, plan, stack);
+      const generated = this.generateMissing(agentDir, audit, report, plan, stack, projectPath);
       return { generated, audit };
     }
 
-    const generated = this.generateFull(agentDir, report, plan, stack);
+    const generated = this.generateFull(agentDir, report, plan, stack, projectPath);
     return { generated, audit: [] };
   }
 
   // ── Private: Build Template Context ──
 
-  private buildContext(report: AnalysisReport, plan: RefactoringPlan, stack: StackInfo): TemplateContext {
+  private buildContext(report: AnalysisReport, plan: RefactoringPlan, stack: StackInfo, projectPath?: string): EnrichedTemplateContext {
+    if (projectPath) {
+      return this.contextEnricher.enrich(report, plan, stack, projectPath);
+    }
+    // Fallback to basic enriched context for backward compatibility
     return {
       report,
       plan,
@@ -238,14 +250,42 @@ export class AgentGenerator {
       projectName: report.projectInfo.name || 'Project',
       stackLabel: [...stack.languages, ...stack.frameworks].join(' + '),
       config: DEFAULT_AGENT_CONFIG,
+      domain: {
+        domain: 'general',
+        subDomain: 'general',
+        description: '',
+        businessEntities: [],
+        compliance: [],
+        integrations: [],
+        keywords: [],
+        confidence: 0,
+      },
+      modules: [],
+      endpoints: [],
+      untestedModules: [],
+      criticalPaths: [],
+      projectDepth: 'small',
+      detectedFrameworks: [],
+      primaryFramework: null,
+      toolchain: {
+        buildCmd: 'echo "No build command detected"',
+        testCmd: 'echo "No test command detected"',
+        lintCmd: 'echo "No lint command detected"',
+        runCmd: 'echo "No run command detected"',
+        coverageCmd: 'echo "No coverage command detected"',
+        installCmd: 'echo "No install command detected"',
+        migrateCmd: null,
+        depsFile: 'unknown',
+      },
+      projectStructure: 'unknown',
     };
   }
 
   // ── Private: Full Generation ──
 
-  private generateFull(agentDir: string, report: AnalysisReport, plan: RefactoringPlan, stack: StackInfo): string[] {
+  private generateFull(agentDir: string, report: AnalysisReport, plan: RefactoringPlan, stack: StackInfo, projectPath: string): string[] {
     const generated: string[] = [];
-    const ctx = this.buildContext(report, plan, stack);
+    const ctx = this.buildContext(report, plan, stack, projectPath);
 
     // Create directories
     const dirs = ['agents', 'rules', 'guards', 'workflows', 'templates', 'skills'];
@@ -293,11 +333,11 @@ export class AgentGenerator {
     }
 
     // ── Domain templates ──
-    coreFiles['templates/C4.md'] = generateC4Template();
-    coreFiles['templates/BDD.md'] = generateBddTemplate();
-    coreFiles['templates/TDD.md'] = generateTddTemplate();
-    coreFiles['templates/ADR.md'] = generateAdrTemplate();
-    coreFiles['templates/THREAT-MODEL.md'] = generateThreatModelTemplate();
+    coreFiles['templates/C4.md'] = generateC4Template(ctx);
+    coreFiles['templates/BDD.md'] = generateBddTemplate(ctx);
+    coreFiles['templates/TDD.md'] = generateTddTemplate(ctx);
+    coreFiles['templates/ADR.md'] = generateAdrTemplate(ctx);
+    coreFiles['templates/THREAT-MODEL.md'] = generateThreatModelTemplate(ctx);
 
     // ── Write all files ──
     for (const [path, content] of Object.entries(coreFiles)) {
@@ -319,10 +359,11 @@ export class AgentGenerator {
     report: AnalysisReport,
     plan: RefactoringPlan,
     stack: StackInfo,
+    projectPath: string,
   ): string[] {
     const generated: string[] = [];
     const missing = audit.filter(f => f.type === 'MISSING');
-    const ctx = this.buildContext(report, plan, stack);
+    const ctx = this.buildContext(report, plan, stack, projectPath);
 
     for (const finding of missing) {
       const fullPath = join(agentDir, finding.file);
@@ -339,7 +380,7 @@ export class AgentGenerator {
     return generated;
   }
 
-  private getTemplateFor(file: string, ctx: TemplateContext): string | null {
+  private getTemplateFor(file: string, ctx: EnrichedTemplateContext): string | null {
     if (file.includes('INDEX')) return generateIndexMd(ctx);
     if (file.includes('ORCHESTRATOR')) return generateOrchestrator(ctx);
     if (file.includes('PREFLIGHT')) return generatePreflight(ctx);
@@ -359,11 +400,11 @@ export class AgentGenerator {
     if (file.includes('new-feature') || file.includes('develop')) return generateNewFeatureWorkflow(ctx);
     if (file.includes('fix-bug')) return generateFixBugWorkflow(ctx);
     if (file.includes('review')) return generateReviewWorkflow(ctx);
-    if (file.includes('C4')) return generateC4Template();
-    if (file.includes('BDD')) return generateBddTemplate();
-    if (file.includes('TDD')) return generateTddTemplate();
-    if (file.includes('ADR')) return generateAdrTemplate();
-    if (file.includes('THREAT')) return generateThreatModelTemplate();
+    if (file.includes('C4')) return generateC4Template(ctx);
+    if (file.includes('BDD')) return generateBddTemplate(ctx);
+    if (file.includes('TDD')) return generateTddTemplate(ctx);
+    if (file.includes('ADR')) return generateAdrTemplate(ctx);
+    if (file.includes('THREAT')) return generateThreatModelTemplate(ctx);
     return null;
   }
 
