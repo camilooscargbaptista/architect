@@ -26,6 +26,11 @@ export function generateOrchestrator(ctx: TemplateContext | EnrichedTemplateCont
   const agentDispatch = buildAgentDispatch(ctx);
   const businessQuestions = buildBusinessQuestions(ctx);
 
+  // Extract toolchain commands for Quality Gates (dynamic per-stack)
+  const enrichedCtx = isEnriched(ctx) ? ctx : null;
+  const buildCmd = enrichedCtx?.toolchain?.buildCmd || 'npm run build';
+  const testCmd = enrichedCtx?.toolchain?.testCmd || 'npm run test';
+
   return `---
 antigravity:
   trigger: 'always_on'
@@ -323,11 +328,12 @@ Quando dois agentes discordam:
 \`\`\`
 ╔══════════════════════════════════════════╗
 ║  BUILD GATE                              ║
-║  $ npm run build   (ou equivalente)      ║
+║  $ ${buildCmd}
 ║  Resultado: PASS ou BLOCK                ║
 ╠══════════════════════════════════════════╣
 ║  TEST GATE                               ║
-║  $ npm run test    (ou equivalente)      ║
+║  $ ${testCmd}
+║
 ║  Resultado: PASS ou BLOCK                ║
 ╠══════════════════════════════════════════╣
 ║  COVERAGE GATE                           ║

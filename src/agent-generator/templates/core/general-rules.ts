@@ -11,6 +11,33 @@ export function generateGeneralRules(ctx: TemplateContext): string {
   const enriched = getEnriched(ctx);
   const namingConventions = buildNamingConventions(ctx);
 
+  // Stack-aware forbidden type actions
+  const langs = stack.languages.map((l) => l.toLowerCase());
+  let typeProhibitions = `❌ any (TypeScript) sem justificativa em comentário
+❌ @ts-ignore / type: ignore sem justificativa`;
+
+  if (langs.includes('python')) {
+    typeProhibitions = `❌ type: ignore sem justificativa em comentário
+❌ # noqa sem justificativa
+❌ Any (typing) sem justificativa em comentário`;
+  } else if (langs.includes('dart')) {
+    typeProhibitions = `❌ dynamic sem justificativa em comentário
+❌ // ignore: sem justificativa
+❌ as dynamic sem type-check`;
+  } else if (langs.includes('java') || langs.includes('kotlin')) {
+    typeProhibitions = `❌ @SuppressWarnings sem justificativa em comentário
+❌ Object onde tipo específico é possível
+❌ Raw types sem justificativa`;
+  } else if (langs.includes('go')) {
+    typeProhibitions = `❌ interface{}/any sem justificativa em comentário
+❌ //nolint sem justificativa
+❌ _ (blank identifier) para erros sem tratamento`;
+  } else if (langs.includes('rust')) {
+    typeProhibitions = `❌ unwrap() em código de produção sem justificativa
+❌ #[allow(...)] sem justificativa em comentário
+❌ unsafe sem revisão e justificativa`;
+  }
+
   return `---
 antigravity:
   trigger: 'always_on'
@@ -187,8 +214,7 @@ npx @girardelli/architect anti-patterns .
 ❌ Ignorar falhas de build/test
 ❌ Hardcodar secrets, tokens, senhas
 ❌ console.log / print() em produção
-❌ any (TypeScript) sem justificativa em comentário
-❌ @ts-ignore / type: ignore sem justificativa
+${typeProhibitions}
 ❌ Testes com .skip() permanente
 ❌ Copiar/colar código (extrair abstração)
 ❌ Alterar mais de 10 arquivos sem reavaliar escopo

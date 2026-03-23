@@ -59,7 +59,7 @@ export function generateC4Template(ctx?: EnrichedTemplateContext | TemplateConte
   if (ctx && 'stack' in ctx && ctx.stack) {
     const stack = ctx.stack;
     let frontendLabel = stack.hasFrontend ? `${stack.frameworks[0] || 'Frontend'}` : '[Frontend]';
-    let backendLabel = stack.frameworks[1] || 'NestJS';
+    let backendLabel = stack.frameworks[1] || 'Backend';
     let dbLabel = '[Database]';
     if (stack.hasDatabase) {
       dbLabel = stack.frameworks.includes('PostgreSQL') ? 'PostgreSQL' : 'Database';
@@ -92,17 +92,77 @@ export function generateC4Template(ctx?: EnrichedTemplateContext | TemplateConte
 └── Tests: ${firstModule.testFiles.length > 0 ? 'Implementados' : 'Pendentes'}`;
   }
 
-  // Build Level 4 content
+  // Build Level 4 content — framework-aware code example
+  const stack = ctx && 'stack' in ctx ? ctx.stack : undefined;
+  const langs = stack ? stack.languages.map((l) => l.toLowerCase()) : [];
+  const isPython = langs.includes('python');
+  const isDart = langs.includes('dart');
+  const isJava = langs.includes('java') || langs.includes('kotlin');
+  const isGo = langs.includes('go');
+  const isRust = langs.includes('rust');
+
+  let level4Lang = 'typescript';
   let level4Content = `interface IExemploService {
   metodo(param: Tipo): Promise<Retorno>;
 }`;
 
+  if (isPython) {
+    level4Lang = 'python';
+    level4Content = `class IExemploService(ABC):
+    @abstractmethod
+    async def metodo(self, param: Tipo) -> Retorno:
+        ...`;
+  } else if (isDart) {
+    level4Lang = 'dart';
+    level4Content = `abstract class IExemploService {
+  Future<Retorno> metodo(Tipo param);
+}`;
+  } else if (isJava) {
+    level4Lang = 'java';
+    level4Content = `public interface IExemploService {
+    Retorno metodo(Tipo param);
+}`;
+  } else if (isGo) {
+    level4Lang = 'go';
+    level4Content = `type ExemploService interface {
+    Metodo(param Tipo) (Retorno, error)
+}`;
+  } else if (isRust) {
+    level4Lang = 'rust';
+    level4Content = `trait ExemploService {
+    fn metodo(&self, param: Tipo) -> Result<Retorno, Error>;
+}`;
+  }
+
   if (endpoints.length > 0) {
     const firstEndpoint = endpoints[0];
-    level4Content = `interface I${firstEndpoint.handler}Service {
+    if (isPython) {
+      level4Content = `class I${firstEndpoint.handler}Service(ABC):
+    # ${firstEndpoint.method} ${firstEndpoint.path}
+    @abstractmethod
+    async def handle_${firstEndpoint.handler.toLowerCase()}(self, req: Request) -> Response:
+        ...`;
+    } else if (isDart) {
+      level4Content = `abstract class I${firstEndpoint.handler}Service {
+  // ${firstEndpoint.method} ${firstEndpoint.path}
+  Future<Response> handle${firstEndpoint.handler}(Request req);
+}`;
+    } else if (isJava) {
+      level4Content = `public interface I${firstEndpoint.handler}Service {
+    // ${firstEndpoint.method} ${firstEndpoint.path}
+    Response handle${firstEndpoint.handler}(Request req);
+}`;
+    } else if (isGo) {
+      level4Content = `type ${firstEndpoint.handler}Service interface {
+    // ${firstEndpoint.method} ${firstEndpoint.path}
+    Handle${firstEndpoint.handler}(req *Request) (*Response, error)
+}`;
+    } else {
+      level4Content = `interface I${firstEndpoint.handler}Service {
   // ${firstEndpoint.method} ${firstEndpoint.path}
   handle${firstEndpoint.handler}(req: Request): Promise<Response>;
 }`;
+    }
   }
 
   return `# 🏗️ Template: Arquitetura C4
@@ -151,7 +211,7 @@ ${componentContent}
 
 > Interfaces, tipos, contratos. Apenas para decisões complexas.
 
-\`\`\`typescript
+\`\`\`${level4Lang}
 ${level4Content}
 \`\`\`
 
@@ -323,14 +383,19 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
       expect(result).toEqual(expected);
     });`;
 
-  // Detect test framework from stack
+  // Detect test framework from stack (case-insensitive comparison)
   if (stack) {
-    if (stack.languages.includes('python')) {
+    const langs = stack.languages.map((l) => l.toLowerCase());
+    if (langs.includes('python')) {
       testFramework = 'pytest';
-    } else if (stack.languages.includes('dart')) {
+    } else if (langs.includes('dart')) {
       testFramework = 'flutter_test';
-    } else if (stack.languages.includes('java')) {
+    } else if (langs.includes('java') || langs.includes('kotlin')) {
       testFramework = 'junit';
+    } else if (langs.includes('go')) {
+      testFramework = 'go_test';
+    } else if (langs.includes('rust')) {
+      testFramework = 'cargo_test';
     }
   }
 
@@ -344,7 +409,7 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
     methodName = `create${service.replace('Service', '')}`;
 
     if (testFramework === 'pytest') {
-      exampleTest = `    def test_should_create_entity_successfully():
+      exampleTest = `    def test_should_create_entity_successfully(self):
         # Arrange
         input_data = {"name": "Test Entity"}
 
@@ -366,6 +431,45 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
       expect(result, isNotNull);
       expect(result.name, equals('Test'));
     });`;
+    } else if (testFramework === 'go_test') {
+      exampleTest = `func TestShould_Create${moduleName}_Successfully(t *testing.T) {
+    // Arrange
+    input := ${moduleName}Input{Name: "Test Entity"}
+
+    // Act
+    result, err := service.${methodName}(input)
+
+    // Assert
+    assert.NoError(t, err)
+    assert.NotNil(t, result)
+    assert.Equal(t, "Test Entity", result.Name)
+}`;
+    } else if (testFramework === 'cargo_test') {
+      exampleTest = `#[test]
+fn test_should_create_${moduleName.toLowerCase()}_successfully() {
+    // Arrange
+    let input = ${moduleName}Input { name: "Test Entity".to_string() };
+
+    // Act
+    let result = service.${methodName}(&input);
+
+    // Assert
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().name, "Test Entity");
+}`;
+    } else if (testFramework === 'junit') {
+      exampleTest = `    @Test
+    void shouldCreate${moduleName}Successfully() {
+        // Arrange
+        var input = new ${moduleName}Input("Test Entity");
+
+        // Act
+        var result = service.${methodName}(input);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Test Entity", result.getName());
+    }`;
     } else {
       exampleTest = `    it('should create ${moduleName} successfully', () => {
       // Arrange
@@ -410,6 +514,44 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
     // Assert
     expect(result.statusCode, equals(200));
   });`;
+    } else if (testFramework === 'go_test') {
+      endpointTest = `
+
+func Test_${endpoint.method}_${endpoint.path.replace(/\//g, '_')}(t *testing.T) {
+    // Arrange
+    req := httptest.NewRequest("${endpoint.method}", "${endpoint.path}", nil)
+    w := httptest.NewRecorder()
+
+    // Act
+    handler.ServeHTTP(w, req)
+
+    // Assert
+    assert.Equal(t, http.StatusOK, w.Code)
+}`;
+    } else if (testFramework === 'cargo_test') {
+      endpointTest = `
+
+#[actix_web::test]
+async fn test_${endpoint.method.toLowerCase()}_${endpoint.path.replace(/\//g, '_')}() {
+    // Arrange
+    let app = test::init_service(App::new().configure(routes)).await;
+    let req = test::TestRequest::${endpoint.method.toLowerCase()}().uri("${endpoint.path}").to_request();
+
+    // Act
+    let resp = test::call_service(&app, req).await;
+
+    // Assert
+    assert!(resp.status().is_success());
+}`;
+    } else if (testFramework === 'junit') {
+      endpointTest = `
+
+    @Test
+    void should${endpoint.method}${endpoint.handler}Correctly() throws Exception {
+        // Act & Assert
+        mockMvc.perform(${endpoint.method.toLowerCase()}("${endpoint.path}"))
+            .andExpect(status().isOk());
+    }`;
     } else {
       endpointTest = `
 
@@ -437,24 +579,24 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
 
 ## Estrutura de Testes (${testFramework})
 
-\`\`\`${testFramework === 'pytest' ? 'python' : testFramework === 'flutter_test' ? 'dart' : 'typescript'}
+\`\`\`${testFramework === 'pytest' ? 'python' : testFramework === 'flutter_test' ? 'dart' : testFramework === 'go_test' ? 'go' : testFramework === 'cargo_test' ? 'rust' : testFramework === 'junit' ? 'java' : 'typescript'}
 ${
   testFramework === 'pytest'
     ? `import pytest
 from app.services.${moduleName.toLowerCase()} import ${moduleName}Service
 
 class Test${moduleName}:
-  """Testes para ${moduleName}"""
+    """Testes para ${moduleName}"""
 
 ${exampleTest}
 
-  def test_should_throw_error_when_invalid_input():
-    # Arrange
-    invalid_input = None
+    def test_should_throw_error_when_invalid_input(self):
+        # Arrange
+        invalid_input = None
 
-    # Act & Assert
-    with pytest.raises(ValueError):
-      service.${methodName}(invalid_input)`
+        # Act & Assert
+        with pytest.raises(ValueError):
+            service.${methodName}(invalid_input)`
     : testFramework === 'flutter_test'
       ? `import 'package:flutter_test/flutter_test.dart';
 import 'package:${moduleName.toLowerCase()}/services/${moduleName.toLowerCase()}_service.dart';
@@ -472,6 +614,71 @@ ${exampleTest}
       expect(() => service.${methodName}(invalid), throwsException);
     });${endpointTest}
   });
+}`
+    : testFramework === 'go_test'
+      ? `package ${moduleName.toLowerCase()}_test
+
+import (
+    "testing"
+    "net/http"
+    "net/http/httptest"
+    "github.com/stretchr/testify/assert"
+)
+
+// ── Happy Path ──
+${exampleTest}
+
+// ── Error Path ──
+func TestShould_Return_Error_When_InvalidInput(t *testing.T) {
+    // Arrange
+    input := ${moduleName}Input{}
+
+    // Act
+    _, err := service.${methodName}(input)
+
+    // Assert
+    assert.Error(t, err)
+}${endpointTest}`
+    : testFramework === 'cargo_test'
+      ? `#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Happy Path ──
+${exampleTest}
+
+    // ── Error Path ──
+    #[test]
+    fn test_should_return_error_when_invalid_input() {
+        // Arrange
+        let input = ${moduleName}Input { name: "".to_string() };
+
+        // Act
+        let result = service.${methodName}(&input);
+
+        // Assert
+        assert!(result.is_err());
+    }${endpointTest}
+}`
+    : testFramework === 'junit'
+      ? `import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class ${moduleName}Test {
+
+    // ── Happy Path ──
+${exampleTest}
+
+    // ── Error Path ──
+    @Test
+    void shouldThrowWhenInvalidInput() {
+        // Arrange
+        var invalidInput = new ${moduleName}Input(null);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class,
+            () -> service.${methodName}(invalidInput));
+    }${endpointTest}
 }`
       : `describe('${moduleName}', () => {
 
@@ -547,23 +754,79 @@ export function generateAdrTemplate(ctx?: EnrichedTemplateContext | TemplateCont
   let alternativeOne = '[alternativa 1]';
   let alternativeTwo = '[alternativa 2]';
 
-  // Generate tech stack specific examples
+  // Generate tech stack specific examples (framework-aware)
   if (stack) {
-    const framework = stack.frameworks[0] || 'NestJS';
-    const database = stack.frameworks.find((f) => ['PostgreSQL', 'MongoDB', 'MySQL'].includes(f)) || 'PostgreSQL';
+    const framework = stack.frameworks[0] || 'Backend Framework';
+    const database = stack.frameworks.find((f) => ['PostgreSQL', 'MongoDB', 'MySQL', 'SQLite', 'Redis'].includes(f)) || 'PostgreSQL';
+    const adrLangs = stack.languages.map((l) => l.toLowerCase());
+    const adrIsPython = adrLangs.includes('python');
+    const adrIsDart = adrLangs.includes('dart');
+    const adrIsGo = adrLangs.includes('go');
+    const adrIsJava = adrLangs.includes('java') || adrLangs.includes('kotlin');
 
     exampleDecision = `Uso de ${framework} para Backend`;
-    contextDescription = `O projeto requer uma API REST escalável com TypeScript. Precisamos escolher um framework que:
+
+    if (adrIsPython) {
+      contextDescription = `O projeto requer uma API REST escalável com Python. Precisamos escolher um framework que:
+- Suporte async/await nativo
+- Tenha tipagem com Pydantic e validação automática
+- Tenha comunidade ativa e documentação excelente`;
+      decisionDescription = `Decidimos usar ${framework} como framework backend principal. ${framework} oferece:
+- Async/await nativo com alto desempenho
+- Validação automática via Pydantic
+- Documentação OpenAPI/Swagger automática
+- Suporte a bancos de dados (SQLAlchemy, Tortoise ORM, etc.)`;
+      alternativeOne = 'Django REST Framework';
+      alternativeTwo = 'Flask + extensões';
+    } else if (adrIsDart) {
+      contextDescription = `O projeto requer um aplicativo mobile multiplataforma. Precisamos escolher um framework que:
+- Suporte iOS e Android com um único codebase
+- Tenha hot-reload e boa experiência de desenvolvimento
+- Tenha widgets nativos e alta performance`;
+      decisionDescription = `Decidimos usar ${framework} como framework principal. ${framework} oferece:
+- UI declarativa com widgets nativos
+- Hot-reload para desenvolvimento rápido
+- Compilação nativa para iOS e Android
+- Ecossistema de pacotes via pub.dev`;
+      alternativeOne = 'React Native';
+      alternativeTwo = 'Kotlin Multiplatform';
+    } else if (adrIsGo) {
+      contextDescription = `O projeto requer um serviço backend de alta performance. Precisamos escolher uma stack que:
+- Tenha concorrência nativa eficiente
+- Suporte compilação estática e deploy simplificado
+- Tenha forte tipagem e performance previsível`;
+      decisionDescription = `Decidimos usar ${framework} como framework principal. ${framework} oferece:
+- Goroutines para concorrência eficiente
+- Binário estático único para deploy
+- Performance previsível e baixo footprint
+- Ecossistema robusto de middleware`;
+      alternativeOne = 'net/http padrão + chi router';
+      alternativeTwo = 'Fiber (Express-like para Go)';
+    } else if (adrIsJava) {
+      contextDescription = `O projeto requer uma API REST enterprise-grade. Precisamos escolher um framework que:
+- Suporte injeção de dependência nativa
+- Tenha ecossistema maduro e produção comprovada
+- Tenha integração com bancos de dados (JPA/Hibernate)`;
+      decisionDescription = `Decidimos usar ${framework} como framework backend principal. ${framework} oferece:
+- Injeção de dependência nativa
+- Ecossistema maduro com milhares de extensões
+- Suporte a JPA/Hibernate para persistência
+- Segurança via Spring Security / equivalente`;
+      alternativeOne = 'Quarkus (nativo GraalVM)';
+      alternativeTwo = 'Micronaut';
+    } else {
+      contextDescription = `O projeto requer uma API REST escalável com TypeScript. Precisamos escolher um framework que:
 - Suporte TypeScript nativo
 - Tenha decorators e dependency injection
 - Tenha comunidade ativa e documentação excelente`;
-    decisionDescription = `Decidimos usar ${framework} como framework backend principal. ${framework} oferece:
+      decisionDescription = `Decidimos usar ${framework} como framework backend principal. ${framework} oferece:
 - Arquitetura modular built-in
 - Decorators para roteamento e middleware
 - Injeção de dependência nativa
 - Suporte a bancos de dados (TypeORM, Prisma, etc.)`;
-    alternativeOne = 'Express.js + middleware customizado';
-    alternativeTwo = 'Fastify';
+      alternativeOne = 'Express.js + middleware customizado';
+      alternativeTwo = 'Fastify';
+    }
 
     // Add database-specific ADR if applicable
     let dbDecision = '';
@@ -590,7 +853,7 @@ Precisamos escolher um banco de dados relacional que:
 Escolhemos ${database} como banco de dados principal por:
 - Suporte a JSON nativo
 - Excelente performance em leitura/escrita
-- Integração com TypeORM/Prisma é padrão
+- Integração com ${adrIsPython ? 'SQLAlchemy/Alembic' : adrIsJava ? 'JPA/Hibernate' : adrIsGo ? 'GORM/sqlx' : 'TypeORM/Prisma'} é padrão
 
 ### Alternativas Consideradas
 
