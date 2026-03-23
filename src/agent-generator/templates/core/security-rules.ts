@@ -311,7 +311,7 @@ architect anti-patterns ./src
 
 ---
 
-**Gerado por Architect v3.0 · Score: ${report.score.overall}/100**
+**Gerado por Architect v3.1 · Score: ${report.score.overall}/100**
 `;
 }
 

@@ -101,6 +101,6 @@ antigravity:
 
 ---
 
-**Gerado por Architect v3.0 · Score: ${report.score.overall}/100 · ${new Date().toISOString().split('T')[0]}**
+**Gerado por Architect v3.1 · Score: ${report.score.overall}/100 · ${new Date().toISOString().split('T')[0]}**
 `;
 }

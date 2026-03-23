@@ -1,21 +1,24 @@
 # Architect
 
-**AI-powered architecture analysis, refactoring, and agent system generator**
+**AI-powered architecture analysis, refactoring, and context-aware agent system generator**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
 [![npm](https://img.shields.io/npm/v/@girardelli/architect)](https://www.npmjs.com/package/@girardelli/architect)
+[![Tests](https://img.shields.io/badge/Tests-337%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Understand your codebase architecture in seconds. Detect anti-patterns, get refactoring plans, and generate AI agent configurations — all from a single command.
+Understand your codebase architecture in seconds. Detect anti-patterns, get refactoring plans, and generate **context-aware AI agent configurations** that actually understand your stack, domain, and toolchain — all from a single command.
 
-## What's New in v2.1
+## What's New in v3.1
 
-- 🔧 **Unified `analyze` command** — Architecture analysis + refactoring plan + agent system suggestions in one report
-- 🤖 **AI Agent System Generator** — Suggests agents, rules, guards, workflows, and skills based on detected stack
-- 🧠 **Skills from [skills.sh](https://skills.sh)** — Stack-specific skill recommendations with install commands
-- 🎯 **Interactive UI** — Toggle cards with Select All/None, dynamic command builder, and copy-to-clipboard
-- 📊 **Refactoring Plan** — Tier-based refactoring steps with score impact predictions
+- **Context-Aware Agent Generation** — Agents are no longer generic. Templates adapt to your detected stack (Python/FastAPI generates pytest examples, not Jest; Go generates `go test`, not `npm test`)
+- **Framework Detection Engine** — 61 frameworks across 10+ ecosystems detected from dependency files (package.json, pyproject.toml, requirements.txt, pubspec.yaml, go.mod, Cargo.toml, pom.xml, Gemfile, composer.json)
+- **Domain Inference** — Detects business domain (fintech, healthtech, e-commerce, tax, HR, etc.) from project metadata, README, and code structure. Generates domain-specific BDD scenarios, threat models, and compliance requirements (LGPD, PCI-DSS, HIPAA, SOX)
+- **Stack-Aware Templates** — C4 Level 4 code blocks, TDD test examples, ADR decisions, quality gates, and forbidden actions all adapt to the detected language and framework
+- **Skills Generator** — Detects architectural patterns in your codebase (adapters, factories, extractors, repositories) and generates `skills/PROJECT-PATTERNS.md`
+- **Enriched Context** — Module extraction, endpoint detection, toolchain commands, project structure analysis, and critical path identification feed into every generated template
+- **Premium HTML Report** — Dark-themed responsive report with interactive D3.js dependency graph, health radar, bubble charts, and collapsible refactoring steps
 
 ## Quick Start
 
@@ -28,81 +31,92 @@ npm install -g @girardelli/architect
 architect analyze ./src
 ```
 
-## Features
+## Core Features
 
-### 📊 Architecture Analysis
-- **Quality Score** — 0-100 score with weighted breakdown (Modularity, Coupling, Cohesion, Layering)
-- **Anti-Pattern Detection** — God Class, Circular Dependencies, Leaky Abstractions, Feature Envy, Shotgun Surgery
-- **Layer Detection** — Automatically identifies API, Service, Data, UI, and Infrastructure layers
-- **Dependency Graph** — Interactive D3.js force-directed graph visualization
-- **Framework Detection** — NestJS, React, Angular, Vue, Next.js, Express, Django, Flask, Spring Boot, and more
-- **Multi-Language** — TypeScript, JavaScript, Python, Java, Go, Ruby, PHP, Rust, SQL
+### Architecture Analysis
 
-### 🔧 Refactoring Plan
-- **Tier 1 (Quick Wins)** — Low-risk improvements for immediate impact
-- **Tier 2 (Strategic)** — Larger refactoring with architecture-level benefits
-- **Score Impact** — Before/after predictions for each refactoring step
-- **File Operations** — CREATE, MOVE, MODIFY, DELETE with detailed descriptions
+Architect scans your codebase and produces a quality score (0-100) with weighted breakdown across four dimensions: Modularity, Coupling, Cohesion, and Layering. It detects anti-patterns (God Class, Circular Dependencies, Leaky Abstractions, Feature Envy, Shotgun Surgery) with severity levels and specific file locations, and automatically identifies architectural layers (API, Service, Data, UI, Infrastructure).
 
-### 🤖 AI Agent System
-- **Stack Detection** — Identifies languages, frameworks, backend/frontend/mobile/database
-- **Agent Suggestions** — Orchestrator, Backend Developer, Frontend Developer, Database Engineer, Security Auditor, QA, Tech Debt Controller
-- **Rules & Guards** — Architecture rules, security rules, preflight checks, quality gates
-- **Workflows** — Development, bug-fix, code review workflows
-- **Skills** — [skills.sh](https://skills.sh) recommendations mapped to your stack (TDD, debugging, security, performance, etc.)
-- **Audit Mode** — If `.agent/` exists, audits and suggests improvements
-- **Interactive UI** — Toggle cards for selecting which items to generate
-- **Command Builder** — Dynamic CLI command updates based on selection
+The analysis supports TypeScript, JavaScript, Python, Java, Kotlin, Go, Ruby, PHP, Rust, Dart, and SQL. Framework detection covers 61 frameworks across all major ecosystems — from NestJS and React to FastAPI, Spring Boot, Flutter, Gin, Actix Web, and Rails.
 
-### 📄 Premium HTML Report
-- Dark-themed responsive design with Inter font
-- Animated score gauge with gradient
-- Interactive D3.js dependency graph
-- Bubble chart for anti-pattern severity
-- Collapsible refactoring steps with code previews
-- Toggle cards for agent system selection
-- Single self-contained HTML file (no external dependencies)
+### Refactoring Plan
+
+Each analysis produces a tiered refactoring plan with score impact predictions. Tier 1 contains quick wins (low-risk, immediate impact), Tier 2 covers strategic refactoring with architecture-level benefits. Every step includes before/after score predictions and specific file operations (CREATE, MOVE, MODIFY, DELETE).
+
+### Context-Aware Agent System
+
+This is what sets Architect apart. The `.agent/` directory it generates isn't a generic template — it's deeply customized to your project.
+
+**What gets generated (20+ files):**
+
+```
+.agent/
+├── INDEX.md                          # Project overview with badges and links
+├── agents/
+│   ├── AGENT-ORCHESTRATOR.md         # 5-phase protocol, dispatch table, quality gates
+│   ├── {STACK}-BACKEND-DEVELOPER.md  # Stack-specific backend agent
+│   ├── {FRAMEWORK}-FRONTEND-DEVELOPER.md
+│   ├── FLUTTER-UI-DEVELOPER.md       # (if mobile detected)
+│   ├── DATABASE-ENGINEER.md          # (if database detected)
+│   ├── SECURITY-AUDITOR.md           # STRIDE threats, compliance, integrations
+│   ├── QA-TEST-ENGINEER.md           # Coverage tracking, test scenarios
+│   └── TECH-DEBT-CONTROLLER.md       # Score targets, anti-pattern tracking
+├── rules/
+│   ├── 00-general.md                 # Golden rules, naming, forbidden actions (stack-aware)
+│   ├── 01-architecture.md            # Anti-pattern prevention, module structure
+│   ├── 02-security.md                # OWASP, secrets, input validation
+│   └── {stack}-rules.md              # Stack-specific rules (Python, TypeScript, etc.)
+├── guards/
+│   ├── PREFLIGHT.md                  # Pre-action checklist with detected toolchain
+│   ├── QUALITY-GATES.md              # Build/test/coverage/score gates
+│   └── CODE-REVIEW-CHECKLIST.md      # Domain-specific review items
+├── workflows/
+│   ├── new-feature.md                # Feature development workflow
+│   ├── fix-bug.md                    # Bug fix workflow
+│   └── review.md                     # Code review workflow
+├── templates/
+│   ├── C4.md                         # Architecture template (framework-aware Level 4)
+│   ├── BDD.md                        # BDD scenarios (domain-aware)
+│   ├── TDD.md                        # TDD examples (pytest/junit/go_test/jest per stack)
+│   ├── ADR.md                        # Decision records (stack-aware context)
+│   └── THREAT-MODEL.md               # STRIDE model (domain-specific threats)
+└── skills/
+    └── PROJECT-PATTERNS.md           # Detected patterns (adapters, factories, etc.)
+```
+
+**What makes it context-aware:**
+
+A Python/FastAPI project gets pytest examples in TDD, `class ABC` interfaces in C4, SQLAlchemy references in ADR, `type: ignore` in forbidden actions, and `pytest` in quality gates. A TypeScript/NestJS project gets Jest, `interface`, TypeORM/Prisma, `@ts-ignore`, and `npm run build`. A Go project gets `go test`, `type ... interface`, GORM, `interface{}` warnings, and `go build`. The same command produces fundamentally different output based on what it detects.
+
+**Domain inference feeds into every template.** A fintech project gets PCI-DSS compliance gates, fraud-prevention BDD scenarios, and encryption-focused threat models. A healthtech project gets HIPAA checks and patient data protection rules. Domain confidence is boosted by reading pyproject.toml descriptions, README keywords, and project names.
 
 ## CLI Commands
 
 ### `architect analyze [path]`
-**The unified command** — runs architecture analysis, refactoring plan, and agent suggestions.
+The unified command — architecture analysis, refactoring plan, and agent suggestions in one report.
 
 ```bash
-# Full analysis with HTML report (default)
-architect analyze ./src
-
-# Custom output path
-architect analyze ./src --output docs/report.html
-
-# JSON or Markdown output
-architect analyze ./src --format json --output report.json
-architect analyze ./src --format markdown --output report.md
-```
-
-### `architect refactor [path]`
-Generate a standalone refactoring plan.
-
-```bash
-architect refactor ./src --output refactor-plan.html
+architect analyze ./src                              # HTML report (default)
+architect analyze ./src --output docs/report.html    # Custom path
+architect analyze ./src --format json                # JSON output
+architect analyze ./src --format markdown             # Markdown output
 ```
 
 ### `architect agents [path]`
 Generate or audit the `.agent/` directory for AI coding assistants.
 
 ```bash
-# Generate agent configuration files
-architect agents ./
-
-# With specific selections
-architect agents ./ --agents ORCHESTRATOR,QA-TEST-ENGINEER --rules 00-general,01-architecture
+architect agents ./                                  # Generate full .agent/
+architect agents ./ --agents ORCHESTRATOR,QA          # Specific agents only
 ```
 
-### `architect diagram [path]`
-Generate architecture diagram in Mermaid format.
+If `.agent/` already exists, Architect audits it and only generates missing files.
+
+### `architect refactor [path]`
+Generate a standalone refactoring plan.
 
 ### `architect score [path]`
-Calculate architecture quality score.
+Calculate architecture quality score (quick mode).
 
 ### `architect anti-patterns [path]`
 Detect anti-patterns with severity levels.
@@ -110,32 +124,8 @@ Detect anti-patterns with severity levels.
 ### `architect layers [path]`
 Analyze layer structure and distribution.
 
-## Output Example
-
-```
-🏗️  Architect — Architecture Analysis
-📂 Path: /path/to/project/src
-📋 Command: analyze
-📄 Format: html
-
-✅ HTML report saved to: architect-report.html
-📊 Score: 82/100
-⚠️  Anti-patterns: 1
-🔧 Refactoring steps: 2
-🤖 Suggested agents: 6
-
-═══════════════════════════════════════
-  SCORE: 82/100
-═══════════════════════════════════════
-├─ Modularity: 95
-├─ Coupling:   50
-├─ Cohesion:   95
-└─ Layering:   85
-
-📁 Files: 12 | 📝 Lines: 1,521
-⚠️  Anti-patterns: 1
-🤖 Agents: 6 suggested | No .agent/ found
-```
+### `architect diagram [path]`
+Generate architecture diagram in Mermaid format.
 
 ## Configuration
 
@@ -143,7 +133,7 @@ Create `.architect.json` in your project root:
 
 ```json
 {
-  "ignore": ["node_modules", "dist", ".git", "coverage"],
+  "ignore": ["node_modules", "dist", ".git", "coverage", "__pycache__", ".venv"],
   "frameworks": { "detect": true },
   "antiPatterns": {
     "godClass": { "linesThreshold": 500, "methodsThreshold": 10 },
@@ -157,6 +147,22 @@ Create `.architect.json` in your project root:
   }
 }
 ```
+
+## Supported Frameworks (61)
+
+| Ecosystem | Frameworks |
+|-----------|-----------|
+| **Node.js/TypeScript** | NestJS, Express, Fastify, Koa, Hapi, Next.js, Nuxt |
+| **Python** | FastAPI, Django, Flask, Starlette, Sanic, Litestar, aiohttp, Tornado, DRF |
+| **Java/Kotlin** | Spring Boot, Quarkus, Micronaut, Ktor |
+| **Go** | Gin, Echo, Fiber, Chi, Gorilla Mux |
+| **Rust** | Actix Web, Axum, Rocket |
+| **Ruby** | Ruby on Rails, Sinatra |
+| **PHP** | Laravel, Symfony, Slim |
+| **Dart/Flutter** | Flutter, Shelf, Dart Frog |
+| **ORM/Database** | TypeORM, Prisma, Sequelize, Mongoose, Knex, Drizzle, SQLAlchemy, SQLModel, Tortoise ORM, Peewee |
+| **Testing** | Jest, Vitest, Mocha, pytest, unittest, Hypothesis, RSpec |
+| **Tooling** | ESLint, Prettier, Biome, Ruff, Black, Flake8, Pylint, mypy |
 
 ## CI/CD Integration
 
@@ -191,7 +197,7 @@ npm install -D @girardelli/architect
 {
   "scripts": {
     "architect": "architect analyze ./src --output docs/architect-report.html",
-    "architect:json": "architect analyze ./src --format json --output docs/report.json"
+    "architect:score": "architect score ./src"
   }
 }
 ```
@@ -209,30 +215,13 @@ const report = await architect.analyze('./src');
 // Refactoring plan
 const plan = architect.refactor(report, './src');
 
-// Agent suggestions (dry-run, no files created)
+// Agent suggestions (dry-run)
 const agents = architect.suggestAgents('./');
 
-// Generate unified HTML report
+// Generate HTML report
 const htmlGenerator = new HtmlReportGenerator();
 const html = htmlGenerator.generateHtml(report, plan, agents);
 ```
-
-## Supported Frameworks
-
-| Framework | Detection Method |
-|-----------|-----------------|
-| NestJS | `@nestjs/core` in dependencies |
-| React | `react` in dependencies |
-| Angular | `@angular/core` in dependencies |
-| Vue.js | `vue` in dependencies |
-| Next.js | `next` in dependencies |
-| Express.js | `express` in dependencies |
-| TypeORM | `typeorm` in dependencies |
-| Prisma | `@prisma/client` in dependencies |
-| Spring Boot | `spring-boot` in pom.xml |
-| Django | `django` in requirements.txt |
-| Flask | `flask` in requirements.txt |
-| Flutter | `flutter` in pubspec.yaml |
 
 ## Development
 
@@ -240,9 +229,13 @@ const html = htmlGenerator.generateHtml(report, plan, agents);
 npm install
 npm run build    # Compile TypeScript
 npm run dev      # Watch mode
-npm test         # Run tests
+npm test         # Run tests (337 tests, 9 suites)
 npm run lint     # ESLint
 ```
+
+## Roadmap
+
+- **v4.0** — Agent Runtime: orchestrated execution with I/O contracts, pipeline engine, and human approval gates
 
 ## Author
 
@@ -262,7 +255,3 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 MIT License - Copyright (c) 2026 Camilo Girardelli / Girardelli Tecnologia
 
 See [LICENSE](LICENSE) for details.
-
----
-
-**Architect** — Architecture analysis, refactoring plans, and AI agent generation for every developer.

@@ -163,7 +163,7 @@ Interceptors:
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -254,7 +254,7 @@ src/app/modules/[feature]/
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -348,7 +348,7 @@ REGRA: Manter Client Components o menor possível.
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -448,7 +448,7 @@ ${fw === 'Django' ? `❌ Fat views (lógica de negócio no view) → Usar servic
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -555,7 +555,7 @@ NUNCA:
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -627,7 +627,7 @@ src/main/java/com/[org]/[project]/
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -700,6 +700,6 @@ src/
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
