@@ -9,6 +9,9 @@ import {
   depthIndicator,
   modulesSummaryTable,
   integrationsSummary,
+  frameworkBadge,
+  toolchainCommands,
+  projectStructureBadge,
 } from '../template-helpers.js';
 
 /**
@@ -104,7 +107,7 @@ version: 3.0.0
 | **Cobertura Mínima** | ${config.coverageMinimum}% |
 | **Refatorações Pendentes** | ${plan.steps.length} steps |
 
-${depthAtLeast(ctx, 'medium') ? `\n---\n\n## 📍 Contexto Enriquecido\n\n${depthIndicator(ctx)}\n${domainBadge(ctx)}${modulesSummaryTable(ctx) ? `\n### 📦 Resumo de Módulos\n\n${modulesSummaryTable(ctx)}` : ''}${integrationsSummary(ctx)}${complianceBadges(ctx)}` : ''}
+${depthAtLeast(ctx, 'medium') ? `\n---\n\n## 📍 Contexto Enriquecido\n\n${depthIndicator(ctx)} · ${projectStructureBadge(ctx)}\n\n${frameworkBadge(ctx)}\n${domainBadge(ctx)}${modulesSummaryTable(ctx) ? `\n### 📦 Resumo de Módulos\n\n${modulesSummaryTable(ctx)}` : ''}${integrationsSummary(ctx)}${complianceBadges(ctx)}${toolchainCommands(ctx)}` : ''}
 
 ---
 
@@ -438,11 +441,12 @@ function buildBusinessQuestions(ctx: TemplateContext | EnrichedTemplateContext):
     );
   }
 
+  let nextQ = questions.length + 1;
   questions.push(
-    `Q${questions.length + 1}: Quem precisa de autenticação?`,
-    `Q${questions.length + 1}: Quais permissões são necessárias?`,
-    `Q${questions.length + 1}: Há dados sensíveis envolvidos?`,
-    `Q${questions.length + 1}: Quais ameaças são relevantes?`,
+    `Q${nextQ++}: Quem precisa de autenticação?`,
+    `Q${nextQ++}: Quais permissões são necessárias?`,
+    `Q${nextQ++}: Há dados sensíveis envolvidos?`,
+    `Q${nextQ++}: Quais ameaças são relevantes?`,
   );
 
   return questions.map(q => `- **${q}**`).join('\n');
