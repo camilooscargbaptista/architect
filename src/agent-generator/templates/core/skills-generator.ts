@@ -164,6 +164,12 @@ export function generateProjectSkills(ctx: TemplateContext | EnrichedTemplateCon
   else if (isDart) fileConvention = 'snake_case para arquivos, camelCase para funções, PascalCase para classes';
   else if (isGo) fileConvention = 'lowercase para pacotes, PascalCase para exports, camelCase para privados';
 
+  // Build frameworks label from enriched detectedFrameworks (most accurate) or stack.frameworks
+  const detectedFw = enriched.detectedFrameworks;
+  const frameworksLabel = detectedFw && detectedFw.length > 0
+    ? detectedFw.map(f => f.version ? `${f.name} v${f.version}` : f.name).join(', ')
+    : (stack?.frameworks.length ? stack.frameworks.join(', ') : 'Não detectados');
+
   const patternsContent = patterns.map(p => `### ${p.name}
 
 ${p.description}
@@ -207,7 +213,7 @@ version: 3.0.0
 
 - **Nomenclatura de arquivos:** ${fileConvention}
 - **Stack:** ${stack?.languages.join(', ') || 'Não detectada'}
-- **Frameworks:** ${stack?.frameworks.join(', ') || 'Não detectados'}
+- **Frameworks:** ${frameworksLabel}
 
 ---
 

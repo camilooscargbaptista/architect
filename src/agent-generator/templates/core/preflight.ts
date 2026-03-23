@@ -1,4 +1,5 @@
-import { TemplateContext } from '../../types.js';
+import { TemplateContext, EnrichedTemplateContext } from '../../types.js';
+import { getEnriched } from '../template-helpers.js';
 
 /**
  * Generates enterprise-grade PREFLIGHT.md
@@ -7,6 +8,8 @@ import { TemplateContext } from '../../types.js';
  */
 export function generatePreflight(ctx: TemplateContext): string {
   const { stack, projectName, config, report } = ctx;
+  const enriched = getEnriched(ctx);
+  const tc = enriched.toolchain;
 
   return `---
 antigravity:
@@ -60,13 +63,13 @@ git status                       # Limpo antes de começar
 git pull origin <branch>         # Sincronizado
 
 # Deps: verificar se está tudo instalado
-${stack.packageManager === 'npm' ? 'npm ci' : stack.packageManager === 'pip' ? 'pip install -r requirements.txt' : stack.packageManager === 'pub' ? 'flutter pub get' : `${stack.packageManager} install`}
+${tc?.installCmd || (stack.packageManager === 'npm' ? 'npm ci' : stack.packageManager === 'pip' ? 'pip install -r requirements.txt' : stack.packageManager === 'pub' ? 'flutter pub get' : `${stack.packageManager} install`)}
 
 # Build: verificar se compila
-${stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'pub' ? 'flutter build' : 'make build'}
+${tc?.buildCmd || (stack.packageManager === 'npm' ? 'npm run build' : stack.packageManager === 'pub' ? 'flutter build' : 'make build')}
 
 # Tests: verificar se passam ANTES de começar
-${stack.testFramework === 'pytest' ? 'pytest' : stack.testFramework === 'flutter_test' ? 'flutter test' : stack.testFramework === 'go test' ? 'go test ./...' : 'npm run test'}
+${tc?.testCmd || (stack.testFramework === 'pytest' ? 'pytest' : stack.testFramework === 'flutter_test' ? 'flutter test' : stack.testFramework === 'go test' ? 'go test ./...' : 'npm run test')}
 \`\`\`
 
 \`\`\`

@@ -409,7 +409,7 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
     methodName = `create${service.replace('Service', '')}`;
 
     if (testFramework === 'pytest') {
-      exampleTest = `    def test_should_create_entity_successfully():
+      exampleTest = `    def test_should_create_entity_successfully(self):
         # Arrange
         input_data = {"name": "Test Entity"}
 
@@ -586,17 +586,17 @@ ${
 from app.services.${moduleName.toLowerCase()} import ${moduleName}Service
 
 class Test${moduleName}:
-  """Testes para ${moduleName}"""
+    """Testes para ${moduleName}"""
 
 ${exampleTest}
 
-  def test_should_throw_error_when_invalid_input():
-    # Arrange
-    invalid_input = None
+    def test_should_throw_error_when_invalid_input(self):
+        # Arrange
+        invalid_input = None
 
-    # Act & Assert
-    with pytest.raises(ValueError):
-      service.${methodName}(invalid_input)`
+        # Act & Assert
+        with pytest.raises(ValueError):
+            service.${methodName}(invalid_input)`
     : testFramework === 'flutter_test'
       ? `import 'package:flutter_test/flutter_test.dart';
 import 'package:${moduleName.toLowerCase()}/services/${moduleName.toLowerCase()}_service.dart';
