@@ -77,7 +77,7 @@ agent_card:
   inputs: [user-story, api-contracts, business-rules, integration-doc]
   outputs: [controllers, services, entities, migrations, tests, integration-doc]
   depends_on: [${stack.hasDatabase ? 'database-engineer' : ''}]
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 🔧 ${lang.toUpperCase()} BACKEND DEVELOPER
@@ -141,7 +141,7 @@ ${crossRef('backend', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -187,7 +187,7 @@ agent_card:
   inputs: [mockup, integration-doc, user-story, design-system]
   outputs: [components, pages, services, tests]
   depends_on: [orchestrator]
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 🎨 ${fw.toUpperCase().replace('.', '')} FRONTEND DEVELOPER
@@ -239,7 +239,7 @@ ${crossRef('frontend', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -322,7 +322,7 @@ agent_card:
   inputs: [architecture-doc, source-code, api-contracts]
   outputs: [threat-model, security-findings, compliance-report]
   depends_on: []
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 🛡️ SECURITY AUDITOR
@@ -365,7 +365,7 @@ ${crossRef('security-auditor', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -475,7 +475,7 @@ agent_card:
   inputs: [user-story, bdd-scenarios, source-code]
   outputs: [test-plan, test-cases, coverage-report]
   depends_on: []
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 🧪 QA TEST ENGINEER
@@ -527,7 +527,7 @@ ${crossRef('qa-test', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -612,7 +612,7 @@ agent_card:
   inputs: [architecture-report, anti-patterns, score-history]
   outputs: [debt-backlog, refactoring-plan, score-targets]
   depends_on: []
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 📊 TECH DEBT CONTROLLER
@@ -670,7 +670,7 @@ ${crossRef('tech-debt', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -815,7 +815,7 @@ ${crossRef('code-review', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -1097,7 +1097,7 @@ agent_card:
   inputs: [entity-model, business-rules, performance-requirements]
   outputs: [migrations, indexes, seeds, query-optimization]
   depends_on: []
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 🗄️ DATABASE ENGINEER
@@ -1124,7 +1124,7 @@ ${crossRef('database-engineer', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }
 
@@ -1226,7 +1226,7 @@ agent_card:
   inputs: [mockup, integration-doc, user-story]
   outputs: [screens, widgets, services, tests]
   depends_on: [orchestrator]
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 📱 FLUTTER UI DEVELOPER
@@ -1288,6 +1288,6 @@ ${crossRef('flutter', ctx)}
 
 ---
 
-**Gerado por Architect v3.0**
+**Gerado por Architect v3.1**
 `;
 }

@@ -200,7 +200,7 @@ ${domain.compliance.map(c => `- **${c.name}**: ${c.reason}`).join('\n')}` : ''}
 antigravity:
   trigger: 'on_demand'
   description: 'Padrões e convenções específicos do projeto'
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 📚 Skills: Padrões do Projeto

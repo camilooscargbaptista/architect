@@ -45,7 +45,7 @@ agent_card:
   inputs: [user-story, feature-request, bug-report, refactoring-request]
   outputs: [consolidated-plan, implementation-blocks, effort-estimate, architecture-docs]
   depends_on: []
-version: 3.0.0
+version: 3.1.0
 ---
 
 # 🎭 AGENT-ORCHESTRATOR: ${projectName}
@@ -350,7 +350,7 @@ Quando dois agentes discordam:
 
 ---
 
-**Gerado por Architect v3.0 · Score: ${report.score.overall}/100 · ${new Date().toISOString().split('T')[0]}**
+**Gerado por Architect v3.1 · Score: ${report.score.overall}/100 · ${new Date().toISOString().split('T')[0]}**
 `;
 }
 

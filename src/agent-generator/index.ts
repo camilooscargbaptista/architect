@@ -61,7 +61,7 @@ import { generateProjectSkills } from './templates/core/skills-generator.js';
 export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, EnrichedTemplateContext, DomainInsights, ModuleDetail, DetectedEndpoint, FrameworkInfo, DetectedToolchain };
 
 /**
- * Agent Generator v3.0 — Enterprise-Grade
+ * Agent Generator v3.1 — Enterprise-Grade
  *
  * Generates or audits .agent/ directories with enterprise-grade
  * agent frameworks: detailed workflows, approval gates, quality enforcement,

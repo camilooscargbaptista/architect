@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Architect CLI v3.0
+ * Architect CLI v3.1
  * Enterprise Architecture Analysis — @girardelli/architect
  *
  * Uso:
@@ -95,7 +95,7 @@ class ProgressReporter {
 
     w.write('\n');
     w.write(`${c.darkGray}  ┌─────────────────────────────────────────────────────────────────┐${c.reset}\n`);
-    w.write(`${c.darkGray}  │${c.reset}  ${c.cyan}${c.bold}⚡ ARCHITECT v3.0${c.reset}  ${c.dim}Enterprise Architecture Intelligence${c.reset}     ${c.darkGray}│${c.reset}\n`);
+    w.write(`${c.darkGray}  │${c.reset}  ${c.cyan}${c.bold}⚡ ARCHITECT v3.1${c.reset}  ${c.dim}Enterprise Architecture Intelligence${c.reset}     ${c.darkGray}│${c.reset}\n`);
     w.write(`${c.darkGray}  │${c.reset}  ${c.dim}@girardelli/architect — powered by Girardelli Tecnologia${c.reset}    ${c.darkGray}│${c.reset}\n`);
     w.write(`${c.darkGray}  └─────────────────────────────────────────────────────────────────┘${c.reset}\n`);
     w.write('\n');
@@ -277,7 +277,7 @@ function parseArgs(args: string[]): CliOptions {
 
 function printUsage(): void {
   console.log(`
-${c.cyan}${c.bold}⚡ Architect v3.0${c.reset} — Enterprise Architecture Intelligence
+${c.cyan}${c.bold}⚡ Architect v3.1${c.reset} — Enterprise Architecture Intelligence
 
 ${c.bold}Usage:${c.reset}
   architect <command> [path] [options]

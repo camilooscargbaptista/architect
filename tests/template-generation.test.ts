@@ -146,7 +146,7 @@ describe('Core Templates', () => {
 
     it('should contain header and project info', () => {
       expect(output).toContain('Agent Framework');
-      expect(output).toContain('Architect v3.0');
+      expect(output).toContain('Architect v3.1');
     });
 
     it('should contain project name', () => {
@@ -672,7 +672,7 @@ describe('Template Quality (Enterprise-Grade)', () => {
     }
   });
 
-  it('all templates should contain Architect v3.0 signature', () => {
+  it('all templates should contain Architect v3.1 signature', () => {
     const templates = [
       generateOrchestrator(ctx),
       generatePreflight(ctx),
@@ -686,7 +686,7 @@ describe('Template Quality (Enterprise-Grade)', () => {
     ];
 
     for (const content of templates) {
-      expect(content).toContain('Architect v3.0');
+      expect(content).toContain('Architect v3.1');
     }
   });
 
