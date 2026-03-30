@@ -297,6 +297,14 @@ describe('AgentGenerator', () => {
 
     it('should generate frontend agent when frontend detected', () => {
       const report = makeReport({
+        projectInfo: {
+          path: '/test',
+          name: 'test-project',
+          frameworks: ['Angular'],
+          totalFiles: 50,
+          totalLines: 5000,
+          primaryLanguages: ['TypeScript'],
+        },
         dependencyGraph: {
           nodes: ['src/app.component.ts', 'src/app.module.ts', 'src/angular.json'],
           edges: [],
@@ -392,6 +400,14 @@ describe('AgentGenerator', () => {
   describe('Python stack generation', () => {
     it('should generate Python-specific agents and rules', () => {
       const report = makeReport({
+        projectInfo: {
+          path: '/test',
+          name: 'test-project',
+          frameworks: ['Django'],
+          totalFiles: 50,
+          totalLines: 5000,
+          primaryLanguages: ['Python'],
+        },
         dependencyGraph: {
           nodes: ['manage.py', 'app/views.py', 'app/models.py', 'app/serializers.py'],
           edges: [
