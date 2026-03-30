@@ -1,4 +1,21 @@
-import { TemplateContext, DEFAULT_AGENT_CONFIG, StackInfo, AnalysisReport, RefactoringPlan, generateIndexMd, generateOrchestrator, generatePreflight, generateQualityGates, generateGeneralRules, generateArchitectureRules, generateSecurityRules, generateNewFeatureWorkflow, generateFixBugWorkflow, generateReviewWorkflow, generateBackendAgent, generateFrontendAgent, generateSecurityAgent, generateQAAgent, generateTechDebtAgent, generateCodeReviewChecklist, generateDatabaseAgent, generateMobileAgent, generateC4Template, generateBddTemplate, generateTddTemplate, generateAdrTemplate, generateThreatModelTemplate, generateStackRules, getStackRuleFileName } from './template-generation.test_deps.js';
+import { TemplateContext } from '../src/core/agent-generator/types/template.js';
+import { StackInfo } from '../src/core/agent-generator/types/stack.js';
+import { DEFAULT_AGENT_CONFIG } from '../src/core/agent-generator/types/agent.js';
+import { AnalysisReport } from '../src/core/types/core.js';
+import { RefactoringPlan } from '../src/core/types/rules.js';
+import { generateIndexMd } from '../src/core/agent-generator/templates/core/index-md.js';
+import { generateOrchestrator } from '../src/core/agent-generator/templates/core/orchestrator.js';
+import { generatePreflight } from '../src/core/agent-generator/templates/core/preflight.js';
+import { generateQualityGates } from '../src/core/agent-generator/templates/core/quality-gates.js';
+import { generateGeneralRules } from '../src/core/agent-generator/templates/core/general-rules.js';
+import { generateArchitectureRules } from '../src/core/agent-generator/templates/core/architecture-rules.js';
+import { generateSecurityRules } from '../src/core/agent-generator/templates/core/security-rules.js';
+import { generateNewFeatureWorkflow } from '../src/core/agent-generator/templates/core/workflow-new-feature.js';
+import { generateFixBugWorkflow } from '../src/core/agent-generator/templates/core/workflow-fix-bug.js';
+import { generateReviewWorkflow } from '../src/core/agent-generator/templates/core/workflow-review.js';
+import { generateBackendAgent, generateFrontendAgent, generateSecurityAgent, generateQAAgent, generateTechDebtAgent, generateCodeReviewChecklist, generateDatabaseAgent, generateMobileAgent } from '../src/core/agent-generator/templates/core/agents.js';
+import { generateC4Template, generateBddTemplate, generateTddTemplate, generateAdrTemplate, generateThreatModelTemplate } from '../src/core/agent-generator/templates/domain/index.js';
+import { generateStackRules, getStackRuleFileName } from '../src/core/agent-generator/templates/stack/index.js';
 
 // ── Core Templates ──
 

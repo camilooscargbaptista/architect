@@ -10,10 +10,10 @@
  */
 
 import path from 'path';
-import { ProjectScanner } from '../src/scanner.js';
-import { ArchitectureAnalyzer } from '../src/analyzer.js';
-import { AntiPatternDetector } from '../src/anti-patterns.js';
-import { ConfigLoader, normalizeIgnorePatterns } from '../src/config.js';
+import { ProjectScanner } from '../src/infrastructure/scanner.js';
+import { ArchitectureAnalyzer } from '../src/core/analyzer.js';
+import { AntiPatternDetector } from '../src/core/anti-patterns.js';
+import { ConfigLoader, normalizeIgnorePatterns } from '../src/core/config.js';
 
 // Use path.resolve for Jest compatibility (import.meta.url not supported by ts-jest)
 const FIXTURE_PATH = path.resolve(process.cwd(), 'tests/fixtures/monorepo');

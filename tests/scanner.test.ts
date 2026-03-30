@@ -1,6 +1,6 @@
 import path from 'path';
-import { ProjectScanner } from '../src/scanner.js';
-import { ArchitectConfig } from '../src/types.js';
+import { ProjectScanner } from '../src/infrastructure/scanner.js';
+import { ArchitectConfig } from '../src/core/types/core.js';
 
 // Use path.resolve for Jest compatibility (import.meta.url not supported by ts-jest)
 const testDir = path.resolve(process.cwd(), 'tests');

@@ -5,13 +5,13 @@
  * between the three analyzer stages.
  */
 
-import { GitHistoryAnalyzer } from '../src/analyzers/git-history.js';
-import { TemporalScorer } from '../src/analyzers/temporal-scorer.js';
-import { ForecastEngine } from '../src/analyzers/forecast.js';
-import { saveToCache, loadFromCache } from '../src/analyzers/git-cache.js';
-import type { GitHistoryReport } from '../src/analyzers/git-history.js';
-import type { TemporalReport } from '../src/analyzers/temporal-scorer.js';
-import type { WeatherForecast } from '../src/analyzers/forecast.js';
+import { GitHistoryAnalyzer } from '../src/infrastructure/git-history.js';
+import { TemporalScorer } from '../src/core/analyzers/temporal-scorer.js';
+import { ForecastEngine } from '../src/core/analyzers/forecast.js';
+import { saveToCache, loadFromCache } from '../src/infrastructure/git-cache.js';
+import type { GitHistoryReport } from '../src/infrastructure/git-history.js';
+import type { TemporalReport } from '../src/core/analyzers/temporal-scorer.js';
+import type { WeatherForecast } from '../src/core/analyzers/forecast.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';

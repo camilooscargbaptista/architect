@@ -5,13 +5,13 @@
  * change coupling detection, and timeline construction.
  */
 
-import { GitHistoryAnalyzer } from '../src/analyzers/git-history.js';
+import { GitHistoryAnalyzer } from '../src/infrastructure/git-history.js';
 import type {
   GitHistoryReport,
   FileHistory,
   ModuleHistory,
   VelocityVector,
-} from '../src/analyzers/git-history.js';
+} from '../src/infrastructure/git-history.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
