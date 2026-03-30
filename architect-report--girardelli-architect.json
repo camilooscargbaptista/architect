@@ -1,12 +1,12 @@
 {
   "report": {
-    "timestamp": "2026-03-30T14:14:09.463Z",
+    "timestamp": "2026-03-30T14:24:50.608Z",
     "projectInfo": {
       "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect",
       "name": "@girardelli/architect",
       "frameworks": [],
-      "totalFiles": 110,
-      "totalLines": 31879,
+      "totalFiles": 118,
+      "totalLines": 37117,
       "primaryLanguages": [
         "JavaScript",
         "TypeScript"
@@ -47,6 +47,14 @@
             "extension": ".js",
             "lines": 19,
             "language": "JavaScript"
+          },
+          {
+            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/architect-report--girardelli-architect.json",
+            "name": "architect-report--girardelli-architect.json",
+            "type": "file",
+            "extension": ".json",
+            "lines": 5167,
+            "language": "Unknown"
           },
           {
             "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/tests",
@@ -687,7 +695,7 @@
                         "name": "template-helpers.ts",
                         "type": "file",
                         "extension": ".ts",
-                        "lines": 777,
+                        "lines": 13,
                         "language": "TypeScript"
                       },
                       {
@@ -701,6 +709,61 @@
                             "type": "file",
                             "extension": ".ts",
                             "lines": 706,
+                            "language": "TypeScript"
+                          }
+                        ]
+                      },
+                      {
+                        "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers",
+                        "name": "helpers",
+                        "type": "directory",
+                        "children": [
+                          {
+                            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers/summary-helpers.ts",
+                            "name": "summary-helpers.ts",
+                            "type": "file",
+                            "extension": ".ts",
+                            "lines": 65,
+                            "language": "TypeScript"
+                          },
+                          {
+                            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers/structure-helpers.ts",
+                            "name": "structure-helpers.ts",
+                            "type": "file",
+                            "extension": ".ts",
+                            "lines": 291,
+                            "language": "TypeScript"
+                          },
+                          {
+                            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers/stack-helpers.ts",
+                            "name": "stack-helpers.ts",
+                            "type": "file",
+                            "extension": ".ts",
+                            "lines": 78,
+                            "language": "TypeScript"
+                          },
+                          {
+                            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers/security-helpers.ts",
+                            "name": "security-helpers.ts",
+                            "type": "file",
+                            "extension": ".ts",
+                            "lines": 196,
+                            "language": "TypeScript"
+                          },
+                          {
+                            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers/cross-ref-helpers.ts",
+                            "name": "cross-ref-helpers.ts",
+                            "type": "file",
+                            "extension": ".ts",
+                            "lines": 80,
+                            "language": "TypeScript"
+                          },
+                          {
+                            "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/helpers/base-helpers.ts",
+                            "name": "base-helpers.ts",
+                            "type": "file",
+                            "extension": ".ts",
+                            "lines": 32,
                             "language": "TypeScript"
                           }
                         ]
@@ -1040,6 +1103,14 @@
                 "language": "TypeScript"
               },
               {
+                "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/scripts/decompose-helpers.ts",
+                "name": "decompose-helpers.ts",
+                "type": "file",
+                "extension": ".ts",
+                "lines": 93,
+                "language": "TypeScript"
+              },
+              {
                 "path": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/scripts/decompose-enrichers.ts",
                 "name": "decompose-enrichers.ts",
                 "type": "file",
@@ -1100,17 +1171,6 @@
       }
     },
     "antiPatterns": [
-      {
-        "name": "God Class",
-        "severity": "CRITICAL",
-        "location": "src/agent-generator/templates/template-helpers.ts",
-        "description": "Class with 777 lines and 15 methods violates single responsibility principle",
-        "suggestion": "Consider splitting into smaller, focused classes with specific responsibilities",
-        "metrics": {
-          "lines": 777,
-          "methods": 15
-        }
-      },
       {
         "name": "Shotgun Surgery",
         "severity": "HIGH",
@@ -1481,6 +1541,12 @@
         "files": [
           "src/agent-generator/templates/template-helpers.ts",
           "src/agent-generator/templates/stack/index.ts",
+          "src/agent-generator/templates/helpers/summary-helpers.ts",
+          "src/agent-generator/templates/helpers/structure-helpers.ts",
+          "src/agent-generator/templates/helpers/stack-helpers.ts",
+          "src/agent-generator/templates/helpers/security-helpers.ts",
+          "src/agent-generator/templates/helpers/cross-ref-helpers.ts",
+          "src/agent-generator/templates/helpers/base-helpers.ts",
           "src/agent-generator/templates/domain/index.ts",
           "src/agent-generator/templates/core/workflow-review.ts",
           "src/agent-generator/templates/core/workflow-new-feature.ts",
@@ -1562,8 +1628,13 @@
         "src/agent-generator/framework-detector.ts",
         "src/agent-generator/domain-inferrer.ts",
         "src/agent-generator/context-enricher.ts",
-        "src/agent-generator/templates/template-helpers.ts",
         "src/agent-generator/templates/stack/index.ts",
+        "src/agent-generator/templates/helpers/summary-helpers.ts",
+        "src/agent-generator/templates/helpers/structure-helpers.ts",
+        "src/agent-generator/templates/helpers/stack-helpers.ts",
+        "src/agent-generator/templates/helpers/security-helpers.ts",
+        "src/agent-generator/templates/helpers/cross-ref-helpers.ts",
+        "src/agent-generator/templates/helpers/base-helpers.ts",
         "src/agent-generator/templates/domain/index.ts",
         "src/agent-generator/templates/core/workflow-review.ts",
         "src/agent-generator/templates/core/workflow-new-feature.ts",
@@ -1600,6 +1671,7 @@
         "src/agent-generator/detectors/dart-detector.ts",
         "src/agent-generator/detectors/base-detector.ts",
         "scripts/decompose-summarizer.ts",
+        "scripts/decompose-helpers.ts",
         "scripts/decompose-enrichers.ts",
         "scripts/decompose-detectors.ts",
         "src/analyzers/temporal-scorer.js",
@@ -1678,6 +1750,7 @@
         "src/agent-generator/enrichers/module-extractor.js",
         "src/agent-generator/enrichers/endpoint-extractor.js",
         "src/agent-generator/enrichers/analysis-helpers.js",
+        "src/agent-generator/templates/helpers/base-helpers.js",
         "src/agent-generator/enrichers/layer-classifier.js",
         "src/agent-generator/enrichers/description-generator.js",
         "src/agent-generator/templates/core/skills-generator.js",
@@ -1692,6 +1765,7 @@
         "scripts/summarizer/purpose-inferrer.js",
         "scripts/summarizer/module-inferrer.js",
         "../types.js",
+        "scripts/base-helpers.js",
         "scripts/layer-classifier.js",
         "scripts/description-generator.js",
         "scripts/analysis-helpers.js",
@@ -2621,13 +2695,67 @@
           "weight": 1
         },
         {
-          "from": "src/agent-generator/templates/template-helpers.ts",
+          "from": "src/agent-generator/templates/stack/index.ts",
           "to": "src/agent-generator/types.js",
           "type": "import",
           "weight": 1
         },
         {
-          "from": "src/agent-generator/templates/stack/index.ts",
+          "from": "src/agent-generator/templates/helpers/summary-helpers.ts",
+          "to": "src/agent-generator/types.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/summary-helpers.ts",
+          "to": "src/agent-generator/templates/helpers/base-helpers.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/structure-helpers.ts",
+          "to": "src/agent-generator/types.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/structure-helpers.ts",
+          "to": "src/agent-generator/templates/helpers/base-helpers.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/stack-helpers.ts",
+          "to": "src/agent-generator/types.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/stack-helpers.ts",
+          "to": "src/agent-generator/templates/helpers/base-helpers.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/security-helpers.ts",
+          "to": "src/agent-generator/types.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/security-helpers.ts",
+          "to": "src/agent-generator/templates/helpers/base-helpers.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/cross-ref-helpers.ts",
+          "to": "src/agent-generator/types.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "src/agent-generator/templates/helpers/base-helpers.ts",
           "to": "src/agent-generator/types.js",
           "type": "import",
           "weight": 1
@@ -3233,6 +3361,18 @@
           "weight": 1
         },
         {
+          "from": "scripts/decompose-helpers.ts",
+          "to": "../types.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
+          "from": "scripts/decompose-helpers.ts",
+          "to": "scripts/base-helpers.js",
+          "type": "import",
+          "weight": 1
+        },
+        {
           "from": "scripts/decompose-enrichers.ts",
           "to": "../types.js",
           "type": "import",
@@ -3392,12 +3532,6 @@
     },
     "suggestions": [
       {
-        "priority": "CRITICAL",
-        "title": "God Class",
-        "description": "Consider splitting into smaller, focused classes with specific responsibilities in `/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/template-helpers.ts`.",
-        "impact": "Addressing this God Class will improve overall architecture score"
-      },
-      {
         "priority": "HIGH",
         "title": "Shotgun Surgery",
         "description": "Refactor to reduce coupling and consolidate related functionality into modules in `/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/tests/template-generation.test.ts`. Affected files: `/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/types.js`, `/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/types.js`, `/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/templates/core/index-md.js` (+12 more).",
@@ -3520,7 +3654,7 @@
       {
         "priority": "HIGH",
         "title": "Hub File: types.js",
-        "description": "`/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/types.js` has 43 connections. Consider extracting a facade or splitting responsibilities to reduce coupling.",
+        "description": "`/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect/src/agent-generator/types.js` has 48 connections. Consider extracting a facade or splitting responsibilities to reduce coupling.",
         "impact": "Reducing connections in `types.js` can improve coupling score by 10-15 points"
       },
       {
@@ -3543,7 +3677,7 @@
       }
     ],
     "diagram": {
-      "mermaid": "graph LR\n  UI[\"UI<br/>(16 files)\"]:::uiStyle\n  Infrastructure[\"Infrastructure<br/>(1 files)\"]:::infraStyle\n  UI --> API\n  API --> Service\n  Service --> Data\n  Data --> Infrastructure\n\n  classDef apiStyle fill:#FFB6C1,stroke:#333,color:#000\n  classDef serviceStyle fill:#87CEEB,stroke:#333,color:#000\n  classDef dataStyle fill:#90EE90,stroke:#333,color:#000\n  classDef uiStyle fill:#FFD700,stroke:#333,color:#000\n  classDef infraStyle fill:#D3D3D3,stroke:#333,color:#000\n",
+      "mermaid": "graph LR\n  UI[\"UI<br/>(22 files)\"]:::uiStyle\n  Infrastructure[\"Infrastructure<br/>(1 files)\"]:::infraStyle\n  UI --> API\n  API --> Service\n  Service --> Data\n  Data --> Infrastructure\n\n  classDef apiStyle fill:#FFB6C1,stroke:#333,color:#000\n  classDef serviceStyle fill:#87CEEB,stroke:#333,color:#000\n  classDef dataStyle fill:#90EE90,stroke:#333,color:#000\n  classDef uiStyle fill:#FFD700,stroke:#333,color:#000\n  classDef infraStyle fill:#D3D3D3,stroke:#333,color:#000\n",
       "type": "layer"
     },
     "projectSummary": {
@@ -3552,12 +3686,12 @@
       "modules": [
         {
           "name": "agent-generator",
-          "files": 86,
+          "files": 92,
           "description": "Utilitários compartilhados"
         },
         {
           "name": "scripts",
-          "files": 29,
+          "files": 31,
           "description": "Utilitários compartilhados"
         },
         {
@@ -3630,7 +3764,7 @@
     }
   },
   "plan": {
-    "timestamp": "2026-03-30T14:14:09.477Z",
+    "timestamp": "2026-03-30T14:24:50.623Z",
     "projectPath": "/Users/camilooscargirardellibaptista/Documentos/camilo/girardelli_tecnologia/repository/architect",
     "currentScore": {
       "overall": 77,
@@ -3762,8 +3896,8 @@
         "rule": "hub-splitter",
         "priority": "CRITICAL",
         "title": "Split hub file: types.js",
-        "description": "`src/agent-generator/types.js` has 43 incoming connections. Split into 9 focused modules to reduce coupling.",
-        "rationale": "High fan-in (43 files depend on this) creates a bottleneck. Changes to this file ripple to 43 other files. Splitting by usage pattern reduces blast radius.",
+        "description": "`src/agent-generator/types.js` has 48 incoming connections. Split into 9 focused modules to reduce coupling.",
+        "rationale": "High fan-in (48 files depend on this) creates a bottleneck. Changes to this file ripple to 48 other files. Splitting by usage pattern reduces blast radius.",
         "operations": [
           {
             "type": "CREATE",
@@ -3779,15 +3913,15 @@
           },
           {
             "type": "CREATE",
-            "path": "src/agent-generator/types_templates.js",
-            "description": "Create `types_templates.js` with functionality used by: template-helpers.ts",
-            "content": "// types_templates — extracted from types\n// Used by: template-helpers.ts\n"
-          },
-          {
-            "type": "CREATE",
             "path": "src/agent-generator/types_stack.js",
             "description": "Create `types_stack.js` with functionality used by: index.ts",
             "content": "// types_stack — extracted from types\n// Used by: index.ts\n"
+          },
+          {
+            "type": "CREATE",
+            "path": "src/agent-generator/types_helpers.js",
+            "description": "Create `types_helpers.js` with functionality used by: summary-helpers.ts, structure-helpers.ts, stack-helpers.ts, security-helpers.ts, cross-ref-helpers.ts, base-helpers.ts",
+            "content": "// types_helpers — extracted from types\n// Used by: summary-helpers.ts, structure-helpers.ts, stack-helpers.ts, security-helpers.ts, cross-ref-helpers.ts, base-helpers.ts\n"
           },
           {
             "type": "CREATE",
@@ -3856,13 +3990,38 @@
           },
           {
             "type": "MODIFY",
-            "path": "src/agent-generator/templates/template-helpers.ts",
-            "description": "Update imports in `template-helpers.ts` to use new split modules"
+            "path": "src/agent-generator/templates/stack/index.ts",
+            "description": "Update imports in `index.ts` to use new split modules"
           },
           {
             "type": "MODIFY",
-            "path": "src/agent-generator/templates/stack/index.ts",
-            "description": "Update imports in `index.ts` to use new split modules"
+            "path": "src/agent-generator/templates/helpers/summary-helpers.ts",
+            "description": "Update imports in `summary-helpers.ts` to use new split modules"
+          },
+          {
+            "type": "MODIFY",
+            "path": "src/agent-generator/templates/helpers/structure-helpers.ts",
+            "description": "Update imports in `structure-helpers.ts` to use new split modules"
+          },
+          {
+            "type": "MODIFY",
+            "path": "src/agent-generator/templates/helpers/stack-helpers.ts",
+            "description": "Update imports in `stack-helpers.ts` to use new split modules"
+          },
+          {
+            "type": "MODIFY",
+            "path": "src/agent-generator/templates/helpers/security-helpers.ts",
+            "description": "Update imports in `security-helpers.ts` to use new split modules"
+          },
+          {
+            "type": "MODIFY",
+            "path": "src/agent-generator/templates/helpers/cross-ref-helpers.ts",
+            "description": "Update imports in `cross-ref-helpers.ts` to use new split modules"
+          },
+          {
+            "type": "MODIFY",
+            "path": "src/agent-generator/templates/helpers/base-helpers.ts",
+            "description": "Update imports in `base-helpers.ts` to use new split modules"
           },
           {
             "type": "MODIFY",
@@ -4763,13 +4922,13 @@
         "rule": "module-grouper",
         "priority": "MEDIUM",
         "title": "Group co-dependent files into `shared/`",
-        "description": "Files `types.js`, `types.js`, `template-helpers.js`, `base-detector.js`, `framework-registry.js`, `index.js`, `context-builder.js`, `index-md.js`, `orchestrator.js`, `preflight.js`, `quality-gates.js`, `general-rules.js`, `architecture-rules.js`, `security-rules.js`, `workflow-new-feature.js`, `workflow-fix-bug.js`, `workflow-review.js`, `agents.js`, `index.js`, `audit-engine.js`, `stack-detector.js`, `analysis-helpers.js`, `layer-classifier.js` are frequently imported together (co-import score: 79). Grouping them improves cohesion.",
+        "description": "Files `types.js`, `types.js`, `template-helpers.js`, `base-detector.js`, `framework-registry.js`, `base-helpers.js`, `index.js`, `context-builder.js`, `index-md.js`, `orchestrator.js`, `preflight.js`, `quality-gates.js`, `general-rules.js`, `architecture-rules.js`, `security-rules.js`, `workflow-new-feature.js`, `workflow-fix-bug.js`, `workflow-review.js`, `agents.js`, `index.js`, `audit-engine.js`, `stack-detector.js`, `analysis-helpers.js`, `layer-classifier.js` are frequently imported together (co-import score: 83). Grouping them improves cohesion.",
         "rationale": "Files that are frequently imported together belong in the same module. This improves discoverability and reduces the cognitive load of understanding which files work together.",
         "operations": [
           {
             "type": "CREATE",
             "path": "src/agent-generator/shared/__init__.py",
-            "description": "Create new module `shared/` to group 23 co-dependent files",
+            "description": "Create new module `shared/` to group 24 co-dependent files",
             "content": "\"\"\"Module shared — grouped by co-import pattern.\"\"\"\n"
           },
           {
@@ -4801,6 +4960,12 @@
             "path": "src/agent-generator/detectors/framework-registry.js",
             "newPath": "src/agent-generator/shared/framework-registry.js",
             "description": "Move `framework-registry.js` → `shared/framework-registry.js`"
+          },
+          {
+            "type": "MOVE",
+            "path": "src/agent-generator/templates/helpers/base-helpers.js",
+            "newPath": "src/agent-generator/shared/base-helpers.js",
+            "description": "Move `base-helpers.js` → `shared/base-helpers.js`"
           },
           {
             "type": "MOVE",
@@ -5019,7 +5184,7 @@
         ]
       }
     ],
-    "totalOperations": 190,
+    "totalOperations": 196,
     "tier1Steps": 15,
     "tier2Steps": 0
   },
