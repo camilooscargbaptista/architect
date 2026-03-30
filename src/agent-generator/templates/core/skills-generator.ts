@@ -234,3 +234,352 @@ ${domainSection}
 \`\`\`
 `;
 }
+
+/**
+ * Generates ARCHITECT-INTEGRATION.md skill with real project data
+ */
+export function generateArchitectIntegrationSkill(ctx: TemplateContext | EnrichedTemplateContext): string {
+  const enriched = getEnriched(ctx);
+  const projectName = ctx.projectName;
+  const report = ctx.report;
+  const config = ctx.config;
+
+  return `---
+antigravity:
+  trigger: 'on_demand'
+  description: 'Como usar o Architect para análise contínua de arquitetura'
+version: 5.1.0
+---
+
+# 🏗️ Skill: Architect Integration — ${projectName}
+
+> Como usar \`@girardelli/architect\` para manter a qualidade arquitetural.
+
+---
+
+## Instalação
+
+\`\`\`bash
+npm install -g @girardelli/architect
+\`\`\`
+
+---
+
+## Comandos Disponíveis
+
+### Análise completa
+\`\`\`bash
+# Gera HTML report + JSON + .agent/ framework
+architect analyze .
+
+# Output:
+#   → architect-report.html (visual)
+#   → architect-report.json (dados)
+#   → .agent/ (framework de agentes)
+\`\`\`
+
+### Score rápido
+\`\`\`bash
+# Verificação rápida do score
+architect score .
+
+# JSON output (para CI)
+architect score . --json
+\`\`\`
+
+### Regenerar agentes
+\`\`\`bash
+# Regenera .agent/ com dados atualizados
+architect agents .
+\`\`\`
+
+---
+
+## Estado Atual — ${projectName}
+
+| Métrica | Valor |
+|---------|-------|
+| **Score** | ${report.score.overall}/100 |
+| **Meta** | ${config.scoreThreshold}/100 (mínimo) |
+| **Score Modularity** | ${report.score.breakdown.modularity}/100 |
+| **Score Coupling** | ${report.score.breakdown.coupling}/100 |
+| **Score Cohesion** | ${report.score.breakdown.cohesion}/100 |
+| **Score Layering** | ${report.score.breakdown.layering}/100 |
+| **Anti-patterns** | ${report.antiPatterns.length} |
+| **Arquivos** | ${report.projectInfo.totalFiles} |
+| **Linhas** | ${report.projectInfo.totalLines.toLocaleString()} |
+
+---
+
+## Integração no Workflow
+
+### Antes de criar PR
+\`\`\`bash
+# Verificar que o score não regrediu
+architect score .
+# Se score < ${config.scoreThreshold} → NÃO criar PR
+\`\`\`
+
+### Após refatoração
+\`\`\`bash
+# Verificar melhoria
+architect analyze .
+# Comparar com score anterior
+\`\`\`
+
+### Revisão de arquitetura
+\`\`\`bash
+# Gerar report completo para code review
+architect analyze . --output-dir docs/
+\`\`\`
+
+---
+
+## Quality Gates
+
+\`\`\`
+Score mínimo para PR:       ${config.scoreThreshold}/100
+Cobertura mínima:           ${config.coverageMinimum}%
+Zero anti-patterns CRITICAL: Obrigatório
+Regressão de score:         Proibida
+\`\`\`
+
+---
+
+**Gerado por Architect v5.1 · Score: ${report.score.overall}/100**
+`;
+}
+
+/**
+ * Generates CI-PIPELINE.md skill with real toolchain data
+ */
+export function generateCIPipelineSkill(ctx: TemplateContext | EnrichedTemplateContext): string {
+  const enriched = getEnriched(ctx);
+  const projectName = ctx.projectName;
+  const tc = enriched.toolchain;
+  const config = ctx.config;
+  const report = ctx.report;
+
+  const buildCmd = tc?.buildCmd || 'npm run build';
+  const testCmd = tc?.testCmd || 'npm test';
+  const lintCmd = tc?.lintCmd || 'npx eslint .';
+  const coverageCmd = tc?.coverageCmd || 'npm run test -- --coverage';
+  const installCmd = tc?.installCmd || 'npm install';
+
+  return `---
+antigravity:
+  trigger: 'on_demand'
+  description: 'Integração CI/CD com verificação de arquitetura'
+version: 5.1.0
+---
+
+# 🔄 Skill: CI Pipeline — ${projectName}
+
+> Pipeline de integração contínua com gates de qualidade arquitetural.
+
+---
+
+## GitHub Actions
+
+\`\`\`yaml
+# .github/workflows/architect-ci.yml
+name: Architecture CI
+
+on:
+  pull_request:
+    branches: [main, develop, staging]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: ${installCmd}
+
+      - name: Build
+        run: ${buildCmd}
+
+      - name: Lint
+        run: ${lintCmd}
+
+      - name: Test
+        run: ${testCmd}
+
+      - name: Coverage
+        run: ${coverageCmd}
+
+      - name: Architecture Score
+        run: |
+          npm install -g @girardelli/architect
+          SCORE=$(architect score . --json | jq '.overall')
+          echo "Architecture Score: $SCORE/100"
+          if [ "$SCORE" -lt ${config.scoreThreshold} ]; then
+            echo "::error::Score ($SCORE) below threshold (${config.scoreThreshold})"
+            exit 1
+          fi
+
+      - name: No Score Regression
+        run: |
+          # Compare with main branch score
+          CURRENT=$(architect score . --json | jq '.overall')
+          echo "Current: $CURRENT/100, Minimum: ${config.scoreThreshold}/100"
+\`\`\`
+
+---
+
+## Comandos do Pipeline
+
+| Step | Comando | Gate |
+|------|---------|------|
+| Install | \`${installCmd}\` | — |
+| Build | \`${buildCmd}\` | ❌ Bloqueia se falhar |
+| Lint | \`${lintCmd}\` | ❌ Bloqueia se falhar |
+| Test | \`${testCmd}\` | ❌ Bloqueia se falhar |
+| Coverage | \`${coverageCmd}\` | ⚠️ Mínimo ${config.coverageMinimum}% |
+| Score | \`architect score .\` | ❌ Mínimo ${config.scoreThreshold}/100 |
+
+---
+
+## GitLab CI
+
+\`\`\`yaml
+# .gitlab-ci.yml
+stages:
+  - build
+  - test
+  - quality
+
+build:
+  stage: build
+  script:
+    - ${installCmd}
+    - ${buildCmd}
+
+test:
+  stage: test
+  script:
+    - ${testCmd}
+    - ${coverageCmd}
+
+architecture:
+  stage: quality
+  script:
+    - npm install -g @girardelli/architect
+    - architect score . --json
+  allow_failure: false
+\`\`\`
+
+---
+
+**Gerado por Architect v5.1 · Score: ${report.score.overall}/100**
+`;
+}
+
+/**
+ * Generates MONOREPO-GUIDE.md skill with real workspace data.
+ * Only generated when projectStructure === 'monorepo'.
+ */
+export function generateMonorepoGuideSkill(ctx: TemplateContext | EnrichedTemplateContext): string | null {
+  const enriched = getEnriched(ctx);
+  if (enriched.projectStructure !== 'monorepo') return null;
+
+  const projectName = ctx.projectName;
+  const modules = enriched.modules || [];
+  const tc = enriched.toolchain;
+
+  if (modules.length === 0) return null;
+
+  const moduleTable = modules.map(m =>
+    `| ${m.name} | \`${m.path}\` | ${m.fileCount} | ${m.lineCount > 0 ? m.lineCount.toLocaleString() : '—'} | ${m.hasTests ? '✅' : '❌'} | ${m.layer} |`
+  ).join('\n');
+
+  return `---
+antigravity:
+  trigger: 'on_demand'
+  description: 'Guia de navegação e desenvolvimento no monorepo'
+version: 5.1.0
+---
+
+# 📦 Skill: Monorepo Guide — ${projectName}
+
+> Estrutura, convenções e fluxos de trabalho do monorepo.
+
+---
+
+## Workspace Map
+
+| Package | Path | Arquivos | Linhas | Testes | Camada |
+|---------|------|----------|--------|--------|--------|
+${moduleTable}
+
+---
+
+## Regras do Monorepo
+
+### Dependency Direction
+\`\`\`
+╔════════════════════════════════════════════╗
+║  types → events → core → bridge → mcp    ║
+║                                            ║
+║  Dependências SEMPRE de baixo para cima.  ║
+║  NUNCA criar referência circular.         ║
+╚════════════════════════════════════════════╝
+\`\`\`
+
+### Boas Práticas
+
+1. **Cada package tem seu package.json** — versão independente
+2. **Types compartilhados** ficam no package \`types\`
+3. **Nunca importar de outro package via path relativo** — usar \`@scope/package\`
+4. **Testes rodam por package** — \`npm test --workspace=packages/<nome>\`
+5. **Build ordem** — respeitar dependências (types primeiro)
+
+### Comandos por Workspace
+
+\`\`\`bash
+# Rodar testes de um package específico
+npm test --workspace=packages/<nome>
+
+# Build de um package específico
+npm run build --workspace=packages/<nome>
+
+# Instalar deps de todos os workspaces
+${tc?.installCmd || 'npm install'}
+
+# Build de todos
+${tc?.buildCmd || 'npm run build'}
+
+# Testes de todos
+${tc?.testCmd || 'npm test'}
+\`\`\`
+
+---
+
+## Quando Criar um Novo Package
+
+1. **Justificativa:** O código é reutilizável por 2+ packages?
+2. **Escopo:** O package tem responsabilidade única?
+3. **Testes:** O package pode ser testado isoladamente?
+4. **Deps:** As dependências são explícitas no package.json?
+
+### Template
+
+\`\`\`bash
+mkdir packages/<nome>
+cd packages/<nome>
+npm init -y
+# Configurar tsconfig.json, jest.config, etc.
+\`\`\`
+
+---
+
+**Gerado por Architect v5.1 · ${modules.length} packages detectados**
+`;
+}

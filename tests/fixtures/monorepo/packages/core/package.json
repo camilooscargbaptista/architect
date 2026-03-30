@@ -1,0 +1,7 @@
+{
+  "name": "@test/core",
+  "version": "1.0.0",
+  "description": "Core business logic module",
+  "main": "src/index.ts",
+  "dependencies": {}
+}

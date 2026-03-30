@@ -1,0 +1,6 @@
+{
+  "name": "@test/monorepo",
+  "version": "1.0.0",
+  "description": "Test monorepo for E2E scanner validation",
+  "workspaces": ["packages/*"]
+}

@@ -5,9 +5,26 @@ export class AntiPatternDetector {
   private config: ArchitectConfig;
   private dependencyGraph: Map<string, Set<string>>;
 
+  /** Paths that indicate third-party or build artifacts — never report anti-patterns here */
+  private static readonly EXCLUDED_PATH_SEGMENTS = [
+    'node_modules', '/dist/', '/build/', '/coverage/',
+    '/.next/', '/venv/', '/__pycache__/', '/target/',
+  ];
+
   constructor(config: ArchitectConfig) {
     this.config = config;
     this.dependencyGraph = new Map();
+  }
+
+  /**
+   * Check if a file path belongs to the project's own source code.
+   * Returns false for node_modules, dist, build artifacts, etc.
+   */
+  private isProjectFile(filePath: string): boolean {
+    const normalized = filePath.replace(/\\/g, '/');
+    return !AntiPatternDetector.EXCLUDED_PATH_SEGMENTS.some(seg =>
+      normalized.includes(seg)
+    );
   }
 
   detect(
@@ -42,7 +59,7 @@ export class AntiPatternDetector {
       this.config.antiPatterns?.godClass?.methodsThreshold || 10;
 
     this.walkFileTree(node, (file) => {
-      if (file.type === 'file' && (file.lines || 0) > threshold) {
+      if (file.type === 'file' && (file.lines || 0) > threshold && this.isProjectFile(file.path)) {
         const methods = this.countMethods(file.path);
         if (methods > methodThreshold) {
           patterns.push({
@@ -70,9 +87,12 @@ export class AntiPatternDetector {
     const recursionStack = new Set<string>();
 
     for (const file of this.dependencyGraph.keys()) {
+      // Only check cycles starting from project files
+      if (!this.isProjectFile(file)) continue;
+
       if (!visited.has(file)) {
         const cycle = this.findCycle(file, visited, recursionStack);
-        if (cycle) {
+        if (cycle && cycle.every(f => this.isProjectFile(f))) {
           patterns.push({
             name: 'Circular Dependency',
             severity: 'HIGH',
@@ -118,7 +138,7 @@ export class AntiPatternDetector {
     const patterns: AntiPattern[] = [];
 
     this.walkFileTree(node, (file) => {
-      if (file.type === 'file') {
+      if (file.type === 'file' && this.isProjectFile(file.path)) {
         const internalExports = this.countInternalExports(file.path);
         if (internalExports > 5) {
           patterns.push({
@@ -146,13 +166,13 @@ export class AntiPatternDetector {
     const patterns: AntiPattern[] = [];
 
     this.walkFileTree(node, (file) => {
-      if (file.type === 'file') {
+      if (file.type === 'file' && this.isProjectFile(file.path)) {
         const externalMethodCalls = (dependencies.get(file.path) || new Set())
           .size;
         const internalMethods = this.countMethods(file.path);
         const name = file.name.toLowerCase();
 
-        // Skip NestJS infrastructure files where external deps are by design
+        // Skip infrastructure files where external deps are by design
         const isInfraFile =
           name.endsWith('.module.ts') ||
           name.endsWith('.dto.ts') ||
@@ -194,6 +214,9 @@ export class AntiPatternDetector {
         ?.changePropagationThreshold || 8;
 
     for (const [file, dependents] of dependencies) {
+      // Only report for project files
+      if (!this.isProjectFile(file)) continue;
+
       if (dependents.size >= threshold) {
         patterns.push({
           name: 'Shotgun Surgery',
@@ -202,7 +225,7 @@ export class AntiPatternDetector {
           description: `Changes to this file likely require modifications in ${dependents.size} other files`,
           suggestion:
             'Refactor to reduce coupling and consolidate related functionality into modules',
-          affectedFiles: Array.from(dependents),
+          affectedFiles: Array.from(dependents).filter(f => this.isProjectFile(f)),
           metrics: {
             dependentFileCount: dependents.size,
           },

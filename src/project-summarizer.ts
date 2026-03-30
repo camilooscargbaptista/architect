@@ -1,17 +1,28 @@
 import { readFileSync, existsSync } from 'fs';
 import { join, basename, dirname } from 'path';
-import { AnalysisReport, ProjectSummary, FileNode } from './types.js';
+import { AnalysisReport, ProjectSummary, FileNode, WorkspaceInfo } from './types.js';
 
 /**
  * ProjectSummarizer — infers what a project does from its metadata,
  * structure, README, package.json, and file naming conventions.
+ *
+ * v5.0: Workspace-aware module inference, package.json-first descriptions,
+ * entry point detection from `bin` fields, and keyword blacklisting.
  */
 export class ProjectSummarizer {
+
+  /** Keywords that should never appear in project summaries */
+  private static readonly KEYWORD_BLACKLIST = new Set([
+    'node_modules', 'dist', 'build', '.git', '.next', 'coverage',
+    '__tests__', '__mocks__', 'src', 'lib', 'index', 'main',
+    'out', 'tmp', '.cache', 'vendor', '.vscode', '.idea',
+  ]);
+
   summarize(projectPath: string, report: AnalysisReport): ProjectSummary {
     const packageInfo = this.readPackageJson(projectPath);
     const readmeContent = this.readReadme(projectPath);
-    const modules = this.inferModules(report);
-    const entryPoints = this.findEntryPoints(report);
+    const modules = this.inferModules(report, projectPath);
+    const entryPoints = this.findEntryPoints(report, projectPath);
     const keywords = this.extractKeywords(packageInfo, readmeContent, modules, report);
     const techStack = this.buildTechStack(report, packageInfo);
     const description = this.buildDescription(packageInfo, readmeContent, report);
@@ -71,12 +82,108 @@ export class ProjectSummarizer {
     return '';
   }
 
-  // ── Module Inference ──
+  // ── Module Inference — Workspace-Aware ──
 
-  private inferModules(report: AnalysisReport): ProjectSummary['modules'] {
+  private inferModules(report: AnalysisReport, projectPath: string): ProjectSummary['modules'] {
+    const workspaces = report.projectInfo.workspaces;
+
+    // If we have workspaces, use them as the authoritative module list
+    if (workspaces && workspaces.length > 0) {
+      return this.inferModulesFromWorkspaces(workspaces, report);
+    }
+
+    // Fallback: infer from directory structure
+    return this.inferModulesFromStructure(report);
+  }
+
+  /**
+   * Workspace-aware module inference.
+   * Uses package.json name, description, and file count from each workspace.
+   */
+  private inferModulesFromWorkspaces(
+    workspaces: WorkspaceInfo[],
+    report: AnalysisReport,
+  ): ProjectSummary['modules'] {
+    return workspaces
+      .map((ws) => {
+        // Count files belonging to this workspace
+        const wsPrefix = ws.relativePath + '/';
+        const fileCount = report.dependencyGraph.nodes.filter(
+          (n) => n.startsWith(wsPrefix) || n.startsWith(ws.relativePath),
+        ).length;
+
+        // Get description: prefer package.json description, then README, then heuristic
+        const description = this.getWorkspaceDescription(ws);
+
+        // Use the short name (last segment of npm scope or dir name)
+        const displayName = ws.name.includes('/')
+          ? ws.name.split('/').pop() || ws.name
+          : basename(ws.relativePath);
+
+        return {
+          name: displayName,
+          files: fileCount || this.countFilesInDir(ws.path),
+          description,
+        };
+      })
+      .filter((m) => m.files > 0)
+      .sort((a, b) => b.files - a.files);
+  }
+
+  /**
+   * Get a meaningful description for a workspace.
+   * Priority: package.json description > README first line > heuristic
+   */
+  private getWorkspaceDescription(ws: WorkspaceInfo): string {
+    // 1. package.json description (most reliable)
+    if (ws.description && ws.description.trim().length > 5) {
+      return ws.description.trim();
+    }
+
+    // 2. README.md first paragraph
+    const readmePath = join(ws.path, 'README.md');
+    if (existsSync(readmePath)) {
+      try {
+        const lines = readFileSync(readmePath, 'utf-8').split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('[')
+              || trimmed.startsWith('<') || trimmed.startsWith('!')
+              || trimmed.length < 15) continue;
+          return trimmed.slice(0, 200);
+        }
+      } catch {
+        // skip
+      }
+    }
+
+    // 3. Heuristic from name and deps
+    return this.describeModule(basename(ws.relativePath), new Set(Object.keys(ws.dependencies)));
+  }
+
+  private countFilesInDir(dirPath: string): number {
+    try {
+      const { globSync } = require('glob');
+      return globSync('**/*.{ts,tsx,js,jsx,py,java,go}', {
+        cwd: dirPath,
+        ignore: ['**/node_modules/**', '**/dist/**'],
+        nodir: true,
+      }).length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Fallback module inference from directory structure (non-workspace projects)
+   */
+  private inferModulesFromStructure(report: AnalysisReport): ProjectSummary['modules'] {
     const modules: Map<string, { files: Set<string>; hints: Set<string> }> = new Map();
 
     for (const node of report.dependencyGraph.nodes) {
+      // Safety: skip any node_modules paths that leaked through
+      if (node.includes('node_modules')) continue;
+
       const parts = node.split('/');
       // Skip root-level files
       if (parts.length < 2) continue;
@@ -155,6 +262,15 @@ export class ProjectSummarizer {
       [/hook|composable/, 'Hooks/composables reutilizáveis'],
       [/store|state|redux|bloc/, 'Gerenciamento de estado'],
       [/navigation|router|routing/, 'Navegação e rotas'],
+      [/bridge/, 'Camada de integração'],
+      [/core/, 'Núcleo e orquestração'],
+      [/event/, 'Sistema de eventos'],
+      [/type/, 'Definições de tipos'],
+      [/mcp/, 'MCP Server'],
+      [/cli/, 'Interface de linha de comando'],
+      [/cloud/, 'Serviço cloud / API'],
+      [/autonomy/, 'Automação e self-healing'],
+      [/app/, 'Aplicação principal'],
     ];
 
     const combined = `${n} ${h}`;
@@ -165,19 +281,70 @@ export class ProjectSummarizer {
     return `Módulo ${name}`;
   }
 
-  // ── Entry Points ──
+  // ── Entry Points — Workspace-Aware ──
 
-  private findEntryPoints(report: AnalysisReport): string[] {
+  private findEntryPoints(report: AnalysisReport, projectPath: string): string[] {
+    const entries: string[] = [];
+
+    // 1. From workspace bin fields
+    const workspaces = report.projectInfo.workspaces;
+    if (workspaces) {
+      for (const ws of workspaces) {
+        if (ws.bin) {
+          if (typeof ws.bin === 'string') {
+            entries.push(`${ws.relativePath}/${ws.bin}`);
+          } else {
+            for (const [, binPath] of Object.entries(ws.bin)) {
+              const fullPath = `${ws.relativePath}/${binPath}`;
+              entries.push(fullPath);
+            }
+          }
+        }
+        if (ws.main) {
+          entries.push(`${ws.relativePath}/${ws.main}`);
+        }
+      }
+    }
+
+    // 2. From root package.json bin/main
+    const rootPkgPath = join(projectPath, 'package.json');
+    if (existsSync(rootPkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
+        if (pkg.bin) {
+          if (typeof pkg.bin === 'string') {
+            entries.push(pkg.bin);
+          } else {
+            for (const [, binPath] of Object.entries(pkg.bin)) {
+              entries.push(binPath as string);
+            }
+          }
+        }
+        if (pkg.main && !entries.includes(pkg.main)) {
+          entries.push(pkg.main);
+        }
+      } catch {
+        // skip
+      }
+    }
+
+    // 3. Pattern-based detection (fallback)
     const entryPatterns = [
       /^(src\/)?(main|index|app|server|cli)\.(ts|js|py|dart|go|java)$/,
       /^(src\/)?bin\//,
+      /^packages\/[^/]+\/src\/(main|index|app|server|cli)\.(ts|js)$/,
+      /^packages\/[^/]+\/src\/bin\//,
       /manage\.py$/,
       /^main\.go$/,
     ];
 
-    return report.dependencyGraph.nodes
+    const patternEntries = report.dependencyGraph.nodes
       .filter(node => entryPatterns.some(p => p.test(node)))
-      .slice(0, 5);
+      .filter(node => !entries.includes(node));
+
+    entries.push(...patternEntries);
+
+    return [...new Set(entries)].slice(0, 10);
   }
 
   // ── Keywords ──
@@ -197,9 +364,12 @@ export class ProjectSummarizer {
       }
     }
 
-    // From module names
+    // From module names (only clean names)
     for (const mod of modules) {
-      keywords.add(mod.name.toLowerCase());
+      const name = mod.name.toLowerCase();
+      if (!ProjectSummarizer.KEYWORD_BLACKLIST.has(name)) {
+        keywords.add(name);
+      }
     }
 
     // From frameworks detected
@@ -212,9 +382,10 @@ export class ProjectSummarizer {
       keywords.add(lang.toLowerCase());
     }
 
-    // Filter out generic words
-    const generic = new Set(['src', 'lib', 'app', 'utils', 'common', 'shared', 'core', 'index', 'main', 'dist', 'build']);
-    return [...keywords].filter(kw => !generic.has(kw) && kw.length > 1).slice(0, 20);
+    // Filter out blacklisted and generic entries
+    return [...keywords]
+      .filter(kw => !ProjectSummarizer.KEYWORD_BLACKLIST.has(kw) && kw.length > 1)
+      .slice(0, 20);
   }
 
   // ── Tech Stack ──
@@ -304,7 +475,10 @@ export class ProjectSummarizer {
       ...keywords,
       ...modules.map(m => m.name.toLowerCase()),
       ...modules.map(m => m.description.toLowerCase()),
-      ...report.dependencyGraph.nodes.map(n => n.toLowerCase()),
+      // Only use project nodes, never leaked node_modules paths
+      ...report.dependencyGraph.nodes
+        .filter(n => !n.includes('node_modules'))
+        .map(n => n.toLowerCase()),
     ].join(' ');
 
     // Infer project type from signals

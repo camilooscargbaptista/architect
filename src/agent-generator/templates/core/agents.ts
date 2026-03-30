@@ -148,8 +148,11 @@ ${crossRef('backend', ctx)}
 export function generateFrontendAgent(ctx: TemplateContext | EnrichedTemplateContext): string {
   const { stack, projectName, config, report } = ctx;
   const enriched = getEnriched(ctx);
-  const fw = stack.frameworks.find(f =>
-    ['Angular', 'Vue', 'Next.js', 'React'].includes(f)) || 'Frontend';
+  // v5.1: Use enriched primaryFramework or detect from all frameworks
+  const FRONTEND_FWS = ['Angular', 'Vue', 'Vue.js', 'Next.js', 'React', 'Nuxt', 'Svelte', 'Remix'];
+  const detectedFw = enriched.detectedFrameworks?.find(f => FRONTEND_FWS.includes(f.name));
+  const fw = detectedFw?.name ||
+    stack.frameworks.find(f => FRONTEND_FWS.includes(f)) || 'Frontend';
 
   // Build endpoints integration guide if available
   const endpointsGuide = enriched.endpoints && enriched.endpoints.length > 0

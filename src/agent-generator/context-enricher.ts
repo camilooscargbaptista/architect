@@ -46,12 +46,19 @@ export class ContextEnricher {
     // v3.1: Framework detection
     const fwResult = this.frameworkDetector.detect(projectPath, report);
 
+    // Build stack label: languages + web frameworks only (no test/lint tools)
+    const webFrameworks = (report.projectInfo?.frameworks || [])
+      .filter(f => !['Jest', 'Vitest', 'Mocha', 'ESLint', 'Prettier', 'Biome',
+        'pytest', 'Ruff', 'mypy', 'Black', 'Flake8', 'RSpec',
+        '@jest/globals', '@types/jest', 'ts-jest'].includes(f));
+    const stackLabel = [...new Set([...stack.languages, ...webFrameworks])].join(' + ');
+
     return {
       report,
       plan,
       stack,
       projectName: report.projectInfo.name || 'Project',
-      stackLabel: [...stack.languages, ...stack.frameworks].join(' + '),
+      stackLabel,
       config,
       domain,
       modules,
@@ -403,9 +410,22 @@ export class ContextEnricher {
   private inferFileLayer(filePath: string): string {
     const lower = filePath.toLowerCase();
 
+    // Monorepo package-level classification
+    const packagesMatch = lower.match(/packages\/([^/]+)/);
+    if (packagesMatch) {
+      const pkgName = packagesMatch[1];
+      // Classify by package name semantics
+      if (['dashboard', 'web', 'frontend', 'app', 'ui'].includes(pkgName)) return 'UI';
+      if (['api', 'cloud', 'server', 'backend'].includes(pkgName)) return 'API';
+      if (['core', 'bridge', 'engine'].includes(pkgName)) return 'Service';
+      if (['cli', 'command'].includes(pkgName)) return 'CLI';
+      if (['types', 'events', 'mcp', 'autonomy'].includes(pkgName)) return 'Infrastructure';
+      return 'Package';
+    }
+
     if (lower.includes('/route') || lower.includes('/controller') || lower.includes('/endpoint')
       || lower.includes('/api/') || lower.includes('/presentation/') || lower.includes('/handler')
-      || lower.includes('/view') && !lower.includes('/review')
+      || (lower.includes('/view') && !lower.includes('/review'))
       || lower.includes('/urls') || lower.includes('/blueprint')
       || lower.includes('/http/')) return 'API';
 
@@ -506,7 +526,16 @@ export class ContextEnricher {
       }
     }
 
-    return endpoints;
+    // Deduplicate endpoints — same method+path from .ts and .js variants
+    const seen = new Set<string>();
+    const deduped = endpoints.filter(ep => {
+      const key = `${ep.method}:${ep.path}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return deduped;
   }
 
   private extractResourceFromFile(filePath: string): string {

@@ -1,8 +1,8 @@
 {
   "name": "@girardelli/architect",
-  "version": "3.1.0",
+  "version": "5.0.0",
   "type": "module",
-  "description": "AI-powered architecture analysis & enterprise agent framework generator for Claude Code",
+  "description": "AI-powered architecture analysis with temporal intelligence — git history, velocity vectors, pre-anti-pattern detection, and architecture weather forecast",
   "author": {
     "name": "Camilo Girardelli",
     "email": "contact@girardelli.tech",
@@ -15,6 +15,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./analyzers": {
+      "import": "./dist/analyzers/index.js",
+      "types": "./dist/analyzers/index.d.ts"
     }
   },
   "bin": {
