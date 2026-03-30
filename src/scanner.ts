@@ -2,6 +2,7 @@ import { globSync } from 'glob';
 import { readFileSync, lstatSync, existsSync } from 'fs';
 import { join, relative, extname, resolve } from 'path';
 import { FileNode, ProjectInfo, ArchitectConfig, WorkspaceInfo } from './types.js';
+import { logger } from './logger.js';
 
 export class ProjectScanner {
   private projectPath: string;
@@ -89,14 +90,15 @@ export class ProjectScanner {
               bin: pkg.bin || undefined,
               main: pkg.main || undefined,
             });
-          } catch {
-            // Skip unparseable package.json
+          } catch (error) {
+            logger.debug('Skipping unparseable package.json in workspace', { pkgPath, error });
           }
         }
       }
 
       return workspaces;
-    } catch {
+    } catch (error) {
+      logger.debug('Failed to parse root package.json for workspaces', { error });
       return [];
     }
   }
@@ -112,8 +114,8 @@ export class ProjectScanner {
         if (parsed.name) {
           return parsed.name;
         }
-      } catch {
-        // skip
+      } catch (error) {
+        logger.debug('Skipping unparseable package.json while resolving project name', { pkgPath, error });
       }
     }
     return this.projectPath.split('/').pop() || 'project';
@@ -243,8 +245,8 @@ export class ProjectScanner {
         if (allDeps['@modelcontextprotocol/sdk']) frameworks.add('MCP SDK');
         if (allDeps['probot']) frameworks.add('Probot');
         if (allDeps['hono']) frameworks.add('Hono');
-      } catch {
-        // Skip unparseable files — NO fallback string matching
+      } catch (error) {
+        logger.debug('Skipping unparseable package.json during framework detection', { file, error });
       }
     }
 
@@ -255,8 +257,8 @@ export class ProjectScanner {
         const content = readFileSync(pomPath, 'utf-8');
         if (content.includes('spring-boot')) frameworks.add('Spring Boot');
         if (content.includes('spring') && !content.includes('spring-boot')) frameworks.add('Spring');
-      } catch {
-        // skip
+      } catch (error) {
+        logger.debug('Error reading pom.xml', { error });
       }
     }
 
@@ -268,8 +270,8 @@ export class ProjectScanner {
         if (content.includes('django')) frameworks.add('Django');
         if (content.includes('flask')) frameworks.add('Flask');
         if (content.includes('fastapi')) frameworks.add('FastAPI');
-      } catch {
-        // skip
+      } catch (error) {
+        logger.debug('Error reading requirements.txt', { error });
       }
     }
 
@@ -279,8 +281,8 @@ export class ProjectScanner {
       try {
         const content = readFileSync(gemPath, 'utf-8');
         if (content.includes('rails')) frameworks.add('Ruby on Rails');
-      } catch {
-        // skip
+      } catch (error) {
+        logger.debug('Error reading Gemfile', { error });
       }
     }
 

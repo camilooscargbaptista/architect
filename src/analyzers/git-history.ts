@@ -18,6 +18,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as path from 'path';
 import * as fs from 'fs';
+import { logger } from '../logger.js';
 
 const execAsync = promisify(exec);
 
@@ -135,10 +136,14 @@ export class GitHistoryAnalyzer {
    * Returns a comprehensive GitHistoryReport.
    */
   async analyze(projectPath: string): Promise<GitHistoryReport> {
+    logger.debug('Starting GitHistory analysis', { projectPath, periodWeeks: this.config.periodWeeks });
+    
     await this.validateGitRepo(projectPath);
 
     const sinceDate = this.getSinceDate();
     const commits = await this.parseGitLog(projectPath, sinceDate);
+    
+    logger.debug('Git history parsed', { commitCount: commits.length });
     const fileHistories = this.buildFileHistories(commits);
     const modules = this.groupByModule(fileHistories);
     const hotspots = this.detectHotspots(fileHistories);
@@ -174,7 +179,8 @@ export class GitHistoryAnalyzer {
         maxBuffer: 10 * 1024 * 1024,  // 10MB buffer for large repos
       });
       output = stdout;
-    } catch {
+    } catch (error) {
+      logger.warn('Failed to parse git log. History features will be bypassed.', { error, cmd });
       return [];
     }
 

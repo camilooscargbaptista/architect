@@ -18,6 +18,7 @@ import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorReportGenerator } from './refactor-reporter.js';
 import { writeFileSync } from 'fs';
 import { resolve, basename } from 'path';
+import { logger } from './logger.js';
 
 type OutputFormat = 'json' | 'markdown' | 'html';
 
@@ -26,6 +27,7 @@ interface CliOptions {
   path: string;
   format: OutputFormat;
   output?: string;
+  verbose: boolean;
 }
 
 // ── ANSI Colors & Styles ──
@@ -271,8 +273,9 @@ function parseArgs(args: string[]): CliOptions {
   const format = (formatIdx >= 0 ? args[formatIdx + 1] : 'html') as OutputFormat;
   const outputIdx = args.indexOf('--output');
   const output = outputIdx >= 0 ? args[outputIdx + 1] : undefined;
+  const verbose = args.includes('--verbose') || args.includes('-v');
 
-  return { command, path: resolve(pathArg), format, output };
+  return { command, path: resolve(pathArg), format, output, verbose };
 }
 
 function printUsage(): void {
@@ -294,6 +297,7 @@ ${c.bold}Commands:${c.reset}
 ${c.bold}Options:${c.reset}
   --format <type>   Output format: html, json, markdown (default: html)
   --output <file>   Output file path
+  --verbose, -v     Enable verbose debug logging
   --help            Show this help message
 
 ${c.bold}Examples:${c.reset}
@@ -314,6 +318,7 @@ async function main(): Promise<void> {
   }
 
   const options = parseArgs(args);
+  logger.setup({ verbose: options.verbose, json: options.format === 'json' });
 
   try {
     switch (options.command) {
@@ -504,12 +509,11 @@ async function main(): Promise<void> {
       }
 
       default:
-        console.error(`${c.red}✗${c.reset} Unknown command: ${options.command}`);
-        printUsage();
+        logger.error(`Unknown command: ${options.command}`);
         process.exit(1);
     }
-  } catch (error) {
-    process.stderr.write(`\n  ${c.red}${c.bold}✗ ERROR${c.reset}: ${error instanceof Error ? error.message : error}\n\n`);
+  } catch (err: any) {
+    logger.error('Fatal execution error', err);
     process.exit(1);
   }
 }
