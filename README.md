@@ -10,7 +10,11 @@
 
 Understand your codebase architecture in seconds. Detect anti-patterns, get refactoring plans, and generate **context-aware AI agent configurations** that actually understand your stack, domain, and toolchain — all from a single command.
 
-## What's New in v3.1
+## What's New in v6.0.0
+
+- **Strict Layered Architecture** — Internal codebase rebuilt utilizing a rigorous Core/Infrastructure/Adapters clean architecture format, verifiable dynamically leading to a perfect 100/100 Layering score.
+- **Self-Healing AI Engine** — Architecture rules (Hub Splitter, Import Organizer, Module Grouper) are now context-aware of Clean Architecture paradigms, effectively ignoring stable DTOs/Interfaces and cross-domain test injections to eliminate false positives.
+- **AST Automation Proven** — Capable of structurally rewriting 150+ coupling bottlenecks in large codebases automatically via AST manipulation and Facade (`_deps.ts`) extractions.
 
 - **Context-Aware Agent Generation** — Agents are no longer generic. Templates adapt to your detected stack (Python/FastAPI generates pytest examples, not Jest; Go generates `go test`, not `npm test`)
 - **Framework Detection Engine** — 61 frameworks across 10+ ecosystems detected from dependency files (package.json, pyproject.toml, requirements.txt, pubspec.yaml, go.mod, Cargo.toml, pom.xml, Gemfile, composer.json)
@@ -137,7 +141,7 @@ Create `.architect.json` in your project root:
   "frameworks": { "detect": true },
   "antiPatterns": {
     "godClass": { "linesThreshold": 500, "methodsThreshold": 10 },
-    "shotgunSurgery": { "changePropagationThreshold": 8 }
+    "shotgunSurgery": { "changePropagationThreshold": 20 }
   },
   "score": {
     "modularity": 0.40,

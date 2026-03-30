@@ -1,5 +1,6 @@
-import { AgentGenerator } from '../src/agent-generator/index.js';
-import { AnalysisReport, RefactoringPlan } from '../src/types.js';
+import { AgentGenerator } from '../src/core/agent-generator/index.js';
+import { AnalysisReport } from '../src/core/types/core.js';
+import { RefactoringPlan } from '../src/core/types/rules.js';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 

@@ -1,5 +1,5 @@
-import { StackDetector } from '../src/agent-generator/stack-detector.js';
-import { AnalysisReport } from '../src/types.js';
+import { StackDetector } from '../src/core/agent-generator/stack-detector.js';
+import { AnalysisReport } from '../src/core/types/core.js';
 
 function makeReport(nodes: string[], frameworks: string[] = []): AnalysisReport {
   return {

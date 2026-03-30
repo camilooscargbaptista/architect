@@ -1,31 +1,9 @@
-import {
-  getEnriched,
-  isEnriched,
-  depthScale,
-  depthAtLeast,
-  crossRef,
-  domainBadge,
-  complianceBadges,
-  depthIndicator,
-  modulesSummaryTable,
-  integrationsSummary,
-  frameworkBadge,
-  projectStructureBadge,
-  toolchainCommands,
-  frameworkModuleStructure,
-  frameworkSecurityChecklist,
-} from '../src/agent-generator/templates/template-helpers.js';
-import {
-  TemplateContext,
-  EnrichedTemplateContext,
-  StackInfo,
-  FrameworkInfo,
-  DetectedToolchain,
-  DomainInsights,
-  ModuleDetail,
-  DetectedEndpoint,
-} from '../src/agent-generator/types.js';
-import { AnalysisReport, RefactoringPlan } from '../src/types.js';
+import { getEnriched, isEnriched, depthScale, depthAtLeast, crossRef, domainBadge, complianceBadges, depthIndicator, modulesSummaryTable, integrationsSummary, frameworkBadge, projectStructureBadge, toolchainCommands, frameworkModuleStructure, frameworkSecurityChecklist } from '../src/core/agent-generator/templates/template-helpers.js';
+import { TemplateContext, EnrichedTemplateContext } from '../src/core/agent-generator/types/template.js';
+import { StackInfo, FrameworkInfo, DetectedToolchain } from '../src/core/agent-generator/types/stack.js';
+import { DomainInsights, ModuleDetail, DetectedEndpoint } from '../src/core/agent-generator/types/domain.js';
+import { AnalysisReport } from '../src/core/types/core.js';
+import { RefactoringPlan } from '../src/core/types/rules.js';
 
 // ───────────────────────────────────────────────────────────────
 // MOCK BUILDERS

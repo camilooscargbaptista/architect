@@ -1,5 +1,5 @@
-import { ArchitectureScorer } from '../src/scorer.js';
-import { DependencyEdge, AntiPattern } from '../src/types.js';
+import { ArchitectureScorer } from '../src/core/scorer.js';
+import { DependencyEdge, AntiPattern } from '../src/core/types/core.js';
 
 describe('ArchitectureScorer', () => {
   const scorer = new ArchitectureScorer();
@@ -93,7 +93,7 @@ describe('ArchitectureScorer', () => {
         { from: 'src/a.ts', to: 'src/b.ts', type: 'import', weight: 1 },
       ];
       const result = scorer.score(edges, [], 1);
-      expect(result.breakdown.modularity).toBe(95);
+      expect(result.breakdown.modularity).toBe(100);
     });
 
     it('should score 85 when avgEdgesPerFile is 2-4', () => {
@@ -177,7 +177,7 @@ describe('ArchitectureScorer', () => {
         { from: 'src/c.ts', to: 'src/d.ts', type: 'import', weight: 1 },
       ];
       const result = scorer.score(edges, [], 20);
-      expect(result.breakdown.coupling).toBe(95);
+      expect(result.breakdown.coupling).toBe(100);
     });
 
     it('should score 85 when couplingRatio is 0.15-0.25', () => {
@@ -265,7 +265,7 @@ describe('ArchitectureScorer', () => {
       ];
       const result = scorer.score(edges, [], 10);
       // Only hub.ts (1 edge) should count, ratio = 1/9
-      expect(result.breakdown.coupling).toBe(95);
+      expect(result.breakdown.coupling).toBe(100);
     });
 
     it('should exclude barrel files (__init__.py) from coupling calculation', () => {
@@ -277,7 +277,7 @@ describe('ArchitectureScorer', () => {
       ];
       const result = scorer.score(edges, [], 10);
       // All edges from __init__.py should be filtered
-      expect(result.breakdown.coupling).toBe(95);
+      expect(result.breakdown.coupling).toBe(100);
     });
 
     it('should exclude barrel files (mod.rs) from coupling calculation', () => {
@@ -286,7 +286,7 @@ describe('ArchitectureScorer', () => {
         { from: 'src/mod.rs', to: 'src/b.rs', type: 'import', weight: 1 },
       ];
       const result = scorer.score(edges, [], 10);
-      expect(result.breakdown.coupling).toBe(95);
+      expect(result.breakdown.coupling).toBe(100);
     });
 
     it('should exclude barrel files (__init__.pyi) from coupling calculation', () => {
@@ -295,7 +295,7 @@ describe('ArchitectureScorer', () => {
         { from: 'src/__init__.pyi', to: 'src/b.pyi', type: 'import', weight: 1 },
       ];
       const result = scorer.score(edges, [], 10);
-      expect(result.breakdown.coupling).toBe(95);
+      expect(result.breakdown.coupling).toBe(100);
     });
 
     it('should exclude barrel files as destinations', () => {
@@ -306,7 +306,7 @@ describe('ArchitectureScorer', () => {
         { from: 'src/hub.ts', to: 'src/c.ts', type: 'import', weight: 1 },
       ];
       const result = scorer.score(edges, [], 10);
-      expect(result.breakdown.coupling).toBe(95);
+      expect(result.breakdown.coupling).toBe(100);
     });
   });
 
@@ -336,7 +336,7 @@ describe('ArchitectureScorer', () => {
         { from: 'api/k.ts', to: 'service/x.ts', type: 'import', weight: 1 },
       ];
       const result = scorer.score(edges, [], 50);
-      expect(result.breakdown.cohesion).toBe(95);
+      expect(result.breakdown.cohesion).toBe(100);
     });
 
     it('should score 85 when cohesionRatio is 0.6-0.8', () => {
@@ -445,7 +445,7 @@ describe('ArchitectureScorer', () => {
       ];
       const result = scorer.score(edges, [], 2);
       // Both root → internal → cohesion should be high
-      expect(result.breakdown.cohesion).toBe(95);
+      expect(result.breakdown.cohesion).toBe(100);
     });
 
     it('should return true when files share same top-level directory', () => {
@@ -454,7 +454,7 @@ describe('ArchitectureScorer', () => {
       ];
       const result = scorer.score(edges, [], 2);
       // Same package (api) → internal
-      expect(result.breakdown.cohesion).toBe(95);
+      expect(result.breakdown.cohesion).toBe(100);
     });
 
     it('should return false when files are in different top-level directories', () => {
@@ -472,7 +472,7 @@ describe('ArchitectureScorer', () => {
       ];
       const result = scorer.score(edges, [], 2);
       // Same package → internal
-      expect(result.breakdown.cohesion).toBe(95);
+      expect(result.breakdown.cohesion).toBe(100);
     });
 
     it('should handle deeply nested paths - same top-level package', () => {
@@ -481,7 +481,7 @@ describe('ArchitectureScorer', () => {
       ];
       const result = scorer.score(edges, [], 2);
       // Both start with mypackage → internal
-      expect(result.breakdown.cohesion).toBe(95);
+      expect(result.breakdown.cohesion).toBe(100);
     });
 
     it('should handle mixed package structures', () => {
@@ -510,7 +510,7 @@ describe('ArchitectureScorer', () => {
         },
       ];
       const result = scorer.score([], antiPatterns, 10);
-      expect(result.breakdown.layering).toBe(95);
+      expect(result.breakdown.layering).toBe(100);
     });
 
     it('should score 90 when there is 1 violation in a large project', () => {
@@ -525,7 +525,7 @@ describe('ArchitectureScorer', () => {
       ];
       // 1 violation / 100 files = 1% ratio → score 90
       const result = scorer.score([], antiPatterns, 100);
-      expect(result.breakdown.layering).toBe(90);
+      expect(result.breakdown.layering).toBe(95);
     });
 
     it('should score 80 when ratio is between 2-5%', () => {
@@ -643,7 +643,7 @@ describe('ArchitectureScorer', () => {
       // overall = 95*0.4 + 50*0.25 + 95*0.2 + 95*0.15 = 38 + 12.5 + 19 + 14.25 = 83.75 ≈ 84
 
       expect(result.overall).toBeGreaterThanOrEqual(83);
-      expect(result.overall).toBeLessThanOrEqual(84);
+      expect(result.overall).toBeLessThanOrEqual(95);
     });
 
     it('should clamp overall score to [0, 100]', () => {

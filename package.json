@@ -1,6 +1,6 @@
 {
   "name": "@girardelli/architect",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "type": "module",
   "description": "AI-powered architecture analysis with temporal intelligence — git history, velocity vectors, pre-anti-pattern detection, and architecture weather forecast",
   "author": {
@@ -22,13 +22,13 @@
     }
   },
   "bin": {
-    "architect": "./dist/cli.js"
+    "architect": "./dist/adapters/cli.js"
   },
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "tsc --watch",
-    "analyze": "node dist/cli.js analyze",
+    "analyze": "node dist/adapters/cli.js analyze",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "lint": "eslint src --ext .ts",

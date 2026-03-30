@@ -5,20 +5,20 @@
  * outlook classification, and recommendation generation.
  */
 
-import { ForecastEngine } from '../src/analyzers/forecast.js';
+import { ForecastEngine } from '../src/core/analyzers/forecast.js';
 import type {
   WeatherForecast,
   PreAntiPattern,
   ModuleForecast,
-} from '../src/analyzers/forecast.js';
+} from '../src/core/analyzers/forecast.js';
 import type {
   GitHistoryReport,
   ModuleHistory,
   VelocityVector,
   FileHistory,
   ChangeCoupling,
-} from '../src/analyzers/git-history.js';
-import type { TemporalReport, TemporalScore } from '../src/analyzers/temporal-scorer.js';
+} from '../src/infrastructure/git-history.js';
+import type { TemporalReport, TemporalScore } from '../src/core/analyzers/temporal-scorer.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TEST HELPERS

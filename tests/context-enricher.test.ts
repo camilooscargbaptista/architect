@@ -1,5 +1,6 @@
-import { ContextEnricher } from '../src/agent-generator/context-enricher.js';
-import { AnalysisReport, RefactoringPlan } from '../src/types.js';
+import { ContextEnricher } from '../src/core/agent-generator/context-enricher.js';
+import { AnalysisReport } from '../src/core/types/core.js';
+import { RefactoringPlan } from '../src/core/types/rules.js';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

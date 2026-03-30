@@ -1,5 +1,6 @@
-import { AntiPatternDetector } from '../src/anti-patterns.js';
-import { ArchitectConfig, FileNode, AntiPattern } from '../src/types.js';
+import { AntiPatternDetector } from '../src/core/anti-patterns.js';
+import { AntiPattern, ArchitectConfig } from '../src/core/types/core.js';
+import { FileNode } from '../src/core/types/infrastructure.js';
 
 describe('AntiPatternDetector', () => {
   const mockConfig: ArchitectConfig = {

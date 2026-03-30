@@ -1,5 +1,5 @@
-import { FrameworkDetector } from '../src/agent-generator/framework-detector.js';
-import { AnalysisReport } from '../src/types.js';
+import { FrameworkDetector } from '../src/core/agent-generator/framework-detector.js';
+import { AnalysisReport } from '../src/core/types/core.js';
 import { existsSync, mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 

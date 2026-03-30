@@ -1,0 +1,13 @@
+export { ProjectScanner } from '../infrastructure/scanner.js';
+export { ArchitectureAnalyzer } from './analyzer.js';
+export { AntiPatternDetector } from './anti-patterns.js';
+export { ArchitectureScorer } from './scorer.js';
+export { DiagramGenerator } from './diagram.js';
+export { ReportGenerator } from '../adapters/reporter.js';
+export { HtmlReportGenerator } from '../adapters/html-reporter.js';
+export { RefactorEngine } from './refactor-engine.js';
+export { AgentGenerator, AgentSuggestion } from './agent-generator/index.js';
+export { ProjectSummarizer } from './project-summarizer.js';
+export { ConfigLoader, normalizeIgnorePatterns } from './config.js';
+export { AnalysisReport } from './types/core.js';
+export { RefactoringPlan } from './types/rules.js';

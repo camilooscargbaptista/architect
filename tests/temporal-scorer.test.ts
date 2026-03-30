@@ -5,14 +5,14 @@
  * projection, risk levels, and overall trend aggregation.
  */
 
-import { TemporalScorer } from '../src/analyzers/temporal-scorer.js';
-import type { TemporalReport, TemporalScore } from '../src/analyzers/temporal-scorer.js';
+import { TemporalScorer } from '../src/core/analyzers/temporal-scorer.js';
+import type { TemporalReport, TemporalScore } from '../src/core/analyzers/temporal-scorer.js';
 import type {
   GitHistoryReport,
   ModuleHistory,
   VelocityVector,
   FileHistory,
-} from '../src/analyzers/git-history.js';
+} from '../src/infrastructure/git-history.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TEST HELPERS

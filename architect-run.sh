@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # ── Script location (resolve symlinks) ──
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ARCHITECT_BIN="${SCRIPT_DIR}/dist/cli.js"
+ARCHITECT_BIN="${SCRIPT_DIR}/dist/adapters/cli.js"
 
 # ── Helpers ──
 
@@ -164,17 +164,13 @@ check_prerequisites() {
   fi
 
   # Architect built?
+  print_info "Garantindo que a versão mais recente está compilada..."
+  (cd "$SCRIPT_DIR" && npm run build)
   if [ ! -f "$ARCHITECT_BIN" ]; then
-    print_warn "Architect não compilado. Compilando agora..."
-    (cd "$SCRIPT_DIR" && npm run build)
-    if [ ! -f "$ARCHITECT_BIN" ]; then
-      print_error "Falha ao compilar. Rode: cd $SCRIPT_DIR && npm run build"
-      exit 1
-    fi
-    print_success "Build concluído"
-  else
-    print_success "Architect compilado"
+    print_error "Falha ao compilar. Rode: cd $SCRIPT_DIR && npm run build"
+    exit 1
   fi
+  print_success "Architect buildado/atualizado"
 
   # Register CLI globally (npm link) if 'architect' not in PATH
   if ! command -v architect &>/dev/null; then
