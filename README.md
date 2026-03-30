@@ -1,5 +1,8 @@
 # Architect
 
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Architect Holographic Cover Art" width="600" />
+</p>
 **AI-powered architecture analysis, refactoring, and context-aware agent system generator**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
@@ -7,6 +10,12 @@
 [![npm](https://img.shields.io/npm/v/@girardelli/architect)](https://www.npmjs.com/package/@girardelli/architect)
 [![Tests](https://img.shields.io/badge/Tests-337%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+<br/>
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="Architect CLI Demo" width="800" />
+</p>
+<br/>
 
 Understand your codebase architecture in seconds. Detect anti-patterns, get refactoring plans, and generate **context-aware AI agent configurations** that actually understand your stack, domain, and toolchain — all from a single command.
 
