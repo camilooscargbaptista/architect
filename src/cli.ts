@@ -337,7 +337,7 @@ async function main(): Promise<void> {
           `${c.white}${agentSuggestion.suggestedAgents.length}${c.reset}${c.dim} agents suggested${agentSuggestion.hasExistingAgents ? ' (existing .agent/ audited)' : ''}${c.reset}`
         );
 
-        const projectName = report.projectInfo.name || basename(options.path);
+        const projectName = String(report.projectInfo.name || basename(options.path)).replace(/[^a-zA-Z0-9-]/g, '-');
 
         // Report generation
         if (options.format === 'html') {
@@ -381,7 +381,7 @@ async function main(): Promise<void> {
 
         progress.printExtraPhase('REFACTOR ENGINE', 'Building refactoring plan', c.orange);
         const plan = architect.refactor(report, options.path);
-        const projectName = report.projectInfo.name || basename(options.path);
+        const projectName = String(report.projectInfo.name || basename(options.path)).replace(/[^a-zA-Z0-9-]/g, '-');
 
         if (options.format === 'json') {
           const outputPath = options.output || `refactor-plan-${projectName}.json`;
