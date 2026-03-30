@@ -1,13 +1,13 @@
 import { StackDetector } from '../src/agent-generator/stack-detector.js';
 import { AnalysisReport } from '../src/types.js';
 
-function makeReport(nodes: string[]): AnalysisReport {
+function makeReport(nodes: string[], frameworks: string[] = []): AnalysisReport {
   return {
     timestamp: new Date().toISOString(),
     projectInfo: {
       path: '/test',
       name: 'test-project',
-      frameworks: [],
+      frameworks,
       totalFiles: nodes.length,
       totalLines: 1000,
       primaryLanguages: [],
@@ -78,50 +78,50 @@ describe('StackDetector', () => {
   });
 
   describe('Framework Detection', () => {
-    it('should detect NestJS from .module.ts files', () => {
-      const report = makeReport(['src/app.module.ts', 'src/users/users.service.ts']);
+    it('should detect NestJS from projectInfo.frameworks', () => {
+      const report = makeReport(['src/app.module.ts', 'src/users/users.service.ts'], ['NestJS']);
       const stack = detector.detect(report);
 
       expect(stack.frameworks).toContain('NestJS');
     });
 
-    it('should detect Angular from .component.ts files', () => {
-      const report = makeReport(['src/app/app.component.ts', 'src/app/app.module.ts']);
+    it('should detect Angular from projectInfo.frameworks', () => {
+      const report = makeReport(['src/app/app.component.ts', 'src/app/app.module.ts'], ['Angular']);
       const stack = detector.detect(report);
 
       expect(stack.frameworks).toContain('Angular');
     });
 
-    it('should detect Django from manage.py', () => {
-      const report = makeReport(['manage.py', 'app/views.py', 'app/models.py']);
+    it('should detect Django from projectInfo.frameworks', () => {
+      const report = makeReport(['manage.py', 'app/views.py', 'app/models.py'], ['Django']);
       const stack = detector.detect(report);
 
       expect(stack.frameworks).toContain('Django');
     });
 
-    it('should detect Flutter from .dart files', () => {
-      const report = makeReport(['lib/main.dart', 'lib/app.dart']);
+    it('should detect Flutter from projectInfo.frameworks', () => {
+      const report = makeReport(['lib/main.dart', 'lib/app.dart'], ['Flutter']);
       const stack = detector.detect(report);
 
       expect(stack.frameworks).toContain('Flutter');
     });
 
-    it('should detect Spring from pom.xml', () => {
-      const report = makeReport(['pom.xml', 'src/main/java/App.java']);
+    it('should detect Spring Boot from projectInfo.frameworks', () => {
+      const report = makeReport(['pom.xml', 'src/main/java/App.java'], ['Spring Boot']);
       const stack = detector.detect(report);
 
-      expect(stack.frameworks).toContain('Spring');
+      expect(stack.frameworks).toContain('Spring Boot');
     });
 
-    it('should detect Next.js from .tsx + next pattern', () => {
-      const report = makeReport(['src/pages/index.tsx', 'next.config.js']);
+    it('should detect Next.js from projectInfo.frameworks', () => {
+      const report = makeReport(['src/pages/index.tsx', 'next.config.js'], ['Next.js']);
       const stack = detector.detect(report);
 
       expect(stack.frameworks).toContain('Next.js');
     });
 
-    it('should detect Vue from .vue files', () => {
-      const report = makeReport(['src/App.vue', 'src/components/Header.vue']);
+    it('should detect Vue from projectInfo.frameworks', () => {
+      const report = makeReport(['src/App.vue', 'src/components/Header.vue'], ['Vue']);
       const stack = detector.detect(report);
 
       expect(stack.frameworks).toContain('Vue');
@@ -137,7 +137,7 @@ describe('StackDetector', () => {
     });
 
     it('should set hasFrontend true for Angular projects', () => {
-      const report = makeReport(['src/app.component.ts', 'src/app.module.ts']);
+      const report = makeReport(['src/app.component.ts', 'src/app.module.ts'], ['Angular']);
       const stack = detector.detect(report);
 
       expect(stack.hasFrontend).toBe(true);
@@ -195,7 +195,7 @@ describe('StackDetector', () => {
     });
 
     it('should return Jest + Jasmine for Angular', () => {
-      const report = makeReport(['src/app.component.ts']);
+      const report = makeReport(['src/app.component.ts'], ['Angular']);
       const stack = detector.detect(report);
 
       expect(stack.testFramework).toBe('Jest + Jasmine');

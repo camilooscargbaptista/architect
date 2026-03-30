@@ -40,6 +40,7 @@ temp/
 .cache/
 
 # Analysis outputs
+docs/
 *.architect.json
 architect-report.md
 architect-diagram.mmd
