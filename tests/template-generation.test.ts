@@ -1,39 +1,23 @@
-import { TemplateContext, DEFAULT_AGENT_CONFIG, StackInfo } from '../src/agent-generator/types.js';
-import { AnalysisReport, RefactoringPlan } from '../src/types.js';
+import { TemplateContext, DEFAULT_AGENT_CONFIG, StackInfo, AnalysisReport, RefactoringPlan, generateIndexMd, generateOrchestrator, generatePreflight, generateQualityGates, generateGeneralRules, generateArchitectureRules, generateSecurityRules, generateNewFeatureWorkflow, generateFixBugWorkflow, generateReviewWorkflow, generateBackendAgent, generateFrontendAgent, generateSecurityAgent, generateQAAgent, generateTechDebtAgent, generateCodeReviewChecklist, generateDatabaseAgent, generateMobileAgent, generateC4Template, generateBddTemplate, generateTddTemplate, generateAdrTemplate, generateThreatModelTemplate, generateStackRules, getStackRuleFileName } from './template-generation.test_deps.js';
 
 // ── Core Templates ──
-import { generateIndexMd } from '../src/agent-generator/templates/core/index-md.js';
-import { generateOrchestrator } from '../src/agent-generator/templates/core/orchestrator.js';
-import { generatePreflight } from '../src/agent-generator/templates/core/preflight.js';
-import { generateQualityGates } from '../src/agent-generator/templates/core/quality-gates.js';
-import { generateGeneralRules } from '../src/agent-generator/templates/core/general-rules.js';
-import { generateArchitectureRules } from '../src/agent-generator/templates/core/architecture-rules.js';
-import { generateSecurityRules } from '../src/agent-generator/templates/core/security-rules.js';
-import { generateNewFeatureWorkflow } from '../src/agent-generator/templates/core/workflow-new-feature.js';
-import { generateFixBugWorkflow } from '../src/agent-generator/templates/core/workflow-fix-bug.js';
-import { generateReviewWorkflow } from '../src/agent-generator/templates/core/workflow-review.js';
-import {
-  generateBackendAgent,
-  generateFrontendAgent,
-  generateSecurityAgent,
-  generateQAAgent,
-  generateTechDebtAgent,
-  generateCodeReviewChecklist,
-  generateDatabaseAgent,
-  generateMobileAgent,
-} from '../src/agent-generator/templates/core/agents.js';
+
+
+
+
+
+
+
+
+
+
+
 
 // ── Domain Templates ──
-import {
-  generateC4Template,
-  generateBddTemplate,
-  generateTddTemplate,
-  generateAdrTemplate,
-  generateThreatModelTemplate,
-} from '../src/agent-generator/templates/domain/index.js';
+
 
 // ── Stack Templates ──
-import { generateStackRules, getStackRuleFileName } from '../src/agent-generator/templates/stack/index.js';
+
 
 // ── Helpers ──
 

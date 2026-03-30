@@ -1,31 +1,4 @@
-import {
-  getEnriched,
-  isEnriched,
-  depthScale,
-  depthAtLeast,
-  crossRef,
-  domainBadge,
-  complianceBadges,
-  depthIndicator,
-  modulesSummaryTable,
-  integrationsSummary,
-  frameworkBadge,
-  projectStructureBadge,
-  toolchainCommands,
-  frameworkModuleStructure,
-  frameworkSecurityChecklist,
-} from '../src/agent-generator/templates/template-helpers.js';
-import {
-  TemplateContext,
-  EnrichedTemplateContext,
-  StackInfo,
-  FrameworkInfo,
-  DetectedToolchain,
-  DomainInsights,
-  ModuleDetail,
-  DetectedEndpoint,
-} from '../src/agent-generator/types.js';
-import { AnalysisReport, RefactoringPlan } from '../src/types.js';
+import { getEnriched, isEnriched, depthScale, depthAtLeast, crossRef, domainBadge, complianceBadges, depthIndicator, modulesSummaryTable, integrationsSummary, frameworkBadge, projectStructureBadge, toolchainCommands, frameworkModuleStructure, frameworkSecurityChecklist, TemplateContext, EnrichedTemplateContext, StackInfo, FrameworkInfo, DetectedToolchain, DomainInsights, ModuleDetail, DetectedEndpoint, AnalysisReport, RefactoringPlan } from './template-helpers.test_deps.js';
 
 // ───────────────────────────────────────────────────────────────
 // MOCK BUILDERS

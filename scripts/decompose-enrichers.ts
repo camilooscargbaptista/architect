@@ -1,3 +1,5 @@
+import { AnalysisReport, ModuleDetail, DetectedEndpoint, EnrichedTemplateContext, DescriptionGenerator, AnalysisHelpers, StackInfo, EnrichedTemplateContext, AgentGeneratorConfig, DEFAULT_AGENT_CONFIG, DomainInferrer, FrameworkDetector, ModuleExtractor, EndpointExtractor, AnalysisHelpers } from './decompose-enrichers_deps.js';
+
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -11,8 +13,8 @@ const content = readFileSync(SRC, 'utf8');
 // 1. DTO and TYPES
 const baseImports = `import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
-import { AnalysisReport } from '../../types.js';
-import { ModuleDetail, DetectedEndpoint, EnrichedTemplateContext } from '../types.js';\n\n`;
+
+\n\n`;
 
 // Extract Classifiers
 // Layer Classifier (isTest, isEntity, isController, isGenericDir, inferFileLayer, etc)
@@ -60,8 +62,8 @@ writeFileSync(join(DEST_DIR, 'analysis-helpers.ts'), analysisHelpers);
 
 // Module Extractor
 let modExtractor = baseImports + `import { LayerClassifier } from './layer-classifier.js';
-import { DescriptionGenerator } from './description-generator.js';
-import { AnalysisHelpers } from './analysis-helpers.js';
+
+
 
 export class ModuleExtractor {
   private layerClassifier = new LayerClassifier();
@@ -121,19 +123,14 @@ writeFileSync(join(DEST_DIR, 'endpoint-extractor.ts'), endExtractor);
 
 // Finally, rebuild context-enricher.ts Facade
 const facade = `import { AnalysisReport, RefactoringPlan } from '../types.js';
-import {
-  StackInfo,
-  EnrichedTemplateContext,
-  AgentGeneratorConfig,
-  DEFAULT_AGENT_CONFIG,
-} from './types.js';
-import { DomainInferrer } from './domain-inferrer.js';
-import { FrameworkDetector } from './framework-detector.js';
+
+
+
 
 // Engines
-import { ModuleExtractor } from './enrichers/module-extractor.js';
-import { EndpointExtractor } from './enrichers/endpoint-extractor.js';
-import { AnalysisHelpers } from './enrichers/analysis-helpers.js';
+
+
+
 
 /**
  * ContextEnricher — Builds an EnrichedTemplateContext from AnalysisReport.

@@ -1,0 +1,14 @@
+export { groupAntiPatterns, groupSuggestions, escapeHtml } from './html-reporter/utils_adapters.js';
+export { renderHeader, renderFooter } from './html-reporter/sections/header.js';
+export { renderProjectOverview } from './html-reporter/sections/overview.js';
+export { renderScoreHero, renderRadarChart, renderStats } from './html-reporter/sections/score.js';
+export { renderLayers, renderDependencyGraph } from './html-reporter/sections/layers.js';
+export { renderAntiPatternBubbles, renderAntiPatterns } from './html-reporter/sections/anti-patterns.js';
+export { renderSuggestions } from './html-reporter/sections/suggestions.js';
+export { renderRefactoringPlan } from './html-reporter/sections/refactoring-plan.js';
+export { renderAgentSuggestions } from './html-reporter/sections/agents.js';
+export { getScripts } from './html-reporter/scripts.js';
+export { getStyles } from './html-reporter/styles.js';
+export { AnalysisReport, AntiPattern } from '../core/types/core.js';
+export { RefactoringPlan, RefactorStep } from '../core/types/rules.js';
+export { AgentSuggestion } from '../core/agent-generator/index.js';

@@ -1,3 +1,5 @@
+import { FrameworkInfo, BaseDetector, FRAMEWORK_MAP, AnalysisReport, FrameworkInfo, DetectedToolchain, FrameworkInfo, DetectedToolchain, PythonDetector, NodeDetector, JavaDetector, PhpDetector, GoDetector, RubyDetector, DartDetector, RustDetector, ToolchainDetector, StructureDetector } from './decompose-detectors_deps.js';
+
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -13,7 +15,7 @@ const content = readFileSync(SRC, 'utf8');
 const mapMatch = content.match(/(private static readonly FRAMEWORK_MAP[\s\S]*?);/);
 let mapCode = mapMatch ? mapMatch[1].replace('private static readonly', 'export const') + ';' : '';
 
-writeFileSync(join(DEST_DIR, 'framework-registry.ts'), `import { FrameworkInfo } from '../types.js';\n\n${mapCode}\n`);
+writeFileSync(join(DEST_DIR, 'framework-registry.ts'), `\n\n${mapCode}\n`);
 
 // 2. Base Detector Strategy
 const baseStrategy = `import { FrameworkInfo } from '../types.js';
@@ -74,8 +76,8 @@ methods.forEach(def => {
   const fileContent = `import { join } from 'path';
 import { existsSync } from 'fs';
 import { FrameworkInfo } from '../types.js';
-import { BaseDetector } from './base-detector.js';
-import { FRAMEWORK_MAP } from './framework-registry.js';
+
+
 
 export class ${def.class} extends BaseDetector {
 ${clsBody.trim()}
@@ -93,8 +95,8 @@ let structCode = structMatch ? structMatch[1].replace('private detectProjectStru
 
 writeFileSync(join(DEST_DIR, 'toolchain-detector.ts'), `import { existsSync } from 'fs';
 import { join } from 'path';
-import { AnalysisReport } from '../../types.js';
-import { FrameworkInfo, DetectedToolchain } from '../types.js';
+
+
 
 export class ToolchainDetector {
 ${toolchainCode}
@@ -110,17 +112,17 @@ ${structCode}
 
 // 5. Build Facade Index
 const facade = `import { AnalysisReport } from '../../types.js';
-import { FrameworkInfo, DetectedToolchain } from './types.js';
-import { PythonDetector } from './detectors/python-detector.js';
-import { NodeDetector } from './detectors/node-detector.js';
-import { JavaDetector } from './detectors/java-detector.js';
-import { PhpDetector } from './detectors/php-detector.js';
-import { GoDetector } from './detectors/go-detector.js';
-import { RubyDetector } from './detectors/ruby-detector.js';
-import { DartDetector } from './detectors/dart-detector.js';
-import { RustDetector } from './detectors/rust-detector.js';
-import { ToolchainDetector } from './detectors/toolchain-detector.js';
-import { StructureDetector } from './detectors/structure-detector.js';
+
+
+
+
+
+
+
+
+
+
+
 
 /**
  * FrameworkDetector — Detects actual frameworks and toolchain from dependency files.

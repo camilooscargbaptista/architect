@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # ── Script location (resolve symlinks) ──
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ARCHITECT_BIN="${SCRIPT_DIR}/dist/cli.js"
+ARCHITECT_BIN="${SCRIPT_DIR}/dist/adapters/cli.js"
 
 # ── Helpers ──
 
