@@ -1,7 +1,7 @@
 # Architect
 
 <p align="center">
-  <img src="docs/assets/cover.png" alt="Architect Holographic Cover Art" width="600" />
+  <img src="assets/cover.png" alt="Architect Holographic Cover Art" width="600" />
 </p>
 **AI-powered architecture analysis, refactoring, and context-aware agent system generator**
 
@@ -13,7 +13,7 @@
 
 <br/>
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="Architect CLI Demo" width="800" />
+  <img src="assets/demo.gif" alt="Architect CLI Demo" width="800" />
 </p>
 <br/>
 
