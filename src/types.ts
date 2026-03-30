@@ -52,6 +52,18 @@ export interface ArchitectureScore {
   };
 }
 
+export interface WorkspaceInfo {
+  name: string;
+  path: string;
+  relativePath: string;
+  description: string;
+  version: string;
+  dependencies: Record<string, string>;
+  devDependencies: Record<string, string>;
+  bin?: Record<string, string>;
+  main?: string;
+}
+
 export interface ProjectInfo {
   path: string;
   name: string;
@@ -60,6 +72,7 @@ export interface ProjectInfo {
   totalLines: number;
   primaryLanguages: string[];
   fileTree?: FileNode;
+  workspaces?: WorkspaceInfo[];
 }
 
 export interface AnalysisReport {
@@ -113,6 +126,10 @@ export interface ArchitectConfig {
     coupling?: number;
     cohesion?: number;
     layering?: number;
+  };
+  monorepo?: {
+    enabled?: boolean;
+    treatPackagesAsModules?: boolean;
   };
 }
 

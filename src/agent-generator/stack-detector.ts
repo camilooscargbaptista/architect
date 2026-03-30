@@ -3,7 +3,9 @@ import { StackInfo } from './types.js';
 
 /**
  * Detects the technology stack from an AnalysisReport.
- * Extracted from the monolithic AgentGenerator for single-responsibility.
+ *
+ * v5.1: Uses report.projectInfo.frameworks (precise, from scanner v5.0)
+ * instead of naive string-matching on file paths.
  */
 export class StackDetector {
   detect(report: AnalysisReport): StackInfo {
@@ -29,34 +31,44 @@ export class StackDetector {
     if (extensions.has('php')) languages.add('PHP');
     if (extensions.has('cs')) languages.add('C#');
 
-    // ── Framework Detection from file patterns ──
-    const allFiles = files.join(' ');
-    if (allFiles.includes('manage.py') || allFiles.includes('django')) frameworks.add('Django');
-    if (allFiles.includes('flask') || allFiles.includes('app.py')) frameworks.add('Flask');
-    if (allFiles.includes('fastapi')) frameworks.add('FastAPI');
-    if (allFiles.includes('.module.ts') || allFiles.includes('nest')) frameworks.add('NestJS');
-    if (allFiles.includes('.component.ts') || allFiles.includes('angular')) frameworks.add('Angular');
-    if (allFiles.includes('.vue')) frameworks.add('Vue');
-    if (allFiles.includes('.tsx') && allFiles.includes('next')) frameworks.add('Next.js');
-    if (allFiles.includes('.dart')) frameworks.add('Flutter');
-    if (allFiles.includes('go.mod')) frameworks.add('Go Modules');
-    if (allFiles.includes('Cargo.toml')) frameworks.add('Cargo');
-    if (allFiles.includes('pom.xml') || allFiles.includes('build.gradle')) frameworks.add('Spring');
-    if (allFiles.includes('rails') || allFiles.includes('Gemfile')) frameworks.add('Rails');
-    if (allFiles.includes('laravel') || allFiles.includes('artisan')) frameworks.add('Laravel');
+    // ── Framework Detection: Trust report.projectInfo.frameworks ──
+    // These come from scanner v5.0 which reads actual package.json dependencies
+    const reportFrameworks = report.projectInfo?.frameworks || [];
+    for (const fw of reportFrameworks) {
+      frameworks.add(fw);
+    }
 
     // ── Derived Properties ──
     const primary = languages.size > 0 ? [...languages][0] : 'Unknown';
 
-    const hasBackend = languages.has('Python') || languages.has('TypeScript') ||
+    // Frontend frameworks that indicate hasFrontend
+    const FRONTEND_FRAMEWORKS = new Set([
+      'Angular', 'Vue', 'Vue.js', 'Next.js', 'React', 'Nuxt', 'Nuxt.js',
+      'Svelte', 'SvelteKit', 'Remix', 'Gatsby', 'Vite',
+    ]);
+
+    // Backend frameworks that indicate hasBackend (language-based is fallback)
+    const BACKEND_FRAMEWORKS = new Set([
+      'Express', 'Express.js', 'NestJS', 'Fastify', 'Koa', 'Hapi',
+      'Django', 'Flask', 'FastAPI', 'Spring Boot', 'Laravel', 'Rails',
+      'Ruby on Rails', 'Gin', 'Echo', 'Fiber', 'Actix Web', 'Rocket',
+      'Probot', 'MCP SDK',
+    ]);
+
+    const MOBILE_FRAMEWORKS = new Set(['Flutter', 'React Native', 'Expo']);
+
+    const hasBackend = [...frameworks].some(f => BACKEND_FRAMEWORKS.has(f)) ||
+      languages.has('Python') || languages.has('TypeScript') ||
       languages.has('Go') || languages.has('Java/Kotlin') || languages.has('Ruby') ||
       languages.has('PHP') || languages.has('C#') || languages.has('Rust');
 
-    const hasFrontend = frameworks.has('Angular') || frameworks.has('Vue') ||
-      frameworks.has('Next.js') || frameworks.has('React') || extensions.has('html');
+    const hasFrontend = [...frameworks].some(f => FRONTEND_FRAMEWORKS.has(f)) ||
+      extensions.has('tsx') || extensions.has('jsx');
 
-    const hasMobile = languages.has('Dart') || frameworks.has('Flutter');
+    const hasMobile = [...frameworks].some(f => MOBILE_FRAMEWORKS.has(f)) ||
+      languages.has('Dart');
 
+    const allFiles = files.join(' ').toLowerCase();
     const hasDatabase = allFiles.includes('migration') || allFiles.includes('entity') ||
       allFiles.includes('model') || allFiles.includes('schema') ||
       allFiles.includes('prisma') || allFiles.includes('typeorm');

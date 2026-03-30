@@ -3,7 +3,7 @@ import { ProjectScanner } from '../src/scanner.js';
 import { ArchitectConfig } from '../src/types.js';
 
 // Use path.resolve for Jest compatibility (import.meta.url not supported by ts-jest)
-const testDir = path.resolve(__dirname);
+const testDir = path.resolve(process.cwd(), 'tests');
 
 describe('ProjectScanner', () => {
   const mockConfig: ArchitectConfig = {

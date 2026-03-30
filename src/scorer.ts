@@ -24,7 +24,7 @@ export class ArchitectureScorer {
     this.calculateModularity(edges, totalFiles);
     this.calculateCoupling(edges, totalFiles);
     this.calculateCohesion(edges);
-    this.calculateLayering(antiPatterns);
+    this.calculateLayering(antiPatterns, totalFiles);
 
     const components = [
       {
@@ -213,7 +213,7 @@ export class ArchitectureScorer {
     return fromTopLevel === toTopLevel;
   }
 
-  private calculateLayering(antiPatterns: AntiPattern[]): void {
+  private calculateLayering(antiPatterns: AntiPattern[], totalFiles?: number): void {
     const layeringViolations = antiPatterns.filter(
       (p) =>
         p.name === 'Leaky Abstraction' ||
@@ -223,16 +223,31 @@ export class ArchitectureScorer {
 
     if (layeringViolations === 0) {
       this.layering = 95;
-    } else if (layeringViolations === 1) {
-      this.layering = 85;
-    } else if (layeringViolations === 2) {
-      this.layering = 70;
-    } else if (layeringViolations === 3) {
-      this.layering = 55;
-    } else if (layeringViolations <= 5) {
-      this.layering = 40;
+      return;
+    }
+
+    // Use ratio-based scoring: violations per 100 files
+    // This makes scoring fair regardless of project size
+    const fileCount = Math.max(totalFiles || 50, 10);
+    const violationRatio = layeringViolations / fileCount;
+
+    if (violationRatio < 0.02) {
+      // < 2% — e.g. 1 violation in 50 files
+      this.layering = 90;
+    } else if (violationRatio < 0.05) {
+      // < 5% — e.g. 2-3 violations in 50 files
+      this.layering = 80;
+    } else if (violationRatio < 0.1) {
+      // < 10% — e.g. 5 violations in 50 files
+      this.layering = 65;
+    } else if (violationRatio < 0.2) {
+      // < 20% — significant issues
+      this.layering = 50;
+    } else if (violationRatio < 0.35) {
+      this.layering = 35;
     } else {
-      this.layering = 25;
+      // > 35% — severe layering problems
+      this.layering = 20;
     }
   }
 }

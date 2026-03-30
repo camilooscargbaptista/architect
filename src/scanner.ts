@@ -1,7 +1,7 @@
 import { globSync } from 'glob';
-import { readFileSync, lstatSync } from 'fs';
-import { join, relative, extname } from 'path';
-import { FileNode, ProjectInfo, ArchitectConfig } from './types.js';
+import { readFileSync, lstatSync, existsSync } from 'fs';
+import { join, relative, extname, resolve } from 'path';
+import { FileNode, ProjectInfo, ArchitectConfig, WorkspaceInfo } from './types.js';
 
 export class ProjectScanner {
   private projectPath: string;
@@ -17,14 +17,19 @@ export class ProjectScanner {
     const files = this.scanDirectory();
     const fileTree = this.buildFileTree(files);
 
-    // Detect frameworks from scanned files AND parent package.json
-    const parentPackageJsons = this.findParentPackageJsons();
-    const allFilesForDetection = [...files, ...parentPackageJsons];
-    const frameworks = this.detectFrameworks(allFilesForDetection);
+    // Detect workspaces from root package.json
+    const workspaces = this.detectWorkspaces();
 
+    // Detect frameworks ONLY from root + workspace package.json files (never from node_modules)
+    const workspacePkgJsonPaths = [
+      join(this.projectPath, 'package.json'),
+      ...workspaces.map(ws => join(ws.path, 'package.json')),
+    ].filter(p => existsSync(p));
+
+    const frameworks = this.detectFrameworks(workspacePkgJsonPaths);
     const languages = this.detectLanguages(files);
     const totalLines = this.countTotalLines(files);
-    const projectName = this.resolveProjectName(parentPackageJsons);
+    const projectName = this.resolveProjectName(workspacePkgJsonPaths);
 
     return {
       path: this.projectPath,
@@ -34,31 +39,66 @@ export class ProjectScanner {
       totalLines,
       primaryLanguages: languages,
       fileTree,
+      workspaces: workspaces.length > 0 ? workspaces : undefined,
     };
   }
 
   /**
-   * Walk up directory tree to find package.json files for project name and framework detection
+   * Detect npm/yarn/pnpm workspaces from root package.json.
+   * Reads the "workspaces" field and resolves each workspace to its package.json.
    */
-  private findParentPackageJsons(): string[] {
-    const found: string[] = [];
-    let dir = this.projectPath;
-    const root = '/';
-    let depth = 0;
+  private detectWorkspaces(): WorkspaceInfo[] {
+    const rootPkgPath = join(this.projectPath, 'package.json');
+    if (!existsSync(rootPkgPath)) return [];
 
-    while (dir !== root && depth < 5) {
-      const pkgPath = join(dir, 'package.json');
-      try {
-        readFileSync(pkgPath, 'utf-8');
-        found.push(pkgPath);
-      } catch {
-        // no package.json here
+    try {
+      const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
+      let workspaceGlobs: string[] = [];
+
+      if (Array.isArray(rootPkg.workspaces)) {
+        workspaceGlobs = rootPkg.workspaces;
+      } else if (rootPkg.workspaces?.packages && Array.isArray(rootPkg.workspaces.packages)) {
+        workspaceGlobs = rootPkg.workspaces.packages;
       }
-      dir = join(dir, '..');
-      depth++;
-    }
 
-    return found;
+      if (workspaceGlobs.length === 0) return [];
+
+      const workspaces: WorkspaceInfo[] = [];
+
+      for (const pattern of workspaceGlobs) {
+        // Resolve glob patterns like "packages/*"
+        const dirs = globSync(pattern, {
+          cwd: this.projectPath,
+          absolute: true,
+        });
+
+        for (const dir of dirs) {
+          const pkgPath = join(dir, 'package.json');
+          if (!existsSync(pkgPath)) continue;
+
+          try {
+            const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+            workspaces.push({
+              name: pkg.name || relative(this.projectPath, dir),
+              path: dir,
+              relativePath: relative(this.projectPath, dir),
+              description: pkg.description || '',
+              version: pkg.version || '0.0.0',
+              dependencies: pkg.dependencies || {},
+              devDependencies: pkg.devDependencies || {},
+              bin: pkg.bin || undefined,
+              main: pkg.main || undefined,
+            });
+          } catch {
+            // Skip unparseable package.json
+          }
+        }
+      }
+
+      return workspaces;
+    } catch {
+      return [];
+    }
   }
 
   /**
@@ -81,7 +121,6 @@ export class ProjectScanner {
 
   private scanDirectory(): string[] {
     const ignorePatterns = this.config.ignore || [];
-    const negatedPatterns = ignorePatterns.map((p) => `!**/${p}/**`);
 
     const files = globSync('**/*', {
       cwd: this.projectPath,
@@ -167,80 +206,87 @@ export class ProjectScanner {
     return root;
   }
 
-  private detectFrameworks(files: string[]): Set<string> {
+  /**
+   * Detect frameworks ONLY from specified package.json files.
+   * Never reads package.json from node_modules.
+   * No string-matching fallback — only structured dependency key detection.
+   */
+  private detectFrameworks(packageJsonPaths: string[]): Set<string> {
     const frameworks = new Set<string>();
 
-    for (const file of files) {
-      if (file.endsWith('package.json')) {
-        try {
-          const content = readFileSync(file, 'utf-8');
-          const parsed = JSON.parse(content);
-          const allDeps = {
-            ...parsed.dependencies,
-            ...parsed.devDependencies,
-          };
+    for (const file of packageJsonPaths) {
+      if (!file.endsWith('package.json')) continue;
 
-          // Detect from actual dependency keys
-          if (allDeps['@nestjs/core'] || allDeps['@nestjs/common']) frameworks.add('NestJS');
-          if (allDeps['react'] || allDeps['react-dom']) frameworks.add('React');
-          if (allDeps['@angular/core']) frameworks.add('Angular');
-          if (allDeps['vue'] || allDeps['@vue/core']) frameworks.add('Vue.js');
-          if (allDeps['express']) frameworks.add('Express.js');
-          if (allDeps['next']) frameworks.add('Next.js');
-          if (allDeps['fastify']) frameworks.add('Fastify');
-          if (allDeps['typeorm']) frameworks.add('TypeORM');
-          if (allDeps['prisma'] || allDeps['@prisma/client']) frameworks.add('Prisma');
-          if (allDeps['sequelize']) frameworks.add('Sequelize');
-          if (allDeps['mongoose']) frameworks.add('Mongoose');
-        } catch {
-          // Fallback: simple string matching
-          try {
-            const content = readFileSync(file, 'utf-8');
-            if (content.includes('@nestjs')) frameworks.add('NestJS');
-            if (content.includes('react')) frameworks.add('React');
-            if (content.includes('angular')) frameworks.add('Angular');
-            if (content.includes('vue')) frameworks.add('Vue.js');
-            if (content.includes('express')) frameworks.add('Express.js');
-            if (content.includes('next')) frameworks.add('Next.js');
-          } catch {
-            // skip
-          }
-        }
-      }
+      // Safety: skip any path that includes node_modules
+      if (file.includes('node_modules')) continue;
 
-      if (file.includes('pom.xml')) {
-        try {
-          const content = readFileSync(file, 'utf-8');
-          if (content.includes('spring-boot')) frameworks.add('Spring Boot');
-          if (content.includes('spring')) frameworks.add('Spring');
-        } catch {
-          // skip
-        }
-      }
+      try {
+        const content = readFileSync(file, 'utf-8');
+        const parsed = JSON.parse(content);
+        const allDeps = {
+          ...parsed.dependencies,
+          ...parsed.devDependencies,
+        };
 
-      if (file.includes('requirements.txt')) {
-        try {
-          const content = readFileSync(file, 'utf-8');
-          if (content.includes('django')) frameworks.add('Django');
-          if (content.includes('flask')) frameworks.add('Flask');
-          if (content.includes('fastapi')) frameworks.add('FastAPI');
-        } catch {
-          // skip
-        }
+        // Detect from actual dependency keys — no string fallback
+        if (allDeps['@nestjs/core'] || allDeps['@nestjs/common']) frameworks.add('NestJS');
+        if (allDeps['react'] || allDeps['react-dom']) frameworks.add('React');
+        if (allDeps['@angular/core']) frameworks.add('Angular');
+        if (allDeps['vue'] || allDeps['@vue/core']) frameworks.add('Vue.js');
+        if (allDeps['express']) frameworks.add('Express.js');
+        if (allDeps['next']) frameworks.add('Next.js');
+        if (allDeps['fastify']) frameworks.add('Fastify');
+        if (allDeps['typeorm']) frameworks.add('TypeORM');
+        if (allDeps['prisma'] || allDeps['@prisma/client']) frameworks.add('Prisma');
+        if (allDeps['sequelize']) frameworks.add('Sequelize');
+        if (allDeps['mongoose']) frameworks.add('Mongoose');
+        if (allDeps['@modelcontextprotocol/sdk']) frameworks.add('MCP SDK');
+        if (allDeps['probot']) frameworks.add('Probot');
+        if (allDeps['hono']) frameworks.add('Hono');
+      } catch {
+        // Skip unparseable files — NO fallback string matching
       }
+    }
 
-      if (file.includes('Gemfile')) {
-        try {
-          const content = readFileSync(file, 'utf-8');
-          if (content.includes('rails')) frameworks.add('Ruby on Rails');
-        } catch {
-          // skip
-        }
+    // Check for pom.xml only at project root
+    const pomPath = join(this.projectPath, 'pom.xml');
+    if (existsSync(pomPath)) {
+      try {
+        const content = readFileSync(pomPath, 'utf-8');
+        if (content.includes('spring-boot')) frameworks.add('Spring Boot');
+        if (content.includes('spring') && !content.includes('spring-boot')) frameworks.add('Spring');
+      } catch {
+        // skip
       }
+    }
 
-      if (file.includes('go.mod')) {
-        frameworks.add('Go');
+    // Check for requirements.txt only at project root
+    const reqPath = join(this.projectPath, 'requirements.txt');
+    if (existsSync(reqPath)) {
+      try {
+        const content = readFileSync(reqPath, 'utf-8');
+        if (content.includes('django')) frameworks.add('Django');
+        if (content.includes('flask')) frameworks.add('Flask');
+        if (content.includes('fastapi')) frameworks.add('FastAPI');
+      } catch {
+        // skip
       }
+    }
+
+    // Check for Gemfile only at project root
+    const gemPath = join(this.projectPath, 'Gemfile');
+    if (existsSync(gemPath)) {
+      try {
+        const content = readFileSync(gemPath, 'utf-8');
+        if (content.includes('rails')) frameworks.add('Ruby on Rails');
+      } catch {
+        // skip
+      }
+    }
+
+    // Check for go.mod only at project root
+    if (existsSync(join(this.projectPath, 'go.mod'))) {
+      frameworks.add('Go');
     }
 
     return frameworks;

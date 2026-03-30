@@ -277,8 +277,20 @@ export class ArchitectureAnalyzer {
       const path = node.path.toLowerCase();
       const name = node.name.toLowerCase();
 
-      // Data layer — check first (more specific patterns)
+      // Skip test files — they don't belong to any architectural layer
       if (
+        name.endsWith('.test.ts') || name.endsWith('.test.js') ||
+        name.endsWith('.spec.ts') || name.endsWith('.spec.js') ||
+        path.includes('/__tests__/') || path.includes('/__mocks__/')
+      ) {
+        // Don't categorize test files into any layer
+      }
+      // Skip node_modules files (safety barrier)
+      else if (path.includes('node_modules')) {
+        // Don't categorize third-party files
+      }
+      // Data layer — check first (more specific patterns)
+      else if (
         path.includes('/entities/') ||
         path.includes('/entity/') ||
         path.includes('/migrations/') ||

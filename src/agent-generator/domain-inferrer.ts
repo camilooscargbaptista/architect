@@ -51,6 +51,16 @@ export class DomainInferrer {
         'assessment': ['quiz', 'grade', 'exam', 'prova', 'nota'],
       },
     },
+    devtools: {
+      keywords: ['analyzer', 'analysis', 'architect', 'lint', 'linter', 'ast', 'parser', 'scanner', 'refactor', 'mcp', 'cli', 'plugin', 'extension', 'sdk', 'compiler', 'transpiler', 'bundler', 'formatter', 'debugger', 'profiler', 'intelligence', 'code-review', 'anti-pattern', 'score', 'metric', 'dependency-graph'],
+      subDomains: {
+        'code-intelligence': ['analyzer', 'analysis', 'architect', 'anti-pattern', 'score', 'metric', 'intelligence', 'refactor'],
+        'mcp-server': ['mcp', 'perception', 'reasoning', 'validation', 'tool-calling'],
+        'cli-tool': ['cli', 'command', 'terminal', 'argv', 'yargs', 'commander'],
+        'ide-extension': ['extension', 'plugin', 'language-server', 'lsp', 'vscode'],
+        'build-tool': ['bundler', 'compiler', 'transpiler', 'webpack', 'esbuild', 'vite'],
+      },
+    },
     saas: {
       keywords: ['tenant', 'subscription', 'plan', 'workspace', 'organization', 'team', 'member', 'role', 'permission', 'billing', 'api-key', 'webhook', 'dashboard'],
       subDomains: {

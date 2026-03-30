@@ -55,7 +55,10 @@ import {
 } from './templates/domain/index.js';
 
 // ── Skills Generator ──
-import { generateProjectSkills } from './templates/core/skills-generator.js';
+import { generateProjectSkills, generateArchitectIntegrationSkill, generateCIPipelineSkill, generateMonorepoGuideSkill } from './templates/core/skills-generator.js';
+
+// ── Hooks Generator ──
+import { generatePreCommitHook, generatePrePushHook, generatePostAnalysisHook } from './templates/core/hooks-generator.js';
 
 // Re-export types for backward compatibility
 export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, EnrichedTemplateContext, DomainInsights, ModuleDetail, DetectedEndpoint, FrameworkInfo, DetectedToolchain };
@@ -71,6 +74,61 @@ export class AgentGenerator {
   private stackDetector = new StackDetector();
   private contextEnricher = new ContextEnricher();
 
+  /** Max lines for any single generated .agent file */
+  private static readonly MAX_FILE_LINES = 500;
+
+  /** Paths that indicate third-party code — filter from agent context */
+  private static readonly EXCLUDED_SEGMENTS = [
+    'node_modules', '/dist/', '/build/', '/coverage/',
+    '/.next/', '/venv/', '/__pycache__/', '/target/',
+  ];
+
+  /**
+   * Sanitize the report before passing to agent generation.
+   * Removes anti-patterns, dependency nodes, and suggestions
+   * that reference node_modules or build artifacts.
+   */
+  private sanitizeReport(report: AnalysisReport): AnalysisReport {
+    const isProjectPath = (path: string): boolean => {
+      const normalized = path.replace(/\\/g, '/');
+      return !AgentGenerator.EXCLUDED_SEGMENTS.some(seg => normalized.includes(seg));
+    };
+
+    return {
+      ...report,
+      antiPatterns: report.antiPatterns.filter(ap => {
+        if (!isProjectPath(ap.location)) return false;
+        if (ap.affectedFiles?.some(f => !isProjectPath(f))) {
+          // Keep the pattern but clean affected files
+          ap.affectedFiles = ap.affectedFiles.filter(f => isProjectPath(f));
+        }
+        return true;
+      }),
+      dependencyGraph: {
+        nodes: report.dependencyGraph.nodes.filter(n => isProjectPath(n)),
+        edges: report.dependencyGraph.edges.filter(
+          e => isProjectPath(e.from) && isProjectPath(e.to)
+        ),
+      },
+      suggestions: report.suggestions.filter(
+        s => !s.description.includes('node_modules')
+      ),
+    };
+  }
+
+  /**
+   * Cap content to max lines to prevent oversized agent files.
+   */
+  private capContent(content: string): string {
+    const lines = content.split('\n');
+    if (lines.length <= AgentGenerator.MAX_FILE_LINES) return content;
+
+    const truncated = lines.slice(0, AgentGenerator.MAX_FILE_LINES);
+    truncated.push('');
+    truncated.push('<!-- Content truncated at ' + AgentGenerator.MAX_FILE_LINES + ' lines. Run `architect agents` to regenerate. -->');
+    return truncated.join('\n');
+  }
+
   /**
    * Suggest agents without writing files — for unified report.
    */
@@ -79,7 +137,8 @@ export class AgentGenerator {
     plan: RefactoringPlan,
     projectPath: string,
   ): AgentSuggestion {
-    const stack = this.stackDetector.detect(report);
+    const cleanReport = this.sanitizeReport(report);
+    const stack = this.stackDetector.detect(cleanReport);
     const agentDir = join(projectPath, '.agent');
     const isExisting = existsSync(agentDir);
 
@@ -94,7 +153,7 @@ export class AgentGenerator {
       audit = this.auditExisting(agentDir, stack, report, plan);
     }
 
-    const ctx = this.buildContext(report, plan, stack, projectPath);
+    const ctx = this.buildContext(cleanReport, plan, stack, projectPath);
 
     const existingAgents = existingFiles('agents');
     const existingRules = existingFiles('rules');
@@ -125,9 +184,12 @@ export class AgentGenerator {
       desc: `Especialista em ${stack.primary} — APIs, serviços, lógica de negócio, integration docs`,
     });
     if (stack.hasFrontend) {
-      const fw = stack.frameworks.find(f => ['Angular', 'Vue', 'Next.js', 'React'].includes(f)) || 'FRONTEND';
+      const FRONTEND_FWS = ['Angular', 'Vue', 'Vue.js', 'Next.js', 'React', 'Nuxt', 'Svelte', 'Remix'];
+      const detectedFw = ctx.detectedFrameworks?.find(f => FRONTEND_FWS.includes(f.name));
+      const fw = detectedFw?.name ||
+        stack.frameworks.find(f => FRONTEND_FWS.includes(f)) || 'FRONTEND';
       agentDefs.push({
-        name: `${fw.toUpperCase().replace('.', '')}-FRONTEND-DEVELOPER`,
+        name: `${fw.toUpperCase().replace('.', '').replace(/\s/g, '-')}-FRONTEND-DEVELOPER`,
         desc: `Componentes ${fw}, state management, UX responsiva, todos os estados UI`,
       });
     }
@@ -225,17 +287,18 @@ export class AgentGenerator {
     projectPath: string,
     outputDir?: string
   ): { generated: string[]; audit: AgentAuditFinding[] } {
-    const stack = this.stackDetector.detect(report);
+    const cleanReport = this.sanitizeReport(report);
+    const stack = this.stackDetector.detect(cleanReport);
     const agentDir = outputDir || join(projectPath, '.agent');
     const isExisting = existsSync(agentDir);
 
     if (isExisting) {
-      const audit = this.auditExisting(agentDir, stack, report, plan);
-      const generated = this.generateMissing(agentDir, audit, report, plan, stack, projectPath);
+      const audit = this.auditExisting(agentDir, stack, cleanReport, plan);
+      const generated = this.generateMissing(agentDir, audit, cleanReport, plan, stack, projectPath);
       return { generated, audit };
     }
 
-    const generated = this.generateFull(agentDir, report, plan, stack, projectPath);
+    const generated = this.generateFull(agentDir, cleanReport, plan, stack, projectPath);
     return { generated, audit: [] };
   }
 
@@ -291,7 +354,7 @@ export class AgentGenerator {
     const ctx = this.buildContext(report, plan, stack, projectPath);
 
     // Create directories
-    const dirs = ['agents', 'rules', 'guards', 'workflows', 'templates', 'skills'];
+    const dirs = ['agents', 'rules', 'guards', 'workflows', 'templates', 'skills', 'hooks'];
     for (const d of dirs) mkdirSync(join(agentDir, d), { recursive: true });
 
     // ── Core files (Enterprise-Grade) ──
@@ -314,9 +377,11 @@ export class AgentGenerator {
       coreFiles[`agents/${stack.primary.toUpperCase()}-BACKEND-DEVELOPER.md`] = generateBackendAgent(ctx);
     }
     if (stack.hasFrontend) {
-      const fwName = stack.frameworks.find(f =>
-        ['Angular', 'Vue', 'Next.js', 'React'].includes(f)) || 'Frontend';
-      coreFiles[`agents/${fwName.toUpperCase().replace('.', '')}-FRONTEND-DEVELOPER.md`] = generateFrontendAgent(ctx);
+      const FRONTEND_FWS = ['Angular', 'Vue', 'Vue.js', 'Next.js', 'React', 'Nuxt', 'Svelte', 'Remix'];
+      const detectedFw = ctx.detectedFrameworks?.find(f => FRONTEND_FWS.includes(f.name));
+      const fwName = detectedFw?.name ||
+        stack.frameworks.find(f => FRONTEND_FWS.includes(f)) || 'Frontend';
+      coreFiles[`agents/${fwName.toUpperCase().replace('.', '').replace(/\s/g, '-')}-FRONTEND-DEVELOPER.md`] = generateFrontendAgent(ctx);
     }
     if (stack.hasMobile) {
       coreFiles['agents/FLUTTER-UI-DEVELOPER.md'] = generateMobileAgent(ctx);
@@ -348,12 +413,26 @@ export class AgentGenerator {
       coreFiles['skills/PROJECT-PATTERNS.md'] = skillsContent;
     }
 
-    // ── Write all files ──
+    // ── Data-driven Skills (real project data) ──
+    coreFiles['skills/ARCHITECT-INTEGRATION.md'] = generateArchitectIntegrationSkill(ctx);
+    coreFiles['skills/CI-PIPELINE.md'] = generateCIPipelineSkill(ctx);
+
+    const monorepoGuide = generateMonorepoGuideSkill(ctx);
+    if (monorepoGuide) {
+      coreFiles['skills/MONOREPO-GUIDE.md'] = monorepoGuide;
+    }
+
+    // ── Executable Hooks ──
+    coreFiles['hooks/pre-commit.sh'] = generatePreCommitHook(ctx);
+    coreFiles['hooks/pre-push.sh'] = generatePrePushHook(ctx);
+    coreFiles['hooks/post-analysis.sh'] = generatePostAnalysisHook(ctx);
+
+    // ── Write all files (with size cap) ──
     for (const [path, content] of Object.entries(coreFiles)) {
       const fullPath = join(agentDir, path);
       const dir = join(fullPath, '..');
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-      writeFileSync(fullPath, content);
+      writeFileSync(fullPath, this.capContent(content));
       generated.push(path);
     }
 

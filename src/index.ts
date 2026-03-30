@@ -8,7 +8,7 @@ import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorEngine } from './refactor-engine.js';
 import { AgentGenerator, AgentSuggestion } from './agent-generator/index.js';
 import { ProjectSummarizer } from './project-summarizer.js';
-import { ConfigLoader } from './config.js';
+import { ConfigLoader, normalizeIgnorePatterns } from './config.js';
 import { AnalysisReport, RefactoringPlan } from './types.js';
 import { relative } from 'path';
 
@@ -376,4 +376,19 @@ export {
   AgentGenerator,
   ConfigLoader,
 };
+
+// ── v4.0: Temporal & Predictive Analyzers ──
+export { GitHistoryAnalyzer, TemporalScorer, ForecastEngine } from './analyzers/index.js';
+export { saveToCache, loadFromCache } from './analyzers/git-cache.js';
+export type {
+  GitHistoryReport, FileHistory, ModuleHistory, VelocityVector,
+  ChangeCoupling, GitAnalyzerConfig,
+} from './analyzers/git-history.js';
+export type {
+  Trend, TemporalScore, TemporalReport, TemporalScorerConfig,
+} from './analyzers/temporal-scorer.js';
+export type {
+  PreAntiPatternType, PreAntiPattern, ModuleForecast,
+  WeatherForecast, ForecastConfig,
+} from './analyzers/forecast.js';
 
