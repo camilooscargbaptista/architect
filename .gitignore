@@ -43,3 +43,5 @@ temp/
 *.architect.json
 architect-report.md
 architect-diagram.mmd
+architect-report*.html
+referencia*.html
