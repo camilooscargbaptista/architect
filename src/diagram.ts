@@ -1,5 +1,13 @@
 import { DependencyEdge, Layer } from './types.js';
 
+const LAYER_THEME: Record<string, { color: string; style: string }> = {
+  API: { color: '#FFB6C1', style: 'apiStyle' },
+  Service: { color: '#87CEEB', style: 'serviceStyle' },
+  Data: { color: '#90EE90', style: 'dataStyle' },
+  UI: { color: '#FFD700', style: 'uiStyle' },
+  Infrastructure: { color: '#D3D3D3', style: 'infraStyle' },
+};
+
 export class DiagramGenerator {
   generateComponentDiagram(
     edges: DependencyEdge[],
@@ -15,14 +23,7 @@ export class DiagramGenerator {
     for (const layer of layers) {
       for (const file of layer.files) {
         const moduleName = file.split('/').pop() || file;
-        const colorMap: Record<string, string> = {
-          API: '#FFB6C1',
-          Service: '#87CEEB',
-          Data: '#90EE90',
-          UI: '#FFD700',
-          Infrastructure: '#D3D3D3',
-        };
-        nodeColors[moduleName] = colorMap[layer.name] || '#FFFFFF';
+        nodeColors[moduleName] = LAYER_THEME[layer.name]?.color || '#FFFFFF';
       }
     }
 
@@ -40,34 +41,21 @@ export class DiagramGenerator {
       mermaid += `  ${this.sanitizeNodeName(edge.from)} --> ${this.sanitizeNodeName(edge.to)}\n`;
     }
 
-    mermaid += '\n';
-    mermaid += '  classDef apiStyle fill:#FFB6C1,stroke:#333,color:#000\n';
-    mermaid += '  classDef serviceStyle fill:#87CEEB,stroke:#333,color:#000\n';
-    mermaid += '  classDef dataStyle fill:#90EE90,stroke:#333,color:#000\n';
-    mermaid += '  classDef uiStyle fill:#FFD700,stroke:#333,color:#000\n';
-    mermaid += '  classDef infraStyle fill:#D3D3D3,stroke:#333,color:#000\n';
-
-    return mermaid;
+    return this.appendCommonClassDefs(mermaid);
   }
 
   generateLayerDiagram(layers: Layer[]): string {
     let mermaid = 'graph LR\n';
 
     const layerOrder = ['UI', 'API', 'Service', 'Data', 'Infrastructure'];
-    const colorMap: Record<string, string> = {
-      UI: 'uiStyle',
-      API: 'apiStyle',
-      Service: 'serviceStyle',
-      Data: 'dataStyle',
-      Infrastructure: 'infraStyle',
-    };
 
     for (const layerName of layerOrder) {
       const layer = layers.find((l) => l.name === layerName);
       if (layer && layer.files.length > 0) {
         const nodeId = layerName.replace(/\s+/g, '_');
         const fileCount = layer.files.length;
-        mermaid += `  ${nodeId}["${layerName}<br/>(${fileCount} files)"]:::${colorMap[layerName]}\n`;
+        const style = LAYER_THEME[layerName]?.style || 'defaultStyle';
+        mermaid += `  ${nodeId}["${layerName}<br/>(${fileCount} files)"]:::${style}\n`;
       }
     }
 
@@ -77,14 +65,7 @@ export class DiagramGenerator {
       mermaid += `  ${from} --> ${to}\n`;
     }
 
-    mermaid += '\n';
-    mermaid += '  classDef apiStyle fill:#FFB6C1,stroke:#333,color:#000\n';
-    mermaid += '  classDef serviceStyle fill:#87CEEB,stroke:#333,color:#000\n';
-    mermaid += '  classDef dataStyle fill:#90EE90,stroke:#333,color:#000\n';
-    mermaid += '  classDef uiStyle fill:#FFD700,stroke:#333,color:#000\n';
-    mermaid += '  classDef infraStyle fill:#D3D3D3,stroke:#333,color:#000\n';
-
-    return mermaid;
+    return this.appendCommonClassDefs(mermaid);
   }
 
   generateDependencyFlowDiagram(edges: DependencyEdge[]): string {
@@ -121,7 +102,7 @@ export class DiagramGenerator {
       mermaid += `  ${this.sanitizeNodeName(from)} -->|${label}| ${this.sanitizeNodeName(to)}\n`;
     }
 
-    return mermaid;
+    return mermaid; // specific diagram that doesn't use standard classDefs
   }
 
   private sanitizeNodeName(path: string): string {
@@ -132,13 +113,17 @@ export class DiagramGenerator {
   }
 
   private getStyleClass(color: string): string {
-    const classMap: Record<string, string> = {
-      '#FFB6C1': 'apiStyle',
-      '#87CEEB': 'serviceStyle',
-      '#90EE90': 'dataStyle',
-      '#FFD700': 'uiStyle',
-      '#D3D3D3': 'infraStyle',
-    };
-    return classMap[color] || 'defaultStyle';
+    const match = Object.values(LAYER_THEME).find(t => t.color === color);
+    return match ? match.style : 'defaultStyle';
+  }
+
+  private appendCommonClassDefs(mermaid: string): string {
+    let result = mermaid + '\n';
+    result += '  classDef apiStyle fill:#FFB6C1,stroke:#333,color:#000\n';
+    result += '  classDef serviceStyle fill:#87CEEB,stroke:#333,color:#000\n';
+    result += '  classDef dataStyle fill:#90EE90,stroke:#333,color:#000\n';
+    result += '  classDef uiStyle fill:#FFD700,stroke:#333,color:#000\n';
+    result += '  classDef infraStyle fill:#D3D3D3,stroke:#333,color:#000\n';
+    return result;
   }
 }
