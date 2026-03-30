@@ -69,12 +69,12 @@ describe('Analyzer Pipeline Integration', () => {
   let temporalReport: TemporalReport;
   let forecast: WeatherForecast;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     setupRealRepo();
 
     // Stage 1: Git History
     const gitAnalyzer = new GitHistoryAnalyzer({ periodWeeks: 52 });
-    gitReport = gitAnalyzer.analyze(TEST_DIR);
+    gitReport = await gitAnalyzer.analyze(TEST_DIR);
 
     // Stage 2: Temporal Scoring
     const scorer = new TemporalScorer({ projectionWeeks: 12 });

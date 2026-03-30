@@ -108,9 +108,9 @@ describe('GitHistoryAnalyzer', () => {
   describe('analyze()', () => {
     let report: GitHistoryReport;
 
-    beforeAll(() => {
+    beforeAll(async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52 });
-      report = analyzer.analyze(TEST_DIR);
+      report = await analyzer.analyze(TEST_DIR);
     });
 
     it('should return correct project path', () => {
@@ -164,9 +164,9 @@ describe('GitHistoryAnalyzer', () => {
   });
 
   describe('change coupling', () => {
-    it('should detect coupled files', () => {
+    it('should detect coupled files', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52, couplingMinCochanges: 3 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
 
       const coupling = report.changeCouplings.find(
         c =>
@@ -182,9 +182,9 @@ describe('GitHistoryAnalyzer', () => {
   });
 
   describe('velocity vectors', () => {
-    it('should calculate velocity for each module', () => {
+    it('should calculate velocity for each module', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
 
       const srcModule = report.modules.find(m => m.modulePath === 'src');
       expect(srcModule).toBeDefined();
@@ -196,9 +196,9 @@ describe('GitHistoryAnalyzer', () => {
   });
 
   describe('module aggregation', () => {
-    it('should aggregate commits across module files', () => {
+    it('should aggregate commits across module files', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
 
       const srcModule = report.modules.find(m => m.modulePath === 'src');
       expect(srcModule!.aggregateCommits).toBe(
@@ -206,17 +206,17 @@ describe('GitHistoryAnalyzer', () => {
       );
     });
 
-    it('should calculate bus factor per module', () => {
+    it('should calculate bus factor per module', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
 
       const srcModule = report.modules.find(m => m.modulePath === 'src');
       expect(srcModule!.busFactor).toBe(2); // Alice + Bob both committed to src/
     });
 
-    it('should sort modules by aggregate churn descending', () => {
+    it('should sort modules by aggregate churn descending', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
 
       for (let i = 1; i < report.modules.length; i++) {
         expect(report.modules[i - 1].aggregateChurn).toBeGreaterThanOrEqual(
@@ -227,27 +227,27 @@ describe('GitHistoryAnalyzer', () => {
   });
 
   describe('error handling', () => {
-    it('should throw for non-git directory', () => {
+    it('should throw for non-git directory', async () => {
       const tmpDir = path.join('/tmp', 'not-a-git-repo');
       fs.mkdirSync(tmpDir, { recursive: true });
 
       const analyzer = new GitHistoryAnalyzer();
-      expect(() => analyzer.analyze(tmpDir)).toThrow('Not a git repository');
+      await expect(analyzer.analyze(tmpDir)).rejects.toThrow('Not a git repository');
 
       fs.rmSync(tmpDir, { recursive: true, force: true });
     });
   });
 
   describe('configuration', () => {
-    it('should respect custom period weeks', () => {
+    it('should respect custom period weeks', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 1 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
       expect(report.periodWeeks).toBe(1);
     });
 
-    it('should respect custom coupling threshold', () => {
+    it('should respect custom coupling threshold', async () => {
       const analyzer = new GitHistoryAnalyzer({ periodWeeks: 52, couplingMinCochanges: 100 });
-      const report = analyzer.analyze(TEST_DIR);
+      const report = await analyzer.analyze(TEST_DIR);
       expect(report.changeCouplings.length).toBe(0);
     });
   });

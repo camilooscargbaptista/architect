@@ -14,9 +14,12 @@
  * @license MIT
  */
 
-import { execSync } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import * as path from 'path';
 import * as fs from 'fs';
+
+const execAsync = promisify(exec);
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -131,11 +134,11 @@ export class GitHistoryAnalyzer {
    * Analyze git history for the project at the given path.
    * Returns a comprehensive GitHistoryReport.
    */
-  analyze(projectPath: string): GitHistoryReport {
-    this.validateGitRepo(projectPath);
+  async analyze(projectPath: string): Promise<GitHistoryReport> {
+    await this.validateGitRepo(projectPath);
 
     const sinceDate = this.getSinceDate();
-    const commits = this.parseGitLog(projectPath, sinceDate);
+    const commits = await this.parseGitLog(projectPath, sinceDate);
     const fileHistories = this.buildFileHistories(commits);
     const modules = this.groupByModule(fileHistories);
     const hotspots = this.detectHotspots(fileHistories);
@@ -160,16 +163,17 @@ export class GitHistoryAnalyzer {
 
   // ── Git Log Parsing ──
 
-  private parseGitLog(projectPath: string, since: string): GitCommit[] {
+  private async parseGitLog(projectPath: string, since: string): Promise<GitCommit[]> {
     const cmd = `git log --format='%H|%an|%aI|%s' --numstat --since="${since}" -- .`;
 
     let output: string;
     try {
-      output = execSync(cmd, {
+      const { stdout } = await execAsync(cmd, {
         cwd: projectPath,
         encoding: 'utf-8',
         maxBuffer: 10 * 1024 * 1024,  // 10MB buffer for large repos
       });
+      output = stdout;
     } catch {
       return [];
     }
@@ -462,12 +466,11 @@ export class GitHistoryAnalyzer {
 
   // ── Utilities ──
 
-  private validateGitRepo(projectPath: string): void {
+  private async validateGitRepo(projectPath: string): Promise<void> {
     try {
-      execSync('git rev-parse --is-inside-work-tree', {
+      await execAsync('git rev-parse --is-inside-work-tree', {
         cwd: projectPath,
         encoding: 'utf-8',
-        stdio: 'pipe',
       });
     } catch {
       throw new Error(`Not a git repository: ${projectPath}`);
