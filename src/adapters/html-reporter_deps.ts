@@ -9,6 +9,6 @@ export { renderRefactoringPlan } from './html-reporter/sections/refactoring-plan
 export { renderAgentSuggestions } from './html-reporter/sections/agents.js';
 export { getScripts } from './html-reporter/scripts.js';
 export { getStyles } from './html-reporter/styles.js';
-export { AnalysisReport, AntiPattern } from '../core/types/core.js';
-export { RefactoringPlan, RefactorStep } from '../core/types/rules.js';
-export { AgentSuggestion } from '../core/agent-generator/index.js';
+export type { AnalysisReport, AntiPattern } from '../core/types/core.js';
+export type { RefactoringPlan, RefactorStep } from '../core/types/rules.js';
+export type { AgentSuggestion } from '../core/agent-generator/index.js';

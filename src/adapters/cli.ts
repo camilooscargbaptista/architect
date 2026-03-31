@@ -16,10 +16,14 @@ import { architect, ProgressEvent } from '../core/architect.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorReportGenerator } from './refactor-reporter.js';
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import { resolve, basename, dirname, join } from 'path';
 import { logger } from '../infrastructure/logger.js';
 import { i18n } from '../core/i18n.js';
+import * as yaml from 'yaml';
+import chokidar from 'chokidar';
+import { ArchitectRules } from '../core/types/architect-rules.js';
+import { RulesEngine } from '../core/rules-engine.js';
 
 type OutputFormat = 'json' | 'markdown' | 'html';
 
@@ -30,6 +34,7 @@ interface CliOptions {
   output?: string;
   verbose: boolean;
   locale: string;
+  watch: boolean;
 }
 
 // ── ANSI Colors & Styles ──
@@ -289,7 +294,9 @@ function parseArgs(args: string[]): CliOptions {
     }
   }
 
-  return { command, path: resolve(pathArg), format, output, verbose, locale };
+  const watch = args.includes('--watch') || args.includes('-w');
+
+  return { command, path: resolve(pathArg), format, output, verbose, locale, watch };
 }
 
 function printUsage(): void {
@@ -301,6 +308,7 @@ ${c.bold}Usage:${c.reset}
 
 ${c.bold}Commands:${c.reset}
   ${c.cyan}analyze${c.reset}         Full architecture analysis (default)
+  ${c.cyan}check${c.reset}           Run architecture-as-code validation against .architect.rules.yml
   ${c.cyan}refactor${c.reset}        Generate refactoring plan with actionable steps
   ${c.cyan}agents${c.reset}          Generate/audit .agent/ directory with AI agents
   ${c.cyan}diagram${c.reset}         Generate architecture diagram only
@@ -313,6 +321,7 @@ ${c.bold}Options:${c.reset}
   --output <file>   Output file path
   --locale <lang>   Language (en or pt-BR)
   --verbose, -v     Enable verbose debug logging
+  --watch, -w       Watch mode (re-run check on file changes)
   --help            Show this help message
 
 ${c.bold}Examples:${c.reset}
@@ -422,6 +431,85 @@ async function main(): Promise<void> {
         process.stderr.write(`\n  ${c.bold}REFACTORING PLAN${c.reset}\n`);
         process.stderr.write(`  ${c.dim}Steps:${c.reset} ${c.white}${plan.steps.length}${c.reset}  ${c.dim}Ops:${c.reset} ${c.white}${plan.totalOperations}${c.reset}  ${c.dim}Tier1:${c.reset} ${c.white}${plan.tier1Steps}${c.reset}  ${c.dim}Tier2:${c.reset} ${c.white}${plan.tier2Steps}${c.reset}\n`);
         process.stderr.write(`  ${c.dim}Score:${c.reset} ${c.white}${plan.currentScore.overall}${c.reset}${c.dim} → ${c.reset}${c.green}${plan.estimatedScoreAfter.overall}${c.reset} ${c.dim}(+${plan.estimatedScoreAfter.overall - plan.currentScore.overall})${c.reset}\n\n`);
+        break;
+      }
+
+      case 'check': {
+        const rulesPath = join(options.path, '.architect.rules.yml');
+
+        const executeCheck = async (): Promise<boolean> => {
+          if (!existsSync(rulesPath)) {
+            logger.error(`Rules file not found at: ${rulesPath}`);
+            logger.error(`Create a '.architect.rules.yml' file to use the 'check' command.`);
+            return false;
+          }
+
+          let rules: ArchitectRules;
+          try {
+            const raw = readFileSync(rulesPath, 'utf8');
+            rules = yaml.parse(raw) as ArchitectRules;
+          } catch (e: any) {
+            logger.error(`Failed to parse ${rulesPath}: ${e.message}`);
+            return false;
+          }
+
+          process.stderr.write(`\n  ${c.cyan}◉${c.reset} ${c.bold}RULES ENGINE${c.reset} ${c.dim}— Validating against .architect.rules.yml...${c.reset}\n`);
+
+          const report = await architect.analyze(options.path);
+          const engine = new RulesEngine();
+          const result = engine.validate(report, rules);
+
+          if (result.violations.length === 0) {
+            process.stderr.write(`\n  ${c.green}✓ All quality gates and boundaries passed!${c.reset} ${c.dim}(Score: ${report.score.overall}/100)${c.reset}\n\n`);
+            return true;
+          }
+
+          process.stderr.write(`\n  ${c.red}✗ Architecture validation failed!${c.reset} ${c.dim}(Score: ${report.score.overall}/100)${c.reset}\n\n`);
+
+          let errors = 0;
+          let warnings = 0;
+
+          for (const v of result.violations) {
+            if (v.level === 'error') {
+              errors++;
+              process.stderr.write(`  ${c.red}[ERROR]${c.reset} ${c.bold}${v.rule}${c.reset}: ${v.message}\n`);
+            } else {
+              warnings++;
+              process.stderr.write(`  ${c.yellow}[WARN]${c.reset} ${c.bold}${v.rule}${c.reset}: ${v.message}\n`);
+            }
+          }
+
+          process.stderr.write(`\n  ${c.dim}Total: ${errors} errors, ${warnings} warnings.${c.reset}\n\n`);
+          return result.success;
+        };
+
+        if (options.watch) {
+          process.stderr.write(`\n  ${c.dim}👀 Watch mode enabled. Listening for changes in ${options.path}...${c.reset}\n`);
+          
+          await executeCheck();
+          
+          const watcher = chokidar.watch([
+            join(options.path, '**/*.ts'),
+            join(options.path, '**/*.js'),
+            rulesPath
+          ], {
+            ignored: /(^|[\/\\])\../, // ignore dotfiles
+            persistent: true,
+            ignoreInitial: true,
+          });
+
+          watcher.on('all', async (event, path) => {
+            console.clear();
+            process.stderr.write(`  ${c.dim}↻ File changed: ${basename(path)}. Re-running checks...${c.reset}\n`);
+            await executeCheck();
+          });
+          
+          // Keep process alive
+          return new Promise(() => {});
+        } else {
+          const success = await executeCheck();
+          if (!success) process.exit(1);
+        }
         break;
       }
 
