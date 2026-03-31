@@ -23,7 +23,7 @@ export const ptBR = {
 
   // === AGONTS OUTPUTS ===
   agents: {
-    generatedBy: 'Gerado por Architect v3.1',
+    generatedBy: 'Gerado por Architect v8.1',
     backend: {
       description: '{lang} Backend Developer — APIs, serviços, lógica de negócio',
       title: '🔧 {lang} BACKEND DEVELOPER',
