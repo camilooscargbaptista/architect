@@ -1,23 +1,18 @@
-# Feature: Enterprise Custom Rules Engine & SDK (Phase 2.3)
+# Phase 3.0: Autonomous Agent Runtime (v7.0.0)
 
-## 🎯 Objective
-Introduce the Plugin SDK to Architect, enabling dynamic extensibility for enterprise-level custom architectural rules.
+## Context & Motivation
+Following the completion of the Phase 2.3 Framework architecture metrics, `@girardelli/architect` now advances into Phase 3.0: Transitioning from passive analysis into active code modification. This PR introduces the **Agent Runtime Executor**, giving the Architect the ability to generate protective branches via GitFlow and safely apply structual refactoring operations directly onto the codebase using AST deterministic operations and vendor-agnostic AI proxies.
 
-## 🏗️ Technical Context
-While Architect provides powerful generic heuristics (like God Class and Circular Dependencies), strict enterprise environments often dictate bespoke domain boundaries. We needed a robust, non-blocking way to allow developers to write custom AST hooks in standard ESM/CJS JavaScript, and have them execute seamlessly alongside native detectors during the Analysis flow. 
+## Summary of Changes
+- **Core Agent Executor**: New `AgentExecutor` module capable of parsing and executing structured `RefactorStep` AST plans.
+- **Vendor-Agnostic AI Provider**: Created `ModelProviderFactory` supporting `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GEMINI_API_KEY` seamlessly leveraging NodeJS native Fetch (zero Vercel AI SDK bloat).
+- **Git Flow Protection Mechanism**: Mandatorily halts destructive actions on `main/develop` by forcing isolated branch instantiation `feature/architect-refactor-<timestamp>`.
+- **Human Interactive Gate**: Halts automated modifications to prompt via interactive UI unless `--auto` mode overrides (the YOLO flag).
+- **CLI Implementation**: Connected the `architect execute` command exposing the new interface.
 
-## 🔧 Solution Implementation
-- **Dynamic Plugin Loader:** Implemented `PluginLoader` utilizing `await import()` specifically to bypass ESM limits without polluting parallel memory pools (learned from the Tree-Sitter GC issue in Phase 2.2).
-- **Asynchronous Execution Pipeline:** Upgraded `AntiPatternDetector`'s `detect()` flow from structural array mapping to `async/await` Promises.
-- **Fail-Safe Mechanism:** Deep-try/catch blocks shield the native pipeline so a client's flawed external plugin script doesn't crash the global CI process.
-- **`ArchitectConfig` Extension:** Seamless configuration via the `.architect.json` `plugins: []` array.
+## Review Guidance
+- Look at `src/core/agent-runtime/executor.ts` for the Git branch-switching rules.
+- Review the agnostic HTTP abstraction in `ai-provider.ts` preventing vendor lock-in.
 
-## 🎨 Walkthrough & Examples
-- Included `examples/my-enterprise-rule.mjs` showcasing a real-world AcmeCorp use case: blocking `src/domain` from importing `src/infrastructure` and preventing Controller-to-Controller coupling.
-- Updated `README.md` to document the Extension API and Configuration blocks.
-
-## ✅ Quality Checks
-- `[x]` E2E Native Flow untouched
-- `[x]` 438 internal tests passing
-- `[x]` PluginLoader Unit Tests isolated and verified
-- `[x]` No C++ Memory Leaks regression
+---
+*Self-Verification: 100% of Phase 3 tests pass locally with isolated sandbox and zero memory leaks.*

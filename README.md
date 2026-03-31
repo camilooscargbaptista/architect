@@ -24,7 +24,7 @@ Understand your codebase architecture in seconds. Detect anti-patterns, get refa
 - **Enterprise Plugin SDK** — The rules engine is now fully extensible. Write Node Modules injecting custom business domain thresholds, mapping the exact graph AST to flag proprietary Clean Architecture violations tailored exclusively to your company!
 - **Dynamic V8 GC Escape** — Built with lazy-loaded isolated ESM initializations, our underlying C++ Tree-Sitter components are hermetically sealed, passing 438 tests with 0 V8 Garbage Collection leakage.
 
-## What's New in v6.0.0
+## What's New in v7.0.0
 - **Strict Layered Architecture** — Internal codebase rebuilt utilizing a rigorous Core/Infrastructure/Adapters clean architecture format, verifiable dynamically leading to a perfect 100/100 Layering score.
 - **Self-Healing AI Engine** — Architecture rules (Hub Splitter, Import Organizer, Module Grouper) are now context-aware of Clean Architecture paradigms, effectively ignoring stable DTOs/Interfaces and cross-domain test injections to eliminate false positives.
 - **AST Automation Proven** — Capable of structurally rewriting 150+ coupling bottlenecks in large codebases automatically via AST manipulation and Facade (`_deps.ts`) extractions.

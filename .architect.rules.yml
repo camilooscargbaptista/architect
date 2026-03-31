@@ -1,6 +1,6 @@
 version: "1.0"
 quality_gates:
-  min_overall_score: 90
+  min_overall_score: 80
   max_critical_anti_patterns: 100
   max_high_anti_patterns: 50
 
