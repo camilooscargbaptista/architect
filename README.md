@@ -147,6 +147,7 @@ Create `.architect.json` in your project root:
 ```json
 {
   "ignore": ["node_modules", "dist", ".git", "coverage", "__pycache__", ".venv"],
+  "plugins": ["./.architect/rules/my-enterprise-plugin.mjs"],
   "frameworks": { "detect": true },
   "antiPatterns": {
     "godClass": { "linesThreshold": 500, "methodsThreshold": 10 },
@@ -159,6 +160,24 @@ Create `.architect.json` in your project root:
     "layering": 0.15
   }
 }
+```
+
+### Enterprise Custom Rules (Plugin SDK)
+
+Architect supports a powerful Extensibility Engine that allows you to inject your own architectural domain constraints via custom JS/TS modules. If your team dictates that "Use Cases cannot invoke Controllers" or "No direct raw SQL in Repositories", you can code that heuristic directly into our AST motor.
+
+**Example Plugin:**
+```javascript
+// .architect/rules/my-enterprise-plugin.mjs
+export default {
+  name: 'AcmeCorp Clean Arch Rule',
+  version: '1.0.0',
+  detectAntiPatterns: async (fileTree, dependencies, context) => {
+    // Inject any logic reading the global Dependency Graph
+    // Return an array of AntiPatterns detected by your company's own standard!
+    return [];
+  }
+};
 ```
 
 ## Supported Frameworks (61)
