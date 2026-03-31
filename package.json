@@ -30,12 +30,14 @@
     "dev": "tsc --watch",
     "benchmark": "npx tsx src/scripts/benchmark-runner.ts && npx tsx src/scripts/benchmark-report.ts",
     "analyze": "node dist/adapters/cli.js analyze",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch --runInBand",
     "lint": "eslint src --ext .ts",
     "prepublishOnly": "npm run build && npm run test"
   },
   "dependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
     "acorn": "^8.11.0",
     "chokidar": "^5.0.0",
     "glob": "^10.3.10",

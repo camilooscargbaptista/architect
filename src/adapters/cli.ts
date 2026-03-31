@@ -22,8 +22,11 @@ import { logger } from '../infrastructure/logger.js';
 import { i18n } from '../core/i18n.js';
 import * as yaml from 'yaml';
 import chokidar from 'chokidar';
-import { ArchitectRules } from '../core/types/architect-rules.js';
+import { ArchitectRules, ValidationResult } from '../core/types/architect-rules.js';
 import { RulesEngine } from '../core/rules-engine.js';
+import { execSync } from 'child_process';
+import { GithubActionAdapter } from './github-action.js';
+import * as github from '@actions/github';
 
 type OutputFormat = 'json' | 'markdown' | 'html';
 
@@ -309,6 +312,7 @@ ${c.bold}Usage:${c.reset}
 ${c.bold}Commands:${c.reset}
   ${c.cyan}analyze${c.reset}         Full architecture analysis (default)
   ${c.cyan}check${c.reset}           Run architecture-as-code validation against .architect.rules.yml
+  ${c.cyan}pr-review${c.reset}       Run in GitHub Actions to comment on PRs with Score Delta
   ${c.cyan}refactor${c.reset}        Generate refactoring plan with actionable steps
   ${c.cyan}agents${c.reset}          Generate/audit .agent/ directory with AI agents
   ${c.cyan}diagram${c.reset}         Generate architecture diagram only
@@ -509,6 +513,68 @@ async function main(): Promise<void> {
         } else {
           const success = await executeCheck();
           if (!success) process.exit(1);
+        }
+        break;
+      }
+
+      case 'pr-review': {
+        const githubToken = process.env.GITHUB_TOKEN;
+        if (!githubToken) {
+          logger.error('GITHUB_TOKEN environment variable is required for pr-review');
+          process.exit(1);
+          return;
+        }
+
+        if (!github.context.payload.pull_request) {
+          logger.error('Not running in a Pull Request context. Exiting.');
+          process.exit(0);
+          return;
+        }
+
+        process.stderr.write(`\n  ${c.cyan}◉${c.reset} ${c.bold}PR REVIEWER${c.reset} ${c.dim}— Analyzing HEAD vs BASE...${c.reset}\n`);
+
+        const headReport = await architect.analyze(options.path);
+        
+        let baseReport = null;
+        try {
+          const baseRef = github.context.payload.pull_request.base.ref;
+          process.stderr.write(`  ${c.dim}↳ Fetching and checking out base branch: ${baseRef}${c.reset}\n`);
+          
+          execSync(`git fetch origin ${baseRef} || true`, { stdio: 'ignore', cwd: options.path });
+          const currentBranch = execSync(`git rev-parse --abbrev-ref HEAD`, { cwd: options.path }).toString().trim();
+          execSync(`git checkout ${baseRef}`, { stdio: 'ignore', cwd: options.path });
+          
+          process.stderr.write(`  ${c.dim}↳ Analyzing base branch...${c.reset}\n`);
+          baseReport = await architect.analyze(options.path);
+
+          process.stderr.write(`  ${c.dim}↳ Reverting to original branch: ${currentBranch}${c.reset}\n`);
+          execSync(`git checkout ${currentBranch}`, { stdio: 'ignore', cwd: options.path });
+        } catch (e: any) {
+          logger.error(`Failed to analyze base branch: ${e.message}`);
+          process.stderr.write(`  ${c.yellow}⚠️ Falling back to single-scan (no delta)${c.reset}\n`);
+          // Ensure we try to checkout back just in case
+          try { execSync(`git checkout -`, { stdio: 'ignore', cwd: options.path }); } catch {}
+        }
+
+        let validationResult: ValidationResult | undefined;
+        const rulesPath = join(options.path, '.architect.rules.yml');
+        if (existsSync(rulesPath)) {
+          process.stderr.write(`  ${c.dim}↳ Validating Architecture Rules...${c.reset}\n`);
+          const raw = readFileSync(rulesPath, 'utf8');
+          const rules = yaml.parse(raw) as ArchitectRules;
+          const engine = new RulesEngine();
+          validationResult = engine.validate(headReport, rules);
+        }
+
+        process.stderr.write(`  ${c.dim}↳ Posting comment to GitHub PR #${github.context.payload.pull_request.number}...${c.reset}\n`);
+        const adapter = new GithubActionAdapter(githubToken);
+        await adapter.postComment(headReport, baseReport, validationResult);
+        
+        process.stderr.write(`\n  ${c.green}✓ PR Comment successfully posted!${c.reset}\n\n`);
+
+        if (validationResult && !validationResult.success) {
+          process.stderr.write(`  ${c.red}✗ Architecture rules validation failed (Action blocked).${c.reset}\n\n`);
+          process.exit(1);
         }
         break;
       }
