@@ -13,6 +13,7 @@
  */
 
 import { architect, ProgressEvent } from '../core/architect.js';
+import { AgentExecutor } from '../core/agent-runtime/executor.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorReportGenerator } from './refactor-reporter.js';
@@ -38,6 +39,7 @@ interface CliOptions {
   verbose: boolean;
   locale: string;
   watch: boolean;
+  auto: boolean;
 }
 
 // ── ANSI Colors & Styles ──
@@ -276,6 +278,8 @@ class ProgressReporter {
 
 // ── CLI Parsing ──
 
+
+
 function parseArgs(args: string[]): CliOptions {
   const command = args[0] || 'analyze';
   const pathArg = args.find((a) => !a.startsWith('--') && a !== command) || '.';
@@ -298,19 +302,21 @@ function parseArgs(args: string[]): CliOptions {
   }
 
   const watch = args.includes('--watch') || args.includes('-w');
+  const auto = args.includes('--auto');
 
-  return { command, path: resolve(pathArg), format, output, verbose, locale, watch };
+  return { command, path: resolve(pathArg), format, output, verbose, locale, watch, auto };
 }
 
 function printUsage(): void {
   console.log(`
-${c.cyan}${c.bold}⚡ Architect v3.1${c.reset} — Enterprise Architecture Intelligence
+${c.cyan}${c.bold}⚡ Architect Agent v7.0${c.reset} — Enterprise Architecture Intelligence
 
 ${c.bold}Usage:${c.reset}
   architect <command> [path] [options]
 
 ${c.bold}Commands:${c.reset}
   ${c.cyan}analyze${c.reset}         Full architecture analysis (default)
+  ${c.cyan}execute${c.reset}         [NEW] Autonomous Agent Runtime - auto-refactor project
   ${c.cyan}check${c.reset}           Run architecture-as-code validation against .architect.rules.yml
   ${c.cyan}pr-review${c.reset}       Run in GitHub Actions to comment on PRs with Score Delta
   ${c.cyan}refactor${c.reset}        Generate refactoring plan with actionable steps
@@ -326,13 +332,13 @@ ${c.bold}Options:${c.reset}
   --locale <lang>   Language (en or pt-BR)
   --verbose, -v     Enable verbose debug logging
   --watch, -w       Watch mode (re-run check on file changes)
+  --auto            Agent YOLO Mode - auto-approve structural changes
   --help            Show this help message
 
 ${c.bold}Examples:${c.reset}
-  ${c.dim}$${c.reset} architect analyze ./src
+  ${c.dim}$${c.reset} architect execute ./src
+  ${c.dim}$${c.reset} architect execute ./src --auto
   ${c.dim}$${c.reset} architect analyze ./src --format html --output report.html
-  ${c.dim}$${c.reset} architect agents ./src --locale pt-BR
-  ${c.dim}$${c.reset} architect score ./src --format json
 
 ${c.dim}@girardelli/architect — Girardelli Tecnologia${c.reset}
   `);
@@ -622,6 +628,21 @@ async function main(): Promise<void> {
           }
         }
         process.stderr.write(`\n  ${c.dim}Score: ${report.score.overall}/100${c.reset}\n\n`);
+        break;
+      }
+
+      case 'execute': {
+        const progress = new ProgressReporter();
+        progress.printHeader(options.path);
+
+        const report = await architect.analyze(options.path, (e) => progress.onProgress(e));
+
+        progress.printExtraPhase('REFACTOR ENGINE', 'Building automated refactoring plan', c.orange);
+        const plan = architect.refactor(report, options.path);
+        progress.printExtraComplete(`${c.white}${plan.steps.length}${c.reset}${c.dim} steps generated${c.reset}`);
+
+        const executor = new AgentExecutor(options.auto);
+        await executor.executePlan(plan);
         break;
       }
 
