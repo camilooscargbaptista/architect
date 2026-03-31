@@ -7,11 +7,6 @@
 
 import { ForecastEngine } from '../src/core/analyzers/forecast.js';
 import type {
-  WeatherForecast,
-  PreAntiPattern,
-  ModuleForecast,
-} from '../src/core/analyzers/forecast.js';
-import type {
   GitHistoryReport,
   ModuleHistory,
   VelocityVector,

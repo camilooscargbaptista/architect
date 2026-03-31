@@ -935,7 +935,7 @@ black>=23.0`,
       });
 
       // Create subdirectory
-      const reqDir = join(tempDir, 'requirements');
+      join(tempDir, 'requirements');
       writeFileSync(
         join(tempDir, 'requirements'),
         'placeholder',

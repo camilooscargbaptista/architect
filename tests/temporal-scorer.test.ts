@@ -6,7 +6,6 @@
  */
 
 import { TemporalScorer } from '../src/core/analyzers/temporal-scorer.js';
-import type { TemporalReport, TemporalScore } from '../src/core/analyzers/temporal-scorer.js';
 import type {
   GitHistoryReport,
   ModuleHistory,
