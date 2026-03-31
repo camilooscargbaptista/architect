@@ -16,6 +16,9 @@ jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     
     strategy:
       matrix:
