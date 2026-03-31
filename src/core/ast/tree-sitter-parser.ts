@@ -134,6 +134,15 @@ export class TreeSitterParser implements ASTParser {
       }
     }
 
+    // Anti-GC trick for V8 + node-tree-sitter: 
+    // If the 'tree' object is not referenced after 'query.matches()', V8's aggressive GC
+    // might destroy the Tree before 'query.matches' fully executes its C++ bindings,
+    // resulting in "Cannot read properties of undefined (reading 'tree')" inside marshalNode.
+    // Calling tree.delete() explicitly fixes memory leaks AND keeps the reference alive.
+    if (typeof (tree as any).delete === 'function') {
+      (tree as any).delete();
+    }
+
     return imports;
   }
 }
