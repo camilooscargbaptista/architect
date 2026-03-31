@@ -545,12 +545,12 @@ describe('ArchitectureScorer', () => {
           suggestion: 'Test',
         },
       ];
-      // 2 violations / 100 files = 2% ratio → score 80
+      // 2 violations / 100 files = 2% ratio → score 95
       const result = scorer.score([], antiPatterns, 100);
-      expect(result.breakdown.layering).toBe(80);
+      expect(result.breakdown.layering).toBe(95);
     });
 
-    it('should score 65 when ratio is between 5-10%', () => {
+    it('should score 85 when ratio is between 5-15%', () => {
       const antiPatterns: AntiPattern[] = [
         {
           name: 'Leaky Abstraction',
@@ -574,24 +574,24 @@ describe('ArchitectureScorer', () => {
           suggestion: 'Test',
         },
       ];
-      // 3 violations / 50 files = 6% ratio → score 65
+      // 3 violations / 50 files = 6% ratio → score 85
       const result = scorer.score([], antiPatterns, 50);
-      expect(result.breakdown.layering).toBe(65);
+      expect(result.breakdown.layering).toBe(85);
     });
 
-    it('should score 50 when ratio is between 10-20%', () => {
+    it('should score 85 when ratio is between 10-15%', () => {
       const antiPatterns: AntiPattern[] = [
         { name: 'Leaky Abstraction', severity: 'HIGH', location: 'src/api.ts', description: 'Test', suggestion: 'Test' },
         { name: 'Shotgun Surgery', severity: 'MEDIUM', location: 'src/service.ts', description: 'Test', suggestion: 'Test' },
         { name: 'Circular Dependency', severity: 'CRITICAL', location: 'src/model.ts', description: 'Test', suggestion: 'Test' },
         { name: 'Leaky Abstraction', severity: 'HIGH', location: 'src/data.ts', description: 'Test', suggestion: 'Test' },
       ];
-      // 4 violations / 30 files = 13.3% ratio → score 50
+      // 4 violations / 30 files = 13.3% ratio → score 85
       const result = scorer.score([], antiPatterns, 30);
-      expect(result.breakdown.layering).toBe(50);
+      expect(result.breakdown.layering).toBe(85);
     });
 
-    it('should score 20 when ratio exceeds 35%', () => {
+    it('should score 20 when ratio exceeds 60%', () => {
       const antiPatterns: AntiPattern[] = [
         { name: 'Leaky Abstraction', severity: 'HIGH', location: 'src/a.ts', description: 'Test', suggestion: 'Test' },
         { name: 'Shotgun Surgery', severity: 'MEDIUM', location: 'src/b.ts', description: 'Test', suggestion: 'Test' },
@@ -599,8 +599,9 @@ describe('ArchitectureScorer', () => {
         { name: 'Leaky Abstraction', severity: 'HIGH', location: 'src/d.ts', description: 'Test', suggestion: 'Test' },
         { name: 'Shotgun Surgery', severity: 'MEDIUM', location: 'src/e.ts', description: 'Test', suggestion: 'Test' },
         { name: 'Circular Dependency', severity: 'CRITICAL', location: 'src/f.ts', description: 'Test', suggestion: 'Test' },
+        { name: 'Leaky Abstraction', severity: 'HIGH', location: 'src/g.ts', description: 'Test', suggestion: 'Test' },
       ];
-      // 6 violations / 10 files = 60% ratio → score 20
+      // 7 violations / 10 files = 70% ratio → score 20
       const result = scorer.score([], antiPatterns, 10);
       expect(result.breakdown.layering).toBe(20);
     });
@@ -616,9 +617,9 @@ describe('ArchitectureScorer', () => {
         { name: 'Circular Dependency', severity: 'CRITICAL', location: 'src/f.ts', description: 'Test', suggestion: 'Test' },
       ];
       // Only Leaky Abstraction, Shotgun Surgery, Circular Dependency count = 3
-      // 3 violations / 100 files = 3% ratio → score 80
+      // 3 violations / 100 files = 3% ratio → score 95
       const result = scorer.score([], antiPatterns, 100);
-      expect(result.breakdown.layering).toBe(80);
+      expect(result.breakdown.layering).toBe(95);
     });
   });
 

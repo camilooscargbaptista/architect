@@ -55,9 +55,9 @@ export class AntiPatternDetector {
   private detectGodClasses(node: FileNode): AntiPattern[] {
     const patterns: AntiPattern[] = [];
     const threshold =
-      this.config.antiPatterns?.godClass?.linesThreshold || 500;
+      this.config.antiPatterns?.godClass?.linesThreshold || 800; // Increased to 800 for OSS realities
     const methodThreshold =
-      this.config.antiPatterns?.godClass?.methodsThreshold || 10;
+      this.config.antiPatterns?.godClass?.methodsThreshold || 20; // Increased to 20
 
     this.walkFileTree(node, (file) => {
       if (file.type === 'file' && (file.lines || 0) > threshold && this.isProjectFile(file.path)) {
@@ -215,15 +215,16 @@ export class AntiPatternDetector {
   ): AntiPattern[] {
     const patterns: AntiPattern[] = [];
     const threshold =
-      this.config.antiPatterns?.shotgunSurgery
-        ?.changePropagationThreshold || 8;
+      this.config.antiPatterns?.shotgunSurgery?.changePropagationThreshold ||
+      Math.max(15, Math.ceil(this.dependencyGraph.size * 0.02));
 
     for (const [file, dependents] of dependencies) {
       // Only report for project files
       if (!this.isProjectFile(file)) continue;
 
       const fileName = file.split('/').pop() || '';
-      const isBaseFile = ['index.ts', 'index.js', 'types.ts', 'logger.ts', 'config.ts', 'architect.ts'].includes(fileName);
+      const isBaseFile = ['index.ts', 'index.js', 'types.ts', 'logger.ts', 'config.ts', 'architect.ts', 'constants.ts', 'interfaces.ts', 'globals.ts'].includes(fileName) ||
+                         fileName.endsWith('.interface.ts') || fileName.endsWith('.constants.ts') || fileName.endsWith('.type.ts') || fileName.endsWith('.model.ts') || fileName.endsWith('.enum.ts');
       const isExcludedDir = file.includes('tests/') || file.includes('scripts/') || file.includes('adapters/') || file.includes('agent-generator/');
       if (isBaseFile || isExcludedDir) continue;
 
