@@ -42,7 +42,7 @@ public extractModules(report: AnalysisReport, projectPath: string): ModuleDetail
       mod.files.push(filePath);
       mod.fileCount++;
 
-      // v3.1: Count real lines
+      // v8.1: Count real lines
       mod.lineCount += this.analysisHelpers.countFileLines(projectPath, filePath);
 
       const lower = filePath.toLowerCase();
@@ -75,7 +75,7 @@ public extractModules(report: AnalysisReport, projectPath: string): ModuleDetail
       }
     }
 
-    // v3.1: Smart descriptions for modules without one
+    // v8.1: Smart descriptions for modules without one
     for (const mod of modules.values()) {
       if (!mod.description) {
         mod.description = this.descriptionGenerator.generateSmartDescription(mod);

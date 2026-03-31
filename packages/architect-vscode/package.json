@@ -1,0 +1,48 @@
+{
+  "name": "architect-vscode",
+  "displayName": "Architect Intelligence",
+  "description": "Enterprise architecture guardrail and AI autonomous agent orchestrator",
+  "version": "8.1.0",
+  "publisher": "camilooscargbaptista",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/camilooscargbaptista/architect.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Testing",
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "architect.analyze",
+        "title": "Architect: Analyze Security & Patterns"
+      },
+      {
+        "command": "architect.refactor",
+        "title": "Architect: Generate Refactoring Plan"
+      }
+    ]
+  },
+  "activationEvents": [],
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "watch": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.20.2",
+    "typescript": "^5.5.0",
+    "vsce": "^2.15.0"
+  }
+}

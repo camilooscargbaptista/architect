@@ -16,7 +16,7 @@ export function generateBackendAgent(ctx: TemplateContext | EnrichedTemplateCont
   const { stack, projectName, config, report } = ctx;
   const enriched = getEnriched(ctx);
   const lang = stack.primary;
-  // v3.1: Use detected primary framework instead of generic stack.frameworks
+  // v8.1: Use detected primary framework instead of generic stack.frameworks
   const primaryFw = enriched.primaryFramework;
   const fw = primaryFw ? primaryFw.name : (stack.frameworks.filter(f =>
     ['Django', 'Flask', 'FastAPI', 'NestJS', 'Spring', 'Express', 'Fastify', 'Rails', 'Laravel'].includes(f)
@@ -268,7 +268,7 @@ ${enriched.domain.domain === 'fintech' || enriched.domain.domain === 'payments'
 `
     : '';
 
-  // v3.1: Framework-specific security checklist
+  // v8.1: Framework-specific security checklist
   const stackSecuritySection = frameworkSecurityChecklist(ctx);
 
   return `---
@@ -689,7 +689,7 @@ ${crossRef('code-review', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**Gerado por Architect v8.1**
 `;
 }
 
@@ -999,7 +999,7 @@ ${crossRef('database-engineer', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**Gerado por Architect v8.1**
 `;
 }
 
@@ -1163,6 +1163,6 @@ ${crossRef('flutter', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**Gerado por Architect v8.1**
 `;
 }
