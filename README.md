@@ -34,7 +34,22 @@ Understand your codebase topology in seconds. Detect severe anti-patterns, gener
 
 ## 📦 Quick Start
 
-### 1. Global Installation (CLI)
+### 1. GitHub Native App (Marketplace)
+Architect runs entirely via GitHub Actions natively in your Pull Requests. Add the following file to `.github/workflows/architecture-review.yml`:
+```yaml
+name: Architecture Review
+on: [pull_request]
+jobs:
+  architect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: camilooscargbaptista/architect@v8
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### 2. Global Installation (CLI)
 ```bash
 npm install -g @girardelli/architect
 ```
