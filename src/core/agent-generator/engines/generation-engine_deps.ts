@@ -1,8 +1,8 @@
-export { AnalysisReport } from '../../types/core.js';
-export { RefactoringPlan } from '../../types/rules.js';
-export { StackInfo } from '../types/stack.js';
-export { AgentAuditFinding } from '../types/agent.js';
-export { EnrichedTemplateContext } from '../types/template.js';
+export type { AnalysisReport } from '../../types/core.js';
+export type { RefactoringPlan } from '../../types/rules.js';
+export type { StackInfo } from '../types/stack.js';
+export type { AgentAuditFinding } from '../types/agent.js';
+export type { EnrichedTemplateContext } from '../types/template.js';
 export { ContextBuilder } from './context-builder.js';
 export { generateIndexMd } from '../templates/core/index-md.js';
 export { generateOrchestrator } from '../templates/core/orchestrator.js';
