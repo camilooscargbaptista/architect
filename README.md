@@ -177,9 +177,26 @@ export default {
   name: 'AcmeCorp Clean Arch Rule',
   version: '1.0.0',
   detectAntiPatterns: async (fileTree, dependencies, context) => {
-    // Inject any logic reading the global Dependency Graph
-    // Return an array of AntiPatterns detected by your company's own standard!
-    return [];
+    const patterns = [];
+    
+    // Example: Block Domain from importing Infrastructure
+    for (const [filePath, imports] of dependencies.entries()) {
+      if (filePath.includes('src/domain')) {
+        for (const importedFile of imports) {
+          if (importedFile.includes('src/infrastructure')) {
+            patterns.push({
+              name: 'AcmeCorp Violation: Domain coupling',
+              severity: 'CRITICAL',
+              location: `${filePath} -> ${importedFile}`,
+              description: 'Domain layer cannot depend directly on Infrastructure.',
+              suggestion: 'Invert the dependency using an Interface in the Domain.',
+            });
+          }
+        }
+      }
+    }
+    
+    return patterns;
   }
 };
 ```
