@@ -90,4 +90,5 @@ export interface ArchitectConfig {
     enabled?: boolean;
     treatPackagesAsModules?: boolean;
   };
+  plugins?: string[];
 }

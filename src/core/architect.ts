@@ -1,4 +1,5 @@
 import { ProjectScanner, ArchitectureAnalyzer, AntiPatternDetector, ArchitectureScorer, DiagramGenerator, ReportGenerator, HtmlReportGenerator, RefactorEngine, AgentGenerator, AgentSuggestion, ProjectSummarizer, ConfigLoader, normalizeIgnorePatterns, AnalysisReport, RefactoringPlan } from './architect_deps.js';
+import { PluginLoader } from './plugin-loader.js';
 
 import { relative } from 'path';
 
@@ -78,8 +79,12 @@ export class Architect implements ArchitectCommand {
 
     // ── Phase 4: Anti-Pattern Detection ──
     emit({ phase: 'antipatterns', status: 'start' });
+    const pluginLoader = new PluginLoader(projectPath, config);
+    await pluginLoader.loadPlugins();
+    
     const detector = new AntiPatternDetector(config);
-    const antiPatterns = detector.detect(projectInfo.fileTree, dependencies);
+    detector.setCustomDetectors(pluginLoader.customAntiPatternDetectors);
+    const antiPatterns = await detector.detect(projectInfo.fileTree, dependencies);
     emit({
       phase: 'antipatterns', status: 'complete',
       metrics: {

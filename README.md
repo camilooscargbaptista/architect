@@ -19,8 +19,12 @@
 
 Understand your codebase architecture in seconds. Detect anti-patterns, get refactoring plans, and generate **context-aware AI agent configurations** that actually understand your stack, domain, and toolchain — all from a single command.
 
-## What's New in v6.0.0
+## What's New in v7.0.0 (The Automation & Extensibility Release)
+- **Autonomous GitHub PR Reports** — The new `architect pr-review .` Action automatically creates highly visual and actionable architecture scorecards and Refactoring Plans directly inside your Pull Requests!
+- **Enterprise Plugin SDK** — The rules engine is now fully extensible. Write Node Modules injecting custom business domain thresholds, mapping the exact graph AST to flag proprietary Clean Architecture violations tailored exclusively to your company!
+- **Dynamic V8 GC Escape** — Built with lazy-loaded isolated ESM initializations, our underlying C++ Tree-Sitter components are hermetically sealed, passing 438 tests with 0 V8 Garbage Collection leakage.
 
+## What's New in v6.0.0
 - **Strict Layered Architecture** — Internal codebase rebuilt utilizing a rigorous Core/Infrastructure/Adapters clean architecture format, verifiable dynamically leading to a perfect 100/100 Layering score.
 - **Self-Healing AI Engine** — Architecture rules (Hub Splitter, Import Organizer, Module Grouper) are now context-aware of Clean Architecture paradigms, effectively ignoring stable DTOs/Interfaces and cross-domain test injections to eliminate false positives.
 - **AST Automation Proven** — Capable of structurally rewriting 150+ coupling bottlenecks in large codebases automatically via AST manipulation and Facade (`_deps.ts`) extractions.
@@ -147,6 +151,7 @@ Create `.architect.json` in your project root:
 ```json
 {
   "ignore": ["node_modules", "dist", ".git", "coverage", "__pycache__", ".venv"],
+  "plugins": ["./.architect/rules/my-enterprise-plugin.mjs"],
   "frameworks": { "detect": true },
   "antiPatterns": {
     "godClass": { "linesThreshold": 500, "methodsThreshold": 10 },
@@ -159,6 +164,41 @@ Create `.architect.json` in your project root:
     "layering": 0.15
   }
 }
+```
+
+### Enterprise Custom Rules (Plugin SDK)
+
+Architect supports a powerful Extensibility Engine that allows you to inject your own architectural domain constraints via custom JS/TS modules. If your team dictates that "Use Cases cannot invoke Controllers" or "No direct raw SQL in Repositories", you can code that heuristic directly into our AST motor.
+
+**Example Plugin:**
+```javascript
+// .architect/rules/my-enterprise-plugin.mjs
+export default {
+  name: 'AcmeCorp Clean Arch Rule',
+  version: '1.0.0',
+  detectAntiPatterns: async (fileTree, dependencies, context) => {
+    const patterns = [];
+    
+    // Example: Block Domain from importing Infrastructure
+    for (const [filePath, imports] of dependencies.entries()) {
+      if (filePath.includes('src/domain')) {
+        for (const importedFile of imports) {
+          if (importedFile.includes('src/infrastructure')) {
+            patterns.push({
+              name: 'AcmeCorp Violation: Domain coupling',
+              severity: 'CRITICAL',
+              location: `${filePath} -> ${importedFile}`,
+              description: 'Domain layer cannot depend directly on Infrastructure.',
+              suggestion: 'Invert the dependency using an Interface in the Domain.',
+            });
+          }
+        }
+      }
+    }
+    
+    return patterns;
+  }
+};
 ```
 
 ## Supported Frameworks (61)
