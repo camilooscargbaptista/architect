@@ -28,6 +28,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "dev": "tsc --watch",
+    "benchmark": "npx tsx src/scripts/benchmark-runner.ts && npx tsx src/scripts/benchmark-report.ts",
     "analyze": "node dist/adapters/cli.js analyze",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",

@@ -231,22 +231,22 @@ export class ArchitectureScorer {
     const fileCount = Math.max(totalFiles || 50, 10);
     const violationRatio = layeringViolations / fileCount;
 
-    if (violationRatio < 0.02) {
-      // < 2% — e.g. 1 violation in 50 files
+    if (violationRatio < 0.05) {
+      // < 5% — Very clean architecture
       this.layering = 95;
-    } else if (violationRatio < 0.05) {
-      // < 5% — e.g. 2-3 violations in 50 files
-      this.layering = 80;
-    } else if (violationRatio < 0.1) {
-      // < 10% — e.g. 5 violations in 50 files
-      this.layering = 65;
-    } else if (violationRatio < 0.2) {
-      // < 20% — significant issues
+    } else if (violationRatio < 0.15) {
+      // < 15% — Normal OSS level (e.g. Nest/Express with utilities)
+      this.layering = 85;
+    } else if (violationRatio < 0.25) {
+      // < 25% — Moderate issues
+      this.layering = 70;
+    } else if (violationRatio < 0.40) {
+      // < 40% — Significant issues
       this.layering = 50;
-    } else if (violationRatio < 0.35) {
+    } else if (violationRatio < 0.60) {
       this.layering = 35;
     } else {
-      // > 35% — severe layering problems
+      // > 60% — Severe problems
       this.layering = 20;
     }
   }
