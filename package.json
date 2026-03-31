@@ -1,6 +1,6 @@
 {
   "name": "@girardelli/architect",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "type": "module",
   "description": "AI-powered architecture analysis with temporal intelligence — git history, velocity vectors, pre-anti-pattern detection, and architecture weather forecast",
   "author": {

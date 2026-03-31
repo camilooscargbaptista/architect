@@ -1,34 +1,23 @@
-# 📌 Architect Intelligence - Phase 2.2: PR Comments & Score Delta (GitHub Action)
+# Feature: Enterprise Custom Rules Engine & SDK (Phase 2.3)
 
 ## 🎯 Objective
-This Pull Request officially transitions **Architect** into an absolute core CI/CD enforcer. By implementing an elegant GitHub Action Integration and calculating **Score Deltas** (-x / +y) between Pull Request branches and baseline branches (`main`), Architect now evaluates Intent directly via Bot Comments on PR threads.
+Introduce the Plugin SDK to Architect, enabling dynamic extensibility for enterprise-level custom architectural rules.
 
-## 🛠 Changes Implemented
+## 🏗️ Technical Context
+While Architect provides powerful generic heuristics (like God Class and Circular Dependencies), strict enterprise environments often dictate bespoke domain boundaries. We needed a robust, non-blocking way to allow developers to write custom AST hooks in standard ESM/CJS JavaScript, and have them execute seamlessly alongside native detectors during the Analysis flow. 
 
-### 1. 🤖 The Github Action Adapter (`src/adapters/github-action.ts`)
-- Integrated `@actions/github` and `@actions/core`.
-- Computes metrics visually, rendering a beautiful markdown checklist inside the PR comment with current Architecture Score, Anti-Patterns found, and broken standard rules.
-- Highlights exact diff numbers (Delta) to ensure developers receive instant feedback when code regressions cause architectural debt scoring drops.
+## 🔧 Solution Implementation
+- **Dynamic Plugin Loader:** Implemented `PluginLoader` utilizing `await import()` specifically to bypass ESM limits without polluting parallel memory pools (learned from the Tree-Sitter GC issue in Phase 2.2).
+- **Asynchronous Execution Pipeline:** Upgraded `AntiPatternDetector`'s `detect()` flow from structural array mapping to `async/await` Promises.
+- **Fail-Safe Mechanism:** Deep-try/catch blocks shield the native pipeline so a client's flawed external plugin script doesn't crash the global CI process.
+- **`ArchitectConfig` Extension:** Seamless configuration via the `.architect.json` `plugins: []` array.
 
-### 2. ⚡️ Internal Dual-Scan Mechanism (`src/adapters/cli.ts: pr-review`)
-- Created `architect pr-review`.
-- When triggered by GitHub Actions, this command:
-  1. Scans the active PR branch.
-  2. Runs a silent, non-destructive `git checkout` on the `base.ref` branch.
-  3. Scans the baseline codebase.
-  4. Returns the project to the PR branch and correlates the deltas.
+## 🎨 Walkthrough & Examples
+- Included `examples/my-enterprise-rule.mjs` showcasing a real-world AcmeCorp use case: blocking `src/domain` from importing `src/infrastructure` and preventing Controller-to-Controller coupling.
+- Updated `README.md` to document the Extension API and Configuration blocks.
 
-### 3. 🚀 The Public Action Manifest (`action.yml`)
-- Transformed this repository into an official, usable GitHub Action! Other projects and ecosystem repositories can now natively run `uses: girardelli/architect@v6` which proxies to our NPM package and triggers the internal `pr-review` scanner automatically without needing complex setup scripts.
-
-### 4. 🪟 Self-Hosted Verification (`.github/workflows/ci.yml`)
-- Updated our internal CI pipeline. If this PR is merged, any subsequent Pull Requests moving against `v6` will now parse their own pull request architecture scores natively as a live demonstration of the feature.
-
-## ✅ Unified Testing (`tests/github-action.test.ts`)
-Coverage explicitly added for standard edge cases and Github Octokit payload mocking:
-- [x] Asserted precise positive Score Delta mapping to `+` syntax in strings.
-- [x] Asserted precise negative Score Delta mapping to Regressions layout.
-- [x] Ensured TypeScript type-checking bypass and asynchronous object injection via ESM `jest.unstable_mockModule` to avoid compilation breakages across runner environments.
-
-## 🚦 Next Steps
-Month 5 differentiation represents a major breakthrough. Next up: Extending these IDE/UI boundary checks directly into local spaces like VSCode extensions or broader plugin SDK integrations.
+## ✅ Quality Checks
+- `[x]` E2E Native Flow untouched
+- `[x]` 438 internal tests passing
+- `[x]` PluginLoader Unit Tests isolated and verified
+- `[x]` No C++ Memory Leaks regression
