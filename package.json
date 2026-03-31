@@ -36,6 +36,8 @@
     "prepublishOnly": "npm run build && npm run test"
   },
   "dependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
     "acorn": "^8.11.0",
     "chokidar": "^5.0.0",
     "glob": "^10.3.10",

@@ -1,0 +1,31 @@
+name: 'Architect Intelligence'
+description: 'Enterprise architecture guardrail running natively on pull requests'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  github_token:
+    description: 'GitHub token with contents:read and pull-requests:write permissions'
+    required: true
+    default: ${{ github.token }}
+  path:
+    description: 'Root folder of the repository to scan'
+    required: false
+    default: '.'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Ensure Node.js is installed
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run Architect CI Analysis
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      run: |
+        echo "🚀 Analyzing Architecture on $GITHUB_REPOSITORY (Path: ${{ inputs.path }})"
+        npx -y @girardelli/architect@latest pr-review ${{ inputs.path }}
