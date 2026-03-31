@@ -1,57 +1,21 @@
 {
-  "name": "@girardelli/architect",
+  "name": "architect-workspace",
   "version": "7.0.0",
+  "description": "Genesis: Next-gen autonomous AI coding assistant and architecture analyzer.",
   "type": "module",
-  "description": "AI-powered architecture analysis with temporal intelligence — git history, velocity vectors, pre-anti-pattern detection, and architecture weather forecast",
-  "author": {
-    "name": "Camilo Girardelli",
-    "email": "contact@girardelli.tech",
-    "url": "https://girardelli.tech"
-  },
-  "license": "MIT",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./analyzers": {
-      "import": "./dist/analyzers/index.js",
-      "types": "./dist/analyzers/index.d.ts"
-    }
-  },
-  "bin": {
-    "architect": "./dist/adapters/cli.js"
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist",
-    "dev": "tsc --watch",
-    "benchmark": "npx tsx src/scripts/benchmark-runner.ts && npx tsx src/scripts/benchmark-report.ts",
-    "analyze": "node dist/adapters/cli.js analyze",
+    "build": "tsc -b",
+    "clean": "rm -rf packages/*/dist",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch --runInBand",
-    "lint": "eslint src --ext .ts",
-    "prepublishOnly": "npm run build && npm run test"
-  },
-  "dependencies": {
-    "@actions/core": "^3.0.0",
-    "@actions/github": "^9.0.0",
-    "acorn": "^8.11.0",
-    "chokidar": "^5.0.0",
-    "glob": "^10.3.10",
-    "tree-sitter": "^0.25.0",
-    "tree-sitter-go": "^0.25.0",
-    "tree-sitter-java": "^0.23.5",
-    "tree-sitter-javascript": "^0.25.0",
-    "tree-sitter-python": "^0.25.0",
-    "tree-sitter-rust": "^0.24.0",
-    "tree-sitter-typescript": "^0.23.2",
-    "yaml": "^2.8.3"
-  },
-  "overrides": {
-    "tree-sitter": "$tree-sitter"
+    "lint": "eslint packages/*/src --ext .ts",
+    "benchmark": "npx tsx packages/architect/src/scripts/benchmark-runner.ts && npx tsx packages/architect/src/scripts/benchmark-report.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
@@ -64,33 +28,5 @@
     "ts-jest": "^29.1.1",
     "ts-morph": "^27.0.2",
     "typescript": "^5.3.0"
-  },
-  "keywords": [
-    "architecture",
-    "analysis",
-    "Claude Code",
-    "plugin",
-    "code quality",
-    "anti-patterns",
-    "refactoring",
-    "visualization",
-    "dependency graph",
-    "mermaid",
-    "agent-framework",
-    "ai-agents",
-    "workflow-automation",
-    "quality-gates",
-    "enterprise"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/camilooscargbaptista/architect"
-  },
-  "bugs": {
-    "url": "https://github.com/camilooscargbaptista/architect/issues"
-  },
-  "homepage": "https://github.com/camilooscargbaptista/architect#readme",
-  "engines": {
-    "node": ">=18.0.0"
   }
 }

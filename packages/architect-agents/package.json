@@ -1,0 +1,24 @@
+{
+  "name": "@girardelli/architect-agents",
+  "version": "7.0.0",
+  "type": "module",
+  "main": "dist/src/core/agent-generator/index.js",
+  "types": "dist/src/core/agent-generator/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/core/agent-generator/index.js",
+      "types": "./dist/src/core/agent-generator/index.d.ts"
+    },
+    "./executor": {
+      "import": "./dist/src/core/agent-runtime/executor.js",
+      "types": "./dist/src/core/agent-runtime/executor.d.ts"
+    },
+    "./*": "./dist/*"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@girardelli/architect-core": "*"
+  }
+}

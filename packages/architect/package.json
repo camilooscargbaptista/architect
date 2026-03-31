@@ -1,0 +1,26 @@
+{
+  "name": "@girardelli/architect",
+  "version": "7.0.0",
+  "type": "module",
+  "main": "dist/src/core/architect.js",
+  "types": "dist/src/core/architect.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/core/architect.js",
+      "types": "./dist/src/core/architect.d.ts"
+    }
+  },
+  "bin": {
+    "architect": "./dist/src/adapters/cli.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
+    "@girardelli/architect-agents": "*",
+    "@girardelli/architect-core": "*",
+    "chokidar": "^5.0.0"
+  }
+}
