@@ -1,13 +1,23 @@
 import path from 'path';
 import { ASTParser } from './ast-parser.interface.js';
-import Parser, { Query } from 'tree-sitter';
 
 export class TreeSitterParser implements ASTParser {
-  private parsers: Map<string, Parser> = new Map();
-  private queries: Map<string, Query> = new Map();
+  private parsers: Map<string, any> = new Map();
+  private queries: Map<string, any> = new Map();
+  
+  // Store the classes dynamically to avoid static C++ addon evaluation leaks in Jest ESM VMs
+  private ParserClass: any = null;
+  private QueryClass: any = null;
 
   async initialize(): Promise<void> {
     try {
+      // Defer loading the native C++ bindings until absolutely needed.
+      // This prevents "Cannot read properties of undefined (reading 'tree')"
+      // when Jest loads the file across multiple test suites concurrently.
+      const treeSitterCore = await import('tree-sitter');
+      this.ParserClass = treeSitterCore.default;
+      this.QueryClass = treeSitterCore.Query;
+
       // Dynamic ESM imports to handle native bindings gracefully
       const tsMod = await import('tree-sitter-typescript').catch(() => null);
       const jsMod = await import('tree-sitter-javascript').catch(() => null);
@@ -55,9 +65,9 @@ export class TreeSitterParser implements ASTParser {
   }
 
   private initParser(ext: string, languageOption: any): void {
-    if (!languageOption) return;
+    if (!languageOption || !this.ParserClass) return;
     try {
-      const parser = new Parser();
+      const parser = new this.ParserClass();
       parser.setLanguage(languageOption);
       this.parsers.set(ext, parser);
 
@@ -95,7 +105,7 @@ export class TreeSitterParser implements ASTParser {
       }
 
       if (queryStr) {
-        const query = new Query(languageOption, queryStr);
+        const query = new this.QueryClass(languageOption, queryStr);
         this.queries.set(ext, query);
       }
     } catch (e) {
