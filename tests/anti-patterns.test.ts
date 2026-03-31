@@ -43,24 +43,24 @@ describe('AntiPatternDetector', () => {
   ]);
 
   describe('detect', () => {
-    it('should detect anti-patterns in code', () => {
+    it('should detect anti-patterns in code', async () => {
       const detector = new AntiPatternDetector(mockConfig);
-      const patterns = detector.detect(mockFileTree, mockDependencies);
+      const patterns = await detector.detect(mockFileTree, mockDependencies);
 
       expect(Array.isArray(patterns)).toBe(true);
     });
 
-    it('should identify God Classes', () => {
+    it('should identify God Classes', async () => {
       const detector = new AntiPatternDetector(mockConfig);
-      const patterns = detector.detect(mockFileTree, mockDependencies);
+      const patterns = await detector.detect(mockFileTree, mockDependencies);
 
       const godClasses = patterns.filter((p) => p.name === 'God Class');
       expect(godClasses.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('should sort patterns by severity', () => {
+    it('should sort patterns by severity', async () => {
       const detector = new AntiPatternDetector(mockConfig);
-      const patterns = detector.detect(mockFileTree, mockDependencies);
+      const patterns = await detector.detect(mockFileTree, mockDependencies);
 
       if (patterns.length > 1) {
         const severityOrder: Record<string, number> = {
@@ -80,14 +80,14 @@ describe('AntiPatternDetector', () => {
   });
 
   describe('circular dependency detection', () => {
-    it('should detect circular dependencies', () => {
+    it('should detect circular dependencies', async () => {
       const circularDeps = new Map<string, Set<string>>([
         ['src/auth.ts', new Set(['src/cache.ts'])],
         ['src/cache.ts', new Set(['src/auth.ts'])],
       ]);
 
       const detector = new AntiPatternDetector(mockConfig);
-      const patterns = detector.detect(mockFileTree, circularDeps);
+      const patterns = await detector.detect(mockFileTree, circularDeps);
 
       expect(patterns.length).toBeGreaterThanOrEqual(0);
     });

@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { AntiPattern, ArchitectConfig } from './types/core.js';
 import { FileNode } from './types/infrastructure.js';
+import type { CustomAntiPatternDetector, PluginContext } from './types/plugin.js';
 
 export class AntiPatternDetector {
   private config: ArchitectConfig;
@@ -12,9 +13,16 @@ export class AntiPatternDetector {
     '/.next/', '/venv/', '/__pycache__/', '/target/',
   ];
 
+  private customDetectors: CustomAntiPatternDetector[] = [];
+  private pluginContext?: PluginContext;
+
   constructor(config: ArchitectConfig) {
     this.config = config;
     this.dependencyGraph = new Map();
+  }
+
+  public setCustomDetectors(detectors: any[]) {
+    this.customDetectors = detectors;
   }
 
   /**
@@ -28,10 +36,10 @@ export class AntiPatternDetector {
     );
   }
 
-  detect(
+  async detect(
     fileTree: FileNode,
     dependencies: Map<string, Set<string>>
-  ): AntiPattern[] {
+  ): Promise<AntiPattern[]> {
     this.dependencyGraph = dependencies;
     const patterns: AntiPattern[] = [];
 
@@ -40,6 +48,23 @@ export class AntiPatternDetector {
     patterns.push(...this.detectLeakyAbstractions(fileTree));
     patterns.push(...this.detectFeatureEnvy(fileTree, dependencies));
     patterns.push(...this.detectShotgunSurgery(dependencies));
+
+    // Execute Enterprise Custom Plugin Detectors
+    const context: PluginContext = this.pluginContext || {
+      config: this.config,
+      projectPath: process.cwd() // Fallback if not injected explicitly
+    };
+
+    for (const detector of this.customDetectors) {
+      try {
+        const customPatterns = await detector(fileTree, dependencies, context);
+        if (Array.isArray(customPatterns)) {
+          patterns.push(...customPatterns);
+        }
+      } catch (err) {
+        console.warn(`[Architect Plugin] A custom rule engine failed during detection: ${(err as Error).message}`);
+      }
+    }
 
     return patterns.sort((a, b) => {
       const severityOrder: Record<string, number> = {

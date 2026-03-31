@@ -1,0 +1,10 @@
+version: "1.0"
+quality_gates:
+  min_overall_score: 90
+  max_critical_anti_patterns: 100
+  max_high_anti_patterns: 50
+
+boundaries:
+  allow_circular_dependencies: true
+  banned_imports:
+    - "lodash"

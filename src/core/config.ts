@@ -38,6 +38,7 @@ const DEFAULT_CONFIG: ArchitectConfig = {
     enabled: true,
     treatPackagesAsModules: true,
   },
+  plugins: [],
 };
 
 /**
@@ -88,6 +89,7 @@ export class ConfigLoader {
 
     return {
       ignore: userIgnore,
+      plugins: user.plugins ?? defaults.plugins,
       frameworks: {
         detect: user.frameworks?.detect ?? defaults.frameworks?.detect,
       },

@@ -101,7 +101,7 @@ describe('Monorepo Scanner — node_modules exclusion', () => {
     }
   });
 
-  test('anti-patterns are only from project files', () => {
+  test('anti-patterns are only from project files', async () => {
     const scanner = new ProjectScanner(FIXTURE_PATH, config);
     const result = scanner.scan();
 
@@ -114,7 +114,7 @@ describe('Monorepo Scanner — node_modules exclusion', () => {
     }
 
     const detector = new AntiPatternDetector(config);
-    const patterns = detector.detect(result.fileTree!, deps);
+    const patterns = await detector.detect(result.fileTree!, deps);
 
     for (const pattern of patterns) {
       expect(pattern.location).not.toContain('node_modules');
