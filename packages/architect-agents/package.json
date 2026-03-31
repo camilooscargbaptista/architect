@@ -13,10 +13,7 @@
       "import": "./dist/src/core/agent-runtime/executor.js",
       "types": "./dist/src/core/agent-runtime/executor.d.ts"
     },
-    "./*": {
-      "import": "./dist/*.js",
-      "types": "./dist/*.d.ts"
-    }
+    "./*": "./dist/*"
   },
   "scripts": {
     "build": "tsc"

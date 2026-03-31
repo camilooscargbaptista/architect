@@ -9,10 +9,7 @@
       "import": "./dist/src/core/index.js",
       "types": "./dist/src/core/index.d.ts"
     },
-    "./*": {
-      "import": "./dist/*.js",
-      "types": "./dist/*.d.ts"
-    }
+    "./*": "./dist/*"
   },
   "scripts": {
     "build": "tsc"
