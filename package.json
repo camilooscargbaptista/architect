@@ -45,6 +45,9 @@
     "tree-sitter-rust": "^0.24.0",
     "tree-sitter-typescript": "^0.23.2"
   },
+  "overrides": {
+    "tree-sitter": "$tree-sitter"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.10.0",
