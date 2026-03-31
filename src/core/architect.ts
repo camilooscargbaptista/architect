@@ -44,6 +44,8 @@ export class Architect implements ArchitectCommand {
     // ── Phase 2: Dependency Analysis ──
     emit({ phase: 'dependencies', status: 'start' });
     const analyzer = new ArchitectureAnalyzer(projectPath);
+    await analyzer.initialize();
+    
     const dependencies = new Map();
     for (const [file, imports] of analyzer
       .analyzeDependencies(projectInfo.fileTree)
@@ -216,6 +218,7 @@ export class Architect implements ArchitectCommand {
     }
 
     const analyzer = new ArchitectureAnalyzer(projectPath);
+    await analyzer.initialize();
     const edges = analyzer.analyzeDependencies(projectInfo.fileTree);
     const layers = analyzer.detectLayers(projectInfo.fileTree);
 
