@@ -19,6 +19,7 @@ import { RefactorReportGenerator } from './refactor-reporter.js';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve, basename, dirname, join } from 'path';
 import { logger } from '../infrastructure/logger.js';
+import { i18n } from '../core/i18n.js';
 
 type OutputFormat = 'json' | 'markdown' | 'html';
 
@@ -28,6 +29,7 @@ interface CliOptions {
   format: OutputFormat;
   output?: string;
   verbose: boolean;
+  locale: string;
 }
 
 // ── ANSI Colors & Styles ──
@@ -275,7 +277,19 @@ function parseArgs(args: string[]): CliOptions {
   const output = outputIdx >= 0 ? args[outputIdx + 1] : undefined;
   const verbose = args.includes('--verbose') || args.includes('-v');
 
-  return { command, path: resolve(pathArg), format, output, verbose };
+  const localeIdx = args.indexOf('--locale');
+  let locale = 'en'; // default
+  if (localeIdx >= 0 && args[localeIdx + 1]) {
+    locale = args[localeIdx + 1];
+  } else {
+    // Attempt detect via ENV
+    const envLang = process.env.LANG || process.env.LANGUAGE || '';
+    if (envLang.toLowerCase().includes('pt')) {
+      locale = 'pt-BR';
+    }
+  }
+
+  return { command, path: resolve(pathArg), format, output, verbose, locale };
 }
 
 function printUsage(): void {
@@ -297,12 +311,14 @@ ${c.bold}Commands:${c.reset}
 ${c.bold}Options:${c.reset}
   --format <type>   Output format: html, json, markdown (default: html)
   --output <file>   Output file path
+  --locale <lang>   Language (en or pt-BR)
   --verbose, -v     Enable verbose debug logging
   --help            Show this help message
 
 ${c.bold}Examples:${c.reset}
   ${c.dim}$${c.reset} architect analyze ./src
   ${c.dim}$${c.reset} architect analyze ./src --format html --output report.html
+  ${c.dim}$${c.reset} architect agents ./src --locale pt-BR
   ${c.dim}$${c.reset} architect score ./src --format json
 
 ${c.dim}@girardelli/architect — Girardelli Tecnologia${c.reset}
@@ -319,6 +335,9 @@ async function main(): Promise<void> {
 
   const options = parseArgs(args);
   logger.setup({ verbose: options.verbose, json: options.format === 'json' });
+  
+  // Set global locale
+  i18n.setLocale(options.locale as any);
 
   try {
     switch (options.command) {

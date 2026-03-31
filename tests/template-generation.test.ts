@@ -418,9 +418,10 @@ describe('Agent Templates', () => {
     });
 
     it('should require all UI states', () => {
-      expect(output).toContain('loading');
-      expect(output).toContain('error');
-      expect(output).toContain('empty');
+      const lowerOutput = output.toLowerCase();
+      expect(lowerOutput).toContain('loading');
+      expect(lowerOutput).toContain('error');
+      expect(lowerOutput).toContain('empty');
     });
   });
 
@@ -491,9 +492,10 @@ describe('Agent Templates', () => {
     });
 
     it('should require all states', () => {
-      expect(output).toContain('loading');
-      expect(output).toContain('error');
-      expect(output).toContain('empty');
+      const lowerOutput = output.toLowerCase();
+      expect(lowerOutput).toContain('loading');
+      expect(lowerOutput).toContain('error');
+      expect(lowerOutput).toContain('empty');
     });
   });
 

@@ -9,6 +9,8 @@ import { crossRef, depthIndicator, depthAtLeast, getEnriched, frameworkBadge, fr
  * Use getEnriched() to safely extract enriched fields when available.
  */
 
+import { i18n } from '../../../i18n.js';
+
 export function generateBackendAgent(ctx: TemplateContext | EnrichedTemplateContext): string {
   const { stack, projectName, config, report } = ctx;
   const enriched = getEnriched(ctx);
@@ -22,13 +24,13 @@ export function generateBackendAgent(ctx: TemplateContext | EnrichedTemplateCont
   // Build module structure section if enriched data available
   const modulesSection = enriched.modules && enriched.modules.length > 0
     ? `
-## Módulos do Projeto
+## ${i18n.t('agents.backend.modules')}
 
 ${enriched.modules.map(m => `### ${m.name}
 - **Path:** \`${m.path}\`
-- **Arquivos:** ${m.fileCount}${m.lineCount > 0 ? ` · **Linhas:** ${m.lineCount.toLocaleString()}` : ''}
+- **${i18n.t('cli.results.files')}:** ${m.fileCount}${m.lineCount > 0 ? ` · **${i18n.t('cli.results.lines')}:** ${m.lineCount.toLocaleString()}` : ''}
 - **Descrição:** ${m.description}
-- **Testes:** ${m.hasTests ? '✅ Sim' : '❌ Não'}
+- **Testes:** ${m.hasTests ? '✅ ' + i18n.t('common.yes') : '❌ ' + i18n.t('common.no')}
 ${m.entities.length > 0 ? `- **Entidades:** ${m.entities.join(', ')}` : ''}
 `).join('\n')}
 `
@@ -37,16 +39,16 @@ ${m.entities.length > 0 ? `- **Entidades:** ${m.entities.join(', ')}` : ''}
   // Build endpoints section if enriched data available
   const endpointsSection = enriched.endpoints && enriched.endpoints.length > 0
     ? `
-## Endpoints Mapeados
+## ${i18n.t('enriched.endpoints')}
 
-${enriched.endpoints.map(e => `- \`${e.method}\` \`${e.path}\` — ${e.handler} (Auth: ${e.hasAuth ? 'sim' : 'não'}, Validação: ${e.hasValidation ? 'sim' : 'não'})`).join('\n')}
+${enriched.endpoints.map(e => `- \`${e.method}\` \`${e.path}\` — ${e.handler} (Auth: ${e.hasAuth ? i18n.t('common.yes') : i18n.t('common.no')}, Validação: ${e.hasValidation ? i18n.t('common.yes') : i18n.t('common.no')})`).join('\n')}
 `
     : '';
 
   // Build domain section if enriched data available
   const domainSection = enriched.domain
     ? `
-## Domínio & Contexto de Negócio
+## ${i18n.t('agents.backend.domainContext')}
 
 - **Domínio:** ${enriched.domain.domain}
 - **Sub-domínio:** ${enriched.domain.subDomain}
@@ -68,7 +70,7 @@ ${enriched.domain.businessEntities.map(e => `- **${e.name}** (${e.layer}) — de
 antigravity:
   trigger: 'on_demand'
   globs: ['**/*.${lang === 'Python' ? 'py' : lang === 'Dart' ? 'dart' : lang === 'Go' ? 'go' : 'ts'}']
-  description: '${lang} Backend Developer — APIs, serviços, lógica de negócio'
+  description: '${i18n.t('agents.backend.description', { lang })}'
 agent_card:
   id: '${lang.toLowerCase()}-backend'
   name: '${lang} Backend Developer'
@@ -80,68 +82,53 @@ agent_card:
 version: 3.1.0
 ---
 
-# 🔧 ${lang.toUpperCase()} BACKEND DEVELOPER
+# ${i18n.t('agents.backend.title', { lang: lang.toUpperCase() })}
 
 ${depthIndicator(ctx)}
 
-> Especialista em backend ${fw} para ${projectName}
+> ${i18n.t('agents.backend.specialistIn', { fw, projectName })}
 
-## Stack
+## ${i18n.t('agents.backend.stack')}
 
-- **Linguagem:** ${lang}
-- **Framework:** ${fw}${primaryFw?.version ? ` v${primaryFw.version}` : ''}
-- **Arquitetura:** ${projectStructureBadge(ctx)}
-- **Teste:** ${stack.testFramework}
-- **Package Manager:** ${stack.packageManager}
-- **Score Atual:** ${report.score.overall}/100
+- **${i18n.t('agents.backend.language')}:** ${lang}
+- **${i18n.t('agents.backend.framework')}:** ${fw}${primaryFw?.version ? ` v${primaryFw.version}` : ''}
+- **${i18n.t('agents.backend.architecture')}:** ${projectStructureBadge(ctx)}
+- **${i18n.t('agents.backend.test')}:** ${stack.testFramework}
+- **${i18n.t('agents.backend.packageManager')}:** ${stack.packageManager}
+- **${i18n.t('agents.backend.currentScore')}:** ${report.score.overall}/100
 
 ${frameworkBadge(ctx)}
 ${domainSection}
 
-## Princípios (SOLID + Clean Architecture)
+## ${i18n.t('agents.backend.principles')}
 
-1. **S** — Single Responsibility: Uma classe, uma responsabilidade
-2. **O** — Open/Closed: Aberto para extensão, fechado para modificação
-3. **L** — Liskov Substitution: Subtipos devem ser substituíveis
-4. **I** — Interface Segregation: Interfaces específicas > interfaces gordas
-5. **D** — Dependency Inversion: Depender de abstrações, não de concretos
+1. **S** — Single Responsibility
+2. **O** — Open/Closed
+3. **L** — Liskov Substitution
+4. **I** — Interface Segregation
+5. **D** — Dependency Inversion
 ${modulesSection}
 
-## Estrutura do Projeto (Detectada)
+## ${i18n.t('agents.backend.projectStructure')}
 
 ${frameworkModuleStructure(ctx)}
 ${endpointsSection}
 
-## Regras de Implementação
+## ${i18n.t('agents.backend.implementationRules')}
 
 \`\`\`
-□ Controller NUNCA contém lógica de negócio (apenas routing)
-□ Service NUNCA acessa Request/Response diretamente
-□ Entity NUNCA é exposta diretamente na API (usar DTO)
-□ Validação de input no DTO / Guard / Pipe
-□ Erros com mensagens claras e códigos HTTP corretos
-□ Logging estruturado (não console.log)
-□ Testes unitários para cada service method
-□ Testes de integração para cada endpoint
-□ Cobertura ≥ ${config.coverageMinimum}%
+${i18n.t('agents.backend.implementationRulesBody', { coverage: config.coverageMinimum })}
 \`\`\`
 
-## Após Implementação Backend
+## ${i18n.t('agents.backend.afterImplementation')}
 
-> **OBRIGATÓRIO: Gerar Documento de Integração antes de qualquer frontend/app.**
-
-O documento deve conter:
-- Todos os endpoints criados/modificados
-- Payloads de request e response (com exemplos)
-- Códigos de erro e mensagens
-- Regras de negócio aplicadas
-- Headers necessários (auth, pagination, etc.)
+${i18n.t('agents.backend.afterImplementationBody')}
 
 ${crossRef('backend', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**${i18n.t('agents.generatedBy')}**
 `;
 }
 
@@ -157,7 +144,7 @@ export function generateFrontendAgent(ctx: TemplateContext | EnrichedTemplateCon
   // Build endpoints integration guide if available
   const endpointsGuide = enriched.endpoints && enriched.endpoints.length > 0
     ? `
-## Endpoints para Integração
+## ${i18n.t('enriched.endpoints')}
 
 ${enriched.endpoints.filter(e => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].includes(e.method))
   .slice(0, 15) // limit to 15 most important
@@ -171,7 +158,7 @@ ${enriched.endpoints.length > 15 ? `
   // Build modules structure if available
   const modulesGuide = enriched.modules && enriched.modules.length > 0
     ? `
-## Estrutura de Módulos Disponíveis
+## ${i18n.t('agents.backend.modules')}
 
 ${enriched.modules.map(m => `- \`${m.path}\` — ${m.description}`).join('\n')}
 `
@@ -181,7 +168,7 @@ ${enriched.modules.map(m => `- \`${m.path}\` — ${m.description}`).join('\n')}
 antigravity:
   trigger: 'on_demand'
   globs: ['**/*.{ts,tsx,vue,jsx,html,css,scss}']
-  description: '${fw} Frontend Developer — Componentes, UX, state management'
+  description: '${i18n.t('agents.frontend.description', { fw })}'
 agent_card:
   id: '${fw.toLowerCase().replace('.', '')}-frontend'
   name: '${fw} Frontend Developer'
@@ -193,56 +180,37 @@ agent_card:
 version: 3.1.0
 ---
 
-# 🎨 ${fw.toUpperCase().replace('.', '')} FRONTEND DEVELOPER
+# ${i18n.t('agents.frontend.title', { fw: fw.toUpperCase().replace('.', '') })}
 
 ${depthIndicator(ctx)}
 
-> Especialista em frontend ${fw} para ${projectName}
+> ${i18n.t('agents.frontend.specialistIn', { fw, projectName })}
 
-## Stack Frontend
+## ${i18n.t('agents.backend.stack')}
 
-- **Framework:** ${fw}
-- **Linguagens:** ${stack.languages.join(', ')}
-- **Teste:** ${stack.testFramework}
-- **Score Atual:** ${report.score.overall}/100
+- **${i18n.t('agents.backend.framework')}:** ${fw}
+- **${i18n.t('agents.backend.language')}s:** ${stack.languages.join(', ')}
+- **${i18n.t('agents.backend.test')}:** ${stack.testFramework}
+- **${i18n.t('agents.backend.currentScore')}:** ${report.score.overall}/100
 
-## Pré-Requisitos para Implementar
+## ${i18n.t('agents.frontend.prerequisites')}
 
 \`\`\`
-╔══════════════════════════════════════════════╗
-║  ANTES de escrever qualquer componente:     ║
-║                                              ║
-║  □ MOCKUP aprovado pelo humano              ║
-║  □ Documento de Integração disponível       ║
-║  □ User stories com critérios de aceite     ║
-║  □ BDD scenarios escritos                   ║
-╚══════════════════════════════════════════════╝
+${i18n.t('agents.frontend.prerequisitesBody')}
 \`\`\`
 ${modulesGuide}${endpointsGuide}
 
-## Regras de Implementação
+## ${i18n.t('agents.frontend.implementationRules')}
 
 \`\`\`
-□ Componente segue MOCKUP aprovado (não inventar UI)
-□ TODOS os estados implementados:
-  - ✅ Com dados (estado normal)
-  - 📭 Vazio (empty state)
-  - ⏳ Carregando (loading state / skeleton)
-  - ❌ Erro (error state com mensagem clara)
-□ Lógica de negócio em services (NUNCA no componente)
-□ State management adequado (sem prop drilling)
-□ Formulários com validação client-side
-□ Responsivo (testar mobile + desktop)
-□ Acessibilidade básica (labels, aria, contraste)
-□ Lazy loading onde aplicável
-□ Cobertura ≥ ${config.coverageMinimum}%
+${i18n.t('agents.frontend.implementationRulesBody', { coverage: config.coverageMinimum })}
 \`\`\`
 
 ${crossRef('frontend', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**${i18n.t('agents.generatedBy')}**
 `;
 }
 
@@ -253,12 +221,12 @@ export function generateSecurityAgent(ctx: TemplateContext | EnrichedTemplateCon
   // Build compliance section if available
   const complianceSection = enriched.domain && enriched.domain.compliance && enriched.domain.compliance.length > 0
     ? `
-## Requisitos de Compliance Detectados
+## ${i18n.t('dynamic.compliance.title')}
 
 ${enriched.domain.compliance.map(c => `### ${c.name}
-**Motivo:** ${c.reason}
+**${i18n.t('dynamic.compliance.reason')}:** ${c.reason}
 
-**Verificações Obrigatórias:**
+**${i18n.t('dynamic.compliance.mandatoryChecks')}:**
 ${c.mandatoryChecks.map(check => `- □ ${check}`).join('\n')}
 `).join('\n')}
 `
@@ -267,18 +235,18 @@ ${c.mandatoryChecks.map(check => `- □ ${check}`).join('\n')}
   // Build integrations security section if available
   const integrationsSection = enriched.domain && enriched.domain.integrations && enriched.domain.integrations.length > 0
     ? `
-## Segurança em Integrações
+## ${i18n.t('dynamic.integrations.title')}
 
 ${enriched.domain.integrations.map(i => {
   let threat = '';
-  if (i.type === 'payment') threat = 'PCI-DSS, criptografia de dados sensíveis, tokenização';
-  else if (i.type === 'auth') threat = 'MFA, session hijacking, credential stuffing';
-  else if (i.type === 'api') threat = 'Rate limiting, API key rotation, HTTPS obrigatório';
-  else if (i.type === 'database') threat = 'SQL Injection, Encryption at rest, Backups';
-  else if (i.type === 'government') threat = 'Compliance regulatório, audit trails, data retention';
-  else threat = 'Validação de entrada/saída, rate limiting';
+  if (i.type === 'payment') threat = i18n.t('dynamic.integrations.types.payment');
+  else if (i.type === 'auth') threat = i18n.t('dynamic.integrations.types.auth');
+  else if (i.type === 'api') threat = i18n.t('dynamic.integrations.types.api');
+  else if (i.type === 'database') threat = i18n.t('dynamic.integrations.types.database');
+  else if (i.type === 'government') threat = i18n.t('dynamic.integrations.types.government');
+  else threat = i18n.t('dynamic.integrations.types.default');
 
-  return `- **${i.name}** (${i.type}) — Ameaças: ${threat}`;
+  return `- **${i.name}** (${i.type}) — ${i18n.t('dynamic.integrations.threats')}: ${threat}`;
 }).join('\n')}
 `
     : '';
@@ -286,27 +254,15 @@ ${enriched.domain.integrations.map(i => {
   // Domain-specific threats
   const domainThreatsSection = enriched.domain
     ? `
-## Ameaças Específicas do Domínio: ${enriched.domain.domain}
+## ${i18n.t('dynamic.domainThreats.title', { domain: enriched.domain.domain })}
 
 ${enriched.domain.domain === 'fintech' || enriched.domain.domain === 'payments'
-  ? `- **Manipulação de dados:** Auditoria de transações, checksums, criptografia
-- **Acesso não autorizado:** MFA em contas privilégiadas, IP whitelist
-- **Conformidade:** PCI-DSS, LGPD, SOX
-- **Fraude:** Detecção de anomalias, rate limiting`
+  ? i18n.t('dynamic.domainThreats.fintech')
   : enriched.domain.domain === 'healthtech'
-  ? `- **Vazamento de dados:** Criptografia end-to-end, anonimização
-- **HIPAA/LGPD:** Audit trails, consentimento explícito
-- **Integridade:** Assinatura digital, blockchain se aplicável
-- **Acesso:** RBAC granular, 2FA para dados sensíveis`
+  ? i18n.t('dynamic.domainThreats.healthtech')
   : enriched.domain.domain === 'e-commerce'
-  ? `- **Fraude de pagamento:** CVV validation, 3D Secure
-- **Roubo de dados:** SSL/TLS, PCI-DSS, criptografia em repouso
-- **DoS:** Rate limiting, CAPTCHA, WAF
-- **Autenticação:** MFA, session timeout`
-  : `- **Confidencialidade:** Dados em trânsito e repouso criptografados
-- **Integridade:** Validação de entrada, checksums
-- **Disponibilidade:** Backup, disaster recovery, monitoring
-- **Auditoria:** Logging de ações sensíveis, retention policy`}
+  ? i18n.t('dynamic.domainThreats.ecommerce')
+  : i18n.t('dynamic.domainThreats.default')}
 `
     : '';
 
@@ -316,7 +272,7 @@ ${enriched.domain.domain === 'fintech' || enriched.domain.domain === 'payments'
   return `---
 antigravity:
   trigger: 'on_demand'
-  description: 'Security Auditor — Análise de ameaças, compliance, vulnerabilidades'
+  description: '${i18n.t('agents.security.description')}'
 agent_card:
   id: 'security-auditor'
   name: 'Security Auditor'
@@ -328,47 +284,33 @@ agent_card:
 version: 3.1.0
 ---
 
-# 🛡️ SECURITY AUDITOR
+# ${i18n.t('agents.security.title')}
 
 ${depthIndicator(ctx)}
 
-> Análise de segurança para ${projectName}
+> ${i18n.t('agents.security.analysisFor', { projectName })}
 
-## Checklist OWASP Top 10
+## ${i18n.t('agents.security.checklist')}
 
 \`\`\`
-□ A01: Broken Access Control — RBAC implementado?
-□ A02: Cryptographic Failures — Dados sensíveis criptografados?
-□ A03: Injection — Inputs sanitizados? Queries parametrizadas?
-□ A04: Insecure Design — Threat model feito?
-□ A05: Security Misconfiguration — Headers, CORS, defaults?
-□ A06: Vulnerable Components — Deps atualizadas?
-□ A07: Auth Failures — Brute force protegido? Session management?
-□ A08: Software Integrity — Supply chain verificado?
-□ A09: Logging Failures — Audit log para ações sensíveis?
-□ A10: SSRF — Server-side requests validados?
+${i18n.t('agents.security.checklistBody')}
 \`\`\`
 ${stackSecuritySection}
 ${complianceSection}${integrationsSection}${domainThreatsSection}
 
-## Quando Ativar
+## ${i18n.t('agents.security.whenToActivate')}
 
-- Qualquer feature que lida com: autenticação, autorização, dados pessoais, pagamentos
-- Novas APIs públicas
-- Integrações com sistemas externos
-- Mudanças em infra/deploy
+${i18n.t('agents.security.whenToActivateBody')}
 
-## Output Esperado
+## ${i18n.t('agents.security.expectedOutput')}
 
-1. Lista de findings com severidade (CRITICAL/HIGH/MEDIUM/LOW)
-2. Recomendações de mitigação
-3. Threat model (se aplicável)
+${i18n.t('agents.security.expectedOutputBody')}
 
 ${crossRef('security-auditor', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**${i18n.t('agents.generatedBy')}**
 `;
 }
 
@@ -380,13 +322,9 @@ export function generateQAAgent(ctx: TemplateContext | EnrichedTemplateContext):
   const untestedCount = enriched.untestedModules?.length || 0;
   const unterstedWarning = untestedCount > 0
     ? `
-## ⚠️ MÓDULOS SEM COBERTURA DE TESTE
+## ⚠️ ${i18n.t('enriched.untestedModules')}
 
-**${untestedCount} módulos sem testes detectados.**
-
-> 📋 Lista completa e priorização: ver [QUALITY-GATES.md](../guards/QUALITY-GATES.md) e [TECH-DEBT-CONTROLLER.md](./TECH-DEBT-CONTROLLER.md)
-
-**Ação:** Implementar testes para cada módulo listado, seguindo o workflow TDD.
+${i18n.t('enriched.untestedModulesBody', { count: untestedCount })}
 `
     : '';
 
@@ -413,63 +351,22 @@ ${enriched.endpoints.length > 10 ? `... e mais ${enriched.endpoints.length - 10}
   // Build domain-specific test scenarios
   const domainTestsSection = enriched.domain
     ? `
-## Cenários de Teste Específicos do Domínio: ${enriched.domain.domain}
+## ${i18n.t('dynamic.qaDomain.title', { domain: enriched.domain.domain })}
 
 ${enriched.domain.domain === 'fintech' || enriched.domain.domain === 'payments'
-  ? `### Testes de Negócio
-- Criar transação com valores válidos
-- Rejeitar transação acima do limite
-- Processar reembolso corretamente
-- Auditoria de todas as transações
-- Validar saldo após múltiplas operações
-
-### Testes de Segurança
-- Não expor dados de cartão em logs
-- Validar PCI-DSS compliance
-- Testar detecção de fraude`
+  ? i18n.t('dynamic.qaDomain.fintech')
   : enriched.domain.domain === 'healthtech'
-  ? `### Testes de Negócio
-- Criar registro de paciente com LGPD compliance
-- Validar consentimento antes de compartilhar dados
-- Anonimizar dados corretamente
-- Respeitar direito ao esquecimento
-- Auditoria de acesso a dados sensíveis
-
-### Testes de Segurança
-- Criptografia end-to-end em repouso
-- Validar 2FA para dados críticos
-- Testar retenção de dados`
+  ? i18n.t('dynamic.qaDomain.healthtech')
   : enriched.domain.domain === 'e-commerce'
-  ? `### Testes de Negócio
-- Criar carrinho com múltiplos produtos
-- Aplicar desconto/cupom corretamente
-- Processar pagamento com validação 3DS
-- Atualizar inventário após venda
-- Gerar pedido com status correto
-
-### Testes de Segurança
-- Não expor dados de cartão
-- Validar rate limiting em checkout
-- Testar proteção contra fraud`
-  : `### Testes de Negócio
-- Fluxo principal (happy path)
-- Edge cases e limites
-- Concorrência (race conditions)
-- Rollback após erro
-- Idempotência
-
-### Testes de Segurança
-- Inputs inválidos/maliciosos
-- Acesso não autorizado
-- Rate limiting
-- Logging correto`}
+  ? i18n.t('dynamic.qaDomain.ecommerce')
+  : i18n.t('dynamic.qaDomain.default')}
 `
     : '';
 
   return `---
 antigravity:
   trigger: 'on_demand'
-  description: 'QA Test Engineer — Planos de teste, BDD/TDD, cobertura'
+  description: '${i18n.t('agents.qa.description')}'
 agent_card:
   id: 'qa-test-engineer'
   name: 'QA Test Engineer'
@@ -481,47 +378,33 @@ agent_card:
 version: 3.1.0
 ---
 
-# 🧪 QA TEST ENGINEER
+# ${i18n.t('agents.qa.title')}
 
 ${depthIndicator(ctx)}
 
-> Qualidade de testes para ${projectName}
+> ${i18n.t('agents.qa.qualityFor', { projectName })}
 
-## Metas Inegociáveis
+## ${i18n.t('agents.qa.nonNegotiable')}
 
 \`\`\`
-╔══════════════════════════════════════════╗
-║  Cobertura mínima: ${config.coverageMinimum}%                ║
-║  Sem testes, sem entrega, sem finalizar  ║
-║  INEGOCIÁVEL.                            ║
-╚══════════════════════════════════════════╝
+${i18n.t('agents.qa.nonNegotiableBody', { coverage: config.coverageMinimum })}
 \`\`\`
 ${unterstedWarning}
 
-## Pirâmide de Testes
+## ${i18n.t('agents.qa.pyramid')}
 
 \`\`\`
-         ╱╲
-        ╱ E2E╲         → Poucos, lentos, alto valor
-       ╱──────╲
-      ╱Integration╲    → Médio, validam integração
-     ╱──────────────╲
-    ╱   Unit Tests    ╲ → Muitos, rápidos, baratos
-   ╱════════════════════╲
+${i18n.t('agents.qa.pyramidBody')}
 \`\`\`
 
-## Processo
+## ${i18n.t('agents.qa.process')}
 
-1. **BDD primeiro** — cenários Gherkin antes de código
-2. **TDD** — RED → GREEN → REFACTOR
-3. **Coverage** — verificar após cada implementação
-4. **Regressão** — TODOS os testes antigos devem continuar passando
-5. **Review** — testes são revisados junto com código
+${i18n.t('agents.qa.processBody')}
 
 ## Framework: ${stack.testFramework}
 ${testScenariosSection}${domainTestsSection}
 
-## Refactoring Roadmap
+## ${i18n.t('agents.qa.refactoringRoadmap')}
 
 ${plan.steps.slice(0, 5).map((step, idx) => `${idx + 1}. ${step.description} (${step.priority || 'MEDIUM'})`).join('\n')}
 ${plan.steps.length > 5 ? `\n... e mais ${plan.steps.length - 5} steps.` : ''}
@@ -530,7 +413,7 @@ ${crossRef('qa-test', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**${i18n.t('agents.generatedBy')}**
 `;
 }
 
@@ -606,7 +489,7 @@ ${enriched.criticalPaths.length > 10 ? `\n... e mais ${enriched.criticalPaths.le
   return `---
 antigravity:
   trigger: 'on_demand'
-  description: 'Tech Debt Controller — Controle de débito técnico e metas de score'
+  description: '${i18n.t('agents.techDebt.description')}'
 agent_card:
   id: 'tech-debt-controller'
   name: 'Tech Debt Controller'
@@ -618,24 +501,18 @@ agent_card:
 version: 3.1.0
 ---
 
-# 📊 TECH DEBT CONTROLLER
+# ${i18n.t('agents.techDebt.title')}
 
 ${depthIndicator(ctx)}
 
-> Controle de débito técnico para ${projectName}
+> ${i18n.t('agents.techDebt.controlFor', { projectName })}
 
-## Estado Atual
+## ${i18n.t('agents.techDebt.currentState')}
 
-| Métrica | Valor |
-|---------|-------|
-| Score | ${report.score.overall}/100 |
-| Meta | ${Math.min(100, report.score.overall + 10)}/100 |
-| Anti-patterns | ${report.antiPatterns.length} |
-| Refatorações pendentes | ${plan.steps.length} |
-| Estimativa de Melhora | +${plan.estimatedScoreAfter.overall - report.score.overall} pontos |
+${i18n.t('agents.techDebt.stateTable', { score: report.score.overall, target: Math.min(100, report.score.overall + 10), antiPatterns: report.antiPatterns.length, refactoringSteps: plan.steps.length, improvement: plan.estimatedScoreAfter.overall - report.score.overall })}
 ${antiPatternsSection}${couplingSection}${unterstedDebtSection}
 
-## Roadmap de Refatoração
+## ${i18n.t('agents.techDebt.refactoringRoadmap')}
 
 Prioridade por impacto:
 
@@ -649,31 +526,23 @@ ${plan.steps.length > 8 ? `
 ... e mais ${plan.steps.length - 8} steps no plano completo.
 ` : ''}
 
-## Metas de Score
+## ${i18n.t('agents.techDebt.scoreTargets')}
 
 \`\`\`
-Score Atual:            ${report.score.overall}/100
-Meta Curto Prazo:       ${Math.min(100, report.score.overall + 5)}/100
-Meta Médio Prazo:       ${Math.min(100, report.score.overall + 10)}/100
-Mínimo Aceitável:       ${config.scoreThreshold}/100
+${i18n.t('agents.techDebt.scoreTargetsBody', { score: report.score.overall, targetShort: Math.min(100, report.score.overall + 5), targetMedium: Math.min(100, report.score.overall + 10), threshold: config.scoreThreshold })}
 \`\`\`
 
-## Regras
+## ${i18n.t('agents.techDebt.rules')}
 
 \`\`\`
-□ Score NUNCA pode regredir após um PR
-□ Mínimo: ${config.scoreThreshold}/100
-□ Críticos: resolver dentro de 1 sprint
-□ Altos: resolver dentro de 2 sprints
-□ Médios: adicionar ao backlog técnico
-□ Verificar com: architect score ./src
+${i18n.t('agents.techDebt.rulesBody', { threshold: config.scoreThreshold })}
 \`\`\`
 
 ${crossRef('tech-debt', ctx)}
 
 ---
 
-**Gerado por Architect v3.1**
+**${i18n.t('agents.generatedBy')}**
 `;
 }
 
