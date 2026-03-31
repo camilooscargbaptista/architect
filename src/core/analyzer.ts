@@ -2,14 +2,33 @@ import { readFileSync, existsSync } from 'fs';
 import { extname, relative, dirname, resolve, join } from 'path';
 import { DependencyEdge, Layer } from './types/core.js';
 import { FileNode } from './types/infrastructure.js';
+import { ASTParser } from './ast/ast-parser.interface.js';
+import { TreeSitterParser } from './ast/tree-sitter-parser.js';
+import { PathResolver } from './ast/path-resolver.js';
 
 export class ArchitectureAnalyzer {
   private projectPath: string;
   private dependencyGraph: Map<string, Set<string>> = new Map();
   private fileExtensions: Map<string, string> = new Map();
+  private astParser: ASTParser;
+  private pathResolver: PathResolver;
+  private isInitialized = false;
 
   constructor(projectPath: string) {
     this.projectPath = projectPath;
+    this.astParser = new TreeSitterParser();
+    this.pathResolver = new PathResolver(projectPath);
+  }
+
+  async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+    try {
+      await this.astParser.initialize();
+      this.pathResolver.initialize();
+    } catch (err) {
+      // Silent failure allows automatic Regex Fallback usage later
+    }
+    this.isInitialized = true;
   }
 
   analyzeDependencies(fileTree: FileNode): DependencyEdge[] {
@@ -176,6 +195,32 @@ export class ArchitectureAnalyzer {
   private parseImports(filePath: string): string[] {
     try {
       const content = readFileSync(filePath, 'utf-8');
+
+      // Tenta parsing via AST primariamente se estiver inicializado
+      if (this.isInitialized) {
+        try {
+          const rawImports = this.astParser.parseImports(content, filePath);
+          
+          const filteredImports = rawImports.filter((imp) => {
+             const ext = extname(filePath);
+             if (ext === '.py') {
+                 return this.isInternalPythonImport(imp);
+             }
+             // For JS/TS, usually we only care about relative or path-aliased internal paths
+             // But AST doesn't know what is internal. `rel` path check or alias resolver helps here.
+             // We'll rely on the resolver in `buildDependencyGraph` which naturally filters out non-existent local files.
+             return true; 
+          });
+
+          return filteredImports;
+        } catch (astErr) {
+          // Fall through to regex on specific file failures (e.g. absent grammar)
+        }
+      }
+
+      // ──────────────────────────────────────────────
+      // GRACEFUL FALLBACK (Regex)
+      // ──────────────────────────────────────────────
       const ext = extname(filePath);
       const imports: string[] = [];
 
@@ -185,13 +230,17 @@ export class ArchitectureAnalyzer {
         let match;
         while ((match = importRegex.exec(content)) !== null) {
           const importPath = match[1];
-          // Only count relative imports (./  ../) as internal dependencies
-          if (importPath.startsWith('.')) {
-            imports.push(importPath);
-          }
+          // Regex antigo considerava apenas './' ou '../'.
+          // O Resolver depois lida com aliases. Para não quebrar legados guardamos tudo.
+          imports.push(importPath);
+        }
+        
+        // Match dynamic imports
+        const dynamicImportRegex = /import\s*\(['"]([^'"]+)['"]\)/g;
+        while ((match = dynamicImportRegex.exec(content)) !== null) {
+            imports.push(match[1]);
         }
       } else if (ext === '.py') {
-        // Parse "from X import Y" — capture X (the module source)
         const fromImportRegex = /^from\s+([\w.]+)\s+import\b/gm;
         let match;
         while ((match = fromImportRegex.exec(content)) !== null) {
@@ -200,7 +249,6 @@ export class ArchitectureAnalyzer {
             imports.push(moduleName);
           }
         }
-        // Parse "import X" — capture X
         const directImportRegex = /^import\s+([\w.]+)(?:\s+as\s+\w+)?$/gm;
         while ((match = directImportRegex.exec(content)) !== null) {
           const moduleName = match[1];
