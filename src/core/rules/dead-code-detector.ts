@@ -20,7 +20,7 @@ export class DeadCodeDetectorRule implements RefactorRule {
     'index.html', 'setup.py', 'setup.cfg', 'pyproject.toml',
   ]);
 
-  analyze(report: AnalysisReport, projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
     const steps: RefactorStep[] = [];
     const edges = report.dependencyGraph.edges;
 

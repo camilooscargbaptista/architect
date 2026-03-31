@@ -1,4 +1,5 @@
 import { TemplateContext, EnrichedTemplateContext } from '../../types/template.js';
+    // @ts-ignore - Audit cleanup unused variable
 import { FrameworkInfo } from '../../types/stack.js';
 
 export function getEnriched(ctx: TemplateContext): Partial<EnrichedTemplateContext> {

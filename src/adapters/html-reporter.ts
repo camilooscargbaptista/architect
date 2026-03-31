@@ -1,4 +1,17 @@
-import { groupAntiPatterns, groupSuggestions, escapeHtml, renderHeader, renderFooter, renderProjectOverview, renderScoreHero, renderRadarChart, renderStats, renderLayers, renderDependencyGraph, renderAntiPatternBubbles, renderAntiPatterns, renderSuggestions, renderRefactoringPlan, renderAgentSuggestions, getScripts, getStyles, AnalysisReport, AntiPattern, RefactoringPlan, RefactorStep, AgentSuggestion } from './html-reporter_deps.js';
+import { groupAntiPatterns, groupSuggestions, escapeHtml } from './html-reporter/utils_adapters.js';
+import { renderHeader, renderFooter } from './html-reporter/sections/header.js';
+import { renderProjectOverview } from './html-reporter/sections/overview.js';
+import { renderScoreHero, renderRadarChart, renderStats } from './html-reporter/sections/score.js';
+import { renderLayers, renderDependencyGraph } from './html-reporter/sections/layers.js';
+import { renderAntiPatternBubbles, renderAntiPatterns } from './html-reporter/sections/anti-patterns.js';
+import { renderSuggestions } from './html-reporter/sections/suggestions.js';
+import { renderRefactoringPlan } from './html-reporter/sections/refactoring-plan.js';
+import { renderAgentSuggestions } from './html-reporter/sections/agents.js';
+import { getScripts } from './html-reporter/scripts.js';
+import { getStyles } from './html-reporter/styles.js';
+import type { AnalysisReport} from '../core/types/core.js';
+import type { RefactoringPlan} from '../core/types/rules.js';
+import type { AgentSuggestion } from '../core/agent-generator/index.js';
 
 /**
  * Generates premium visual HTML reports from AnalysisReport.

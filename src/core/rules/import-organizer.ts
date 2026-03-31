@@ -11,7 +11,7 @@ export class ImportOrganizerRule implements RefactorRule {
   name = 'import-organizer';
   tier = 1 as const;
 
-  analyze(report: AnalysisReport, projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
     const steps: RefactorStep[] = [];
 
     // Find files that import from many different directories

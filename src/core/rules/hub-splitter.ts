@@ -1,4 +1,4 @@
-import { basename, dirname, join } from 'path';
+import { basename, dirname} from 'path';
 import { AnalysisReport } from '../types/core.js';
 import { RefactorRule, RefactorStep, FileOperation } from '../types/rules.js';
 
@@ -11,7 +11,7 @@ export class HubSplitterRule implements RefactorRule {
   name = 'hub-splitter';
   tier = 1 as const;
 
-  analyze(report: AnalysisReport, projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
     const steps: RefactorStep[] = [];
 
     // Count connections per node

@@ -1,4 +1,5 @@
 import { TemplateContext, EnrichedTemplateContext } from '../../types/template.js';
+    // @ts-ignore - Audit cleanup unused variable
 import { crossRef, depthIndicator, depthAtLeast, getEnriched, frameworkBadge, frameworkModuleStructure, frameworkSecurityChecklist, toolchainCommands, projectStructureBadge } from '../template-helpers.js';
 
 /**
@@ -215,6 +216,7 @@ ${crossRef('frontend', ctx)}
 }
 
 export function generateSecurityAgent(ctx: TemplateContext | EnrichedTemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { projectName, config, stack } = ctx;
   const enriched = getEnriched(ctx);
 
@@ -692,6 +694,7 @@ ${crossRef('code-review', ctx)}
 }
 
 export function generateDatabaseAgent(ctx: TemplateContext | EnrichedTemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { projectName, config, stack } = ctx;
   const enriched = getEnriched(ctx);
 

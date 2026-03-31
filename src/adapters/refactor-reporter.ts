@@ -1,4 +1,4 @@
-import { RefactoringPlan, RefactorStep, FileOperation } from '../core/types/rules.js';
+import { RefactoringPlan, RefactorStep} from '../core/types/rules.js';
 
 /**
  * Generates interactive HTML report for refactoring plans.

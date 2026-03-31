@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'fs';
-import { join, basename } from 'path';
+// import { existsSync, readFileSync } from 'fs';
+// import { join, basename } from 'path';
 import { AnalysisReport } from '../types/core.js';
 import { ProjectSummary } from '../types/summarizer.js';
-import { FileNode, WorkspaceInfo } from '../types/infrastructure.js';
+// import { FileNode, WorkspaceInfo } from '../types/infrastructure.js';
 
 export class KeywordExtractor {
   public static readonly KEYWORD_BLACKLIST = new Set([
@@ -13,7 +13,7 @@ export class KeywordExtractor {
 
 public extractKeywords(
     packageInfo: Record<string, unknown>,
-    readme: string,
+    _readme: string,
     modules: ProjectSummary['modules'],
     report: AnalysisReport,
   ): string[] {

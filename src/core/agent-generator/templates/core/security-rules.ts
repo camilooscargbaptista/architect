@@ -5,6 +5,7 @@ import { TemplateContext } from '../../types/template.js';
  * auth/authz patterns, and security anti-patterns.
  */
 export function generateSecurityRules(ctx: TemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { stack, projectName, report, config } = ctx;
   const validationPatterns = buildValidationPatterns(ctx);
   const authPatterns = buildAuthPatterns(ctx);

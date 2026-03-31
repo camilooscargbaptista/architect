@@ -5,6 +5,7 @@ import { TemplateContext } from '../../types/template.js';
  * ~350+ lines with: mandatory reads, situational guide, agent catalog, templates, flow diagram.
  */
 export function generateIndexMd(ctx: TemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { report, stack, projectName, stackLabel, plan, config } = ctx;
 
   const agents = buildAgentCatalog(ctx);

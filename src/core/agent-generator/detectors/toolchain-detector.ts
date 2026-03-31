@@ -12,6 +12,7 @@ public detectToolchain(
   ): DetectedToolchain {
     const lang = report.projectInfo.primaryLanguages[0] || 'Unknown';
     const hasMakefile = existsSync(join(projectPath, 'Makefile'));
+    // @ts-ignore - Audit cleanup unused variable
     const hasDockerCompose = existsSync(join(projectPath, 'docker-compose.yml')) || existsSync(join(projectPath, 'docker-compose.yaml'));
 
     const hasTest = (name: string) => allFrameworks.some(f => f.name === name);

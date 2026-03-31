@@ -1,6 +1,6 @@
 import { AgentSuggestion } from '../../../core/agent-generator/index.js';
 
-import { escapeHtml } from "../utils_sections.js";
+// import { escapeHtml } from "../utils_sections.js";
 
   export function renderAgentSuggestions(s: AgentSuggestion): string {
     const roleIcon = (name: string): string => {

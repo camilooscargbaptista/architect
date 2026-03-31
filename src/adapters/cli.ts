@@ -17,8 +17,8 @@ import { AgentExecutor } from '../core/agent-runtime/executor.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorReportGenerator } from './refactor-reporter.js';
-import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
-import { resolve, basename, dirname, join } from 'path';
+import { writeFileSync, existsSync,  readFileSync } from 'fs';
+import { resolve, basename,  join } from 'path';
 import { logger } from '../infrastructure/logger.js';
 import { i18n } from '../core/i18n.js';
 import * as yaml from 'yaml';
@@ -145,7 +145,7 @@ class ProgressReporter {
     );
   }
 
-  private printPhaseComplete(key: string, phase: PhaseConfig, metrics?: Record<string, number | string>): void {
+  private printPhaseComplete(key: string, _phase: PhaseConfig, metrics?: Record<string, number | string>): void {
     const elapsed = Date.now() - this.phaseStart;
     const metricStr = metrics ? this.formatMetrics(key, metrics) : '';
     process.stderr.write(
@@ -508,7 +508,7 @@ async function main(): Promise<void> {
             ignoreInitial: true,
           });
 
-          watcher.on('all', async (event, path) => {
+          watcher.on('all', async (_event, path) => {
             console.clear();
             process.stderr.write(`  ${c.dim}↻ File changed: ${basename(path)}. Re-running checks...${c.reset}\n`);
             await executeCheck();

@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'fs';
-import { join, basename } from 'path';
+import { join} from 'path';
 import { AnalysisReport } from '../types/core.js';
 import { ProjectSummary } from '../types/summarizer.js';
-import { FileNode, WorkspaceInfo } from '../types/infrastructure.js';
+// import { FileNode, WorkspaceInfo } from '../types/infrastructure.js';
 
 export class PurposeInferrer {
 public buildTechStack(report: AnalysisReport, packageInfo: Record<string, unknown>): string[] {

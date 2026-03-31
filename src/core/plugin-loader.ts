@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { ArchitectPlugin, CustomAntiPatternDetector, PluginContext } from './types/plugin.js';
 import { ArchitectConfig } from './types/core.js';
+import { logger } from '../infrastructure/logger.js';
 
 export class PluginLoader {
   private customDetectors: CustomAntiPatternDetector[] = [];
@@ -29,7 +30,7 @@ export class PluginLoader {
       try {
         await this.loadSinglePlugin(pluginSpec, context);
       } catch (err) {
-        console.warn(`[Architect Plugin] Failed to load plugin '${pluginSpec}': ${(err as Error).message}`);
+        logger.warn(`[Architect Plugin] Failed to load plugin '${pluginSpec}': ${(err as Error).message}`);
       }
     }
   }
@@ -73,7 +74,7 @@ export class PluginLoader {
       };
       
       this.customDetectors.push(wrappedDetector);
-      console.log(`[Architect Plugin] Registered Custom Rules from: ${plugin.name || pluginSpec}`);
+      logger.info(`[Architect Plugin] Registered Custom Rules from: ${plugin.name || pluginSpec}`);
     }
   }
 }

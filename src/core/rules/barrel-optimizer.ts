@@ -15,7 +15,7 @@ export class BarrelOptimizerRule implements RefactorRule {
     '__init__.py', 'index.ts', 'index.js', 'index.tsx', 'index.jsx',
   ]);
 
-  analyze(report: AnalysisReport, projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
     const steps: RefactorStep[] = [];
 
     // Find barrel files in the dependency graph
