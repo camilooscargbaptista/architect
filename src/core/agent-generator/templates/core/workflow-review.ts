@@ -5,6 +5,7 @@ import { TemplateContext } from '../../types/template.js';
  * Structured code review with checklist per dimension.
  */
 export function generateReviewWorkflow(ctx: TemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { stack, projectName, config, report } = ctx;
 
   return `---

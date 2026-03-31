@@ -7,7 +7,7 @@ import { RefactoringPlan } from '../src/core/types/rules.js';
 
 // Mock the AI provider
 const mockAIProvider: AIProvider = {
-  executeRefactoringPrompt: async (content: string, prompt: string) => {
+  executeRefactoringPrompt: async (content: string, _prompt: string) => {
     return `// MOCKED AI RESULT\n${content}\n// END MOCK`;
   }
 };

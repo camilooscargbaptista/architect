@@ -113,7 +113,7 @@ describe('ArchitectureScorer', () => {
       // 2 files, 10 edges → avgEdgesPerFile = 5
       const edges: DependencyEdge[] = Array(10)
         .fill(null)
-        .map((_, i) => ({
+        .map((_, _i) => ({
           from: `src/a.ts`,
           to: `src/b.ts`,
           type: 'import' as const,

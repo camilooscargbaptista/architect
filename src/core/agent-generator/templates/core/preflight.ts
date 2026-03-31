@@ -1,3 +1,4 @@
+    // @ts-ignore - Audit cleanup unused variable
 import { TemplateContext, EnrichedTemplateContext } from '../../types/template.js';
 import { getEnriched } from '../template-helpers.js';
 

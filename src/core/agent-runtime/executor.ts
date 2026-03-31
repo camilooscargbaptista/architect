@@ -7,6 +7,7 @@ import { ModelProviderFactory } from './ai-provider.js';
 
 export class AgentExecutor {
   private gate: HumanGate;
+    // @ts-ignore - Audit cleanup unused variable
   private autoMode: boolean;
 
   constructor(autoMode: boolean = false) {

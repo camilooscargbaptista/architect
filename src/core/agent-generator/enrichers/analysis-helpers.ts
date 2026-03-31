@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { AnalysisReport } from '../../types/core.js';
-import { ModuleDetail, DetectedEndpoint } from '../types/domain.js';
+import { ModuleDetail} from '../types/domain.js';
 import { EnrichedTemplateContext } from '../types/template.js';
 
 export class AnalysisHelpers {

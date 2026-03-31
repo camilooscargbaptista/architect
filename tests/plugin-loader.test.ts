@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { PluginLoader } from '../src/core/plugin-loader.js';
 import { ArchitectConfig } from '../src/core/types/core.js';
-import { PluginContext, ArchitectPlugin, CustomAntiPatternDetector } from '../src/core/types/plugin.js';
+import { logger } from '../src/infrastructure/logger.js';
 
 describe('PluginLoader', () => {
   const mockConfig: ArchitectConfig = {
@@ -26,15 +26,15 @@ describe('PluginLoader', () => {
   // complex module mocks since Jest execution in this repo runs --experimental-vm-modules.
   // We mock a failing dynamic load instead, which should be safely caught.
   it('should gracefully handle missing plugins via dynamic load catch', async () => {
-    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const loggerSpy = jest.spyOn(logger, 'warn').mockImplementation(() => {});
     const loader = new PluginLoader('/fake/path', mockConfig);
     
     await loader.loadPlugins();
     
     // It should log a warning but NOT throw an unhandled promise rejection
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[Architect Plugin] Failed to load plugin \'fake-plugin\''));
+    expect(loggerSpy).toHaveBeenCalledWith(expect.stringContaining('[Architect Plugin] Failed to load plugin \'fake-plugin\''));
     expect(loader.customAntiPatternDetectors.length).toBe(0);
     
-    consoleSpy.mockRestore();
+    loggerSpy.mockRestore();
   });
 });

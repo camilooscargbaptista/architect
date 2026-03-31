@@ -1,7 +1,7 @@
-import { readFileSync } from 'fs';
-import { basename, dirname, join, relative } from 'path';
+// import { readFileSync } from 'fs';
+// import { basename, dirname, join, relative } from 'path';
 import { AnalysisReport } from './types/core.js';
-import { RefactoringPlan, RefactorStep, RefactorRule, FileOperation } from './types/rules.js';
+import { RefactoringPlan, RefactorStep, RefactorRule} from './types/rules.js';
 
 // ── Tier 1 Rules ──
 import { HubSplitterRule } from './rules/hub-splitter.js';

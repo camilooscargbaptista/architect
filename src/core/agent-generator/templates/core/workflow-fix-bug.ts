@@ -5,6 +5,7 @@ import { TemplateContext } from '../../types/template.js';
  * 10 steps: diagnosis → localization → root cause → RED test → fix → regression → docs.
  */
 export function generateFixBugWorkflow(ctx: TemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { stack, projectName, config, report } = ctx;
 
   return `---

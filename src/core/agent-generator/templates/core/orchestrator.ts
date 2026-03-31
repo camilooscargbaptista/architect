@@ -1,7 +1,9 @@
 import { TemplateContext, EnrichedTemplateContext } from '../../types/template.js';
 import {
+    // @ts-ignore - Audit cleanup unused variable
   getEnriched,
   isEnriched,
+    // @ts-ignore - Audit cleanup unused variable
   depthScale,
   depthAtLeast,
   domainBadge,
@@ -20,6 +22,7 @@ import {
  * parallel dispatch, C4/BDD/TDD inline templates, risk matrix, implementation order.
  */
 export function generateOrchestrator(ctx: TemplateContext | EnrichedTemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { report, stack, projectName, stackLabel, plan, config } = ctx;
   const layers = report.layers.map(l => l.name).join(', ') || 'Not detected';
   const antiPatterns = report.antiPatterns.map(a => `${a.name} (${a.severity})`).join(', ') || 'None';

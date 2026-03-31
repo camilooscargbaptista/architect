@@ -1,4 +1,16 @@
-import { ProjectScanner, ArchitectureAnalyzer, AntiPatternDetector, ArchitectureScorer, DiagramGenerator, ReportGenerator, HtmlReportGenerator, RefactorEngine, AgentGenerator, AgentSuggestion, ProjectSummarizer, ConfigLoader, normalizeIgnorePatterns, AnalysisReport, RefactoringPlan } from './architect_deps.js';
+import { ProjectScanner } from '../infrastructure/scanner.js';
+import { ArchitectureAnalyzer } from './analyzer.js';
+import { AntiPatternDetector } from './anti-patterns.js';
+import { ArchitectureScorer } from './scorer.js';
+import { DiagramGenerator } from './diagram.js';
+// import { ReportGenerator } from '../adapters/reporter.js';
+// import { HtmlReportGenerator } from '../adapters/html-reporter.js';
+import { RefactorEngine } from './refactor-engine.js';
+import { AgentGenerator, AgentSuggestion } from './agent-generator/index.js';
+import { ProjectSummarizer } from './project-summarizer.js';
+import { ConfigLoader} from './config.js';
+import type { AnalysisReport } from './types/core.js';
+import type { RefactoringPlan } from './types/rules.js';
 import { PluginLoader } from './plugin-loader.js';
 
 import { relative } from 'path';
@@ -47,9 +59,10 @@ export class Architect implements ArchitectCommand {
     const analyzer = new ArchitectureAnalyzer(projectPath);
     await analyzer.initialize();
     
+    const edges = analyzer.analyzeDependencies(projectInfo.fileTree);
+    
     const dependencies = new Map();
-    for (const [file, imports] of analyzer
-      .analyzeDependencies(projectInfo.fileTree)
+    for (const [file, imports] of edges
       .reduce(
         (map, edge) => {
           if (!map.has(edge.from)) {
@@ -63,7 +76,6 @@ export class Architect implements ArchitectCommand {
       .entries()) {
       dependencies.set(file, imports);
     }
-    const edges = analyzer.analyzeDependencies(projectInfo.fileTree);
     emit({
       phase: 'dependencies', status: 'complete',
       metrics: { edges: edges.length, modules: dependencies.size },

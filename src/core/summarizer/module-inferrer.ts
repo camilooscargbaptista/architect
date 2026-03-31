@@ -5,7 +5,7 @@ import { ProjectSummary } from '../types/summarizer.js';
 import { WorkspaceInfo } from '../types/infrastructure.js';
 
 export class ModuleInferrer {
-public inferModules(report: AnalysisReport, projectPath: string): ProjectSummary['modules'] {
+public inferModules(report: AnalysisReport, _projectPath: string): ProjectSummary['modules'] {
     const workspaces = report.projectInfo.workspaces;
 
     // If we have workspaces, use them as the authoritative module list

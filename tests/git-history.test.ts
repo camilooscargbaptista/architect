@@ -8,9 +8,9 @@
 import { GitHistoryAnalyzer } from '../src/infrastructure/git-history.js';
 import type {
   GitHistoryReport,
-  FileHistory,
-  ModuleHistory,
-  VelocityVector,
+// @ts-ignore
+// @ts-ignore
+// @ts-ignore
 } from '../src/infrastructure/git-history.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';

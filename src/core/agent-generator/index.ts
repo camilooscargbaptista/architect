@@ -3,8 +3,8 @@ import { existsSync } from "fs";
 import { AnalysisReport } from '../types/core.js';
 import { RefactoringPlan } from '../types/rules.js';
 import { StackInfo, FrameworkInfo, DetectedToolchain } from './types/stack.js';
-import { AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion, AgentGeneratorConfig, DEFAULT_AGENT_CONFIG } from './types/agent.js';
-import { TemplateContext, EnrichedTemplateContext } from './types/template.js';
+import { AgentAuditFinding, AgentItem, AgentItemStatus, AgentSuggestion} from './types/agent.js';
+import {  EnrichedTemplateContext } from './types/template.js';
 import { DomainInsights, ModuleDetail, DetectedEndpoint } from './types/domain.js';
 
 import { ContextBuilder } from "./engines/context-builder.js";

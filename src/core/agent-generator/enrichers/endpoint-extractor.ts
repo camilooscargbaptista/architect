@@ -1,15 +1,15 @@
-import { existsSync, readFileSync, statSync } from 'fs';
-import { join } from 'path';
+// import { existsSync, readFileSync, statSync } from 'fs';
+// import { join } from 'path';
 import { AnalysisReport } from '../../types/core.js';
 import { ModuleDetail, DetectedEndpoint } from '../types/domain.js';
-import { EnrichedTemplateContext } from '../types/template.js';
+// import { EnrichedTemplateContext } from '../types/template.js';
 
 import { LayerClassifier } from './layer-classifier.js';
 
 export class EndpointExtractor {
   private layerClassifier = new LayerClassifier();
 
-public extractEndpoints(report: AnalysisReport, modules: ModuleDetail[]): DetectedEndpoint[] {
+public extractEndpoints(report: AnalysisReport, _modules: ModuleDetail[]): DetectedEndpoint[] {
     const endpoints: DetectedEndpoint[] = [];
     const nodes = report.dependencyGraph.nodes;
 

@@ -1,4 +1,4 @@
-import { AnalysisReport, AntiPattern } from '../../../core/types/core.js';
+import { AnalysisReport} from '../../../core/types/core.js';
 
 import { escapeHtml } from "../utils_sections.js";
 

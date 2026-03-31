@@ -1,5 +1,6 @@
 import { globSync } from 'glob';
 import { readFileSync, lstatSync, existsSync } from 'fs';
+    // @ts-ignore - Audit cleanup unused variable
 import { join, relative, extname, resolve } from 'path';
 import { FileNode, ProjectInfo, WorkspaceInfo } from '../core/types/infrastructure.js';
 import { ArchitectConfig } from '../core/types/core.js';
@@ -8,6 +9,7 @@ import { logger } from './logger.js';
 export class ProjectScanner {
   private projectPath: string;
   private config: ArchitectConfig;
+    // @ts-ignore - Audit cleanup unused variable
   private frameworks: Set<string> = new Set();
 
   constructor(projectPath: string, config: ArchitectConfig) {

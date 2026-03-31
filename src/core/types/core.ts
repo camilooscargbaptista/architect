@@ -1,4 +1,4 @@
-import { FileNode, ProjectInfo } from './infrastructure.js';
+import {  ProjectInfo } from './infrastructure.js';
 import { ProjectSummary } from './summarizer.js';
 
 export interface DependencyEdge {

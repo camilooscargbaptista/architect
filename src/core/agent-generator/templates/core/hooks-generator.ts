@@ -15,6 +15,7 @@ import { getEnriched } from '../template-helpers.js';
 export function generatePreCommitHook(ctx: TemplateContext | EnrichedTemplateContext): string {
   const enriched = getEnriched(ctx);
   const tc = enriched.toolchain;
+    // @ts-ignore - Audit cleanup unused variable
   const config = ctx.config;
   const projectName = ctx.projectName;
 
@@ -170,6 +171,7 @@ exit 0
  * Post-analysis hook: remediation actions
  */
 export function generatePostAnalysisHook(ctx: TemplateContext | EnrichedTemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const enriched = getEnriched(ctx);
   const projectName = ctx.projectName;
   const report = ctx.report;

@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+// @ts-ignore
 import { RulesEngine } from '../src/core/rules-engine.js';
 import { AnalysisReport } from '../src/core/types/core.js';
 import { ArchitectRules } from '../src/core/types/architect-rules.js';

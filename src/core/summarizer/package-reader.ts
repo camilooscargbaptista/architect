@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, basename } from 'path';
-import { AnalysisReport } from '../types/core.js';
-import { ProjectSummary } from '../types/summarizer.js';
-import { FileNode, WorkspaceInfo } from '../types/infrastructure.js';
+// import { AnalysisReport } from '../types/core.js';
+// import { ProjectSummary } from '../types/summarizer.js';
+// import { FileNode, WorkspaceInfo } from '../types/infrastructure.js';
 
 export class PackageReader {
 public readPackageJson(projectPath: string): Record<string, unknown> {

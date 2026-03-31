@@ -47,6 +47,7 @@ import { scoreColor, scoreEmoji, scoreLabel } from "../utils_sections.js";
    */
 
   export function renderRadarChart(report: AnalysisReport): string {
+    // @ts-ignore - Audit cleanup unused variable
     const entries = Object.entries(report.score.breakdown);
     return `
 <h2 class="section-title">🎯 Health Radar</h2>

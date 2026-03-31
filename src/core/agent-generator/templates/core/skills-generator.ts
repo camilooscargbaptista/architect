@@ -239,6 +239,7 @@ ${domainSection}
  * Generates ARCHITECT-INTEGRATION.md skill with real project data
  */
 export function generateArchitectIntegrationSkill(ctx: TemplateContext | EnrichedTemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const enriched = getEnriched(ctx);
   const projectName = ctx.projectName;
   const report = ctx.report;

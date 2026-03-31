@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { AntiPattern, ArchitectConfig } from './types/core.js';
 import { FileNode } from './types/infrastructure.js';
 import type { CustomAntiPatternDetector, PluginContext } from './types/plugin.js';
+import { logger } from '../infrastructure/logger.js';
 
 export class AntiPatternDetector {
   private config: ArchitectConfig;
@@ -21,7 +22,7 @@ export class AntiPatternDetector {
     this.dependencyGraph = new Map();
   }
 
-  public setCustomDetectors(detectors: any[]) {
+  public setCustomDetectors(detectors: CustomAntiPatternDetector[]) {
     this.customDetectors = detectors;
   }
 
@@ -62,7 +63,7 @@ export class AntiPatternDetector {
           patterns.push(...customPatterns);
         }
       } catch (err) {
-        console.warn(`[Architect Plugin] A custom rule engine failed during detection: ${(err as Error).message}`);
+        logger.warn(`[Architect Plugin] A custom rule engine failed during detection: ${(err as Error).message}`);
       }
     }
 

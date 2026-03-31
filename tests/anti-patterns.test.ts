@@ -1,5 +1,5 @@
 import { AntiPatternDetector } from '../src/core/anti-patterns.js';
-import { AntiPattern, ArchitectConfig } from '../src/core/types/core.js';
+import { ArchitectConfig } from '../src/core/types/core.js';
 import { FileNode } from '../src/core/types/infrastructure.js';
 
 describe('AntiPatternDetector', () => {

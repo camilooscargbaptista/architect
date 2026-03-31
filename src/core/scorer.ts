@@ -1,12 +1,7 @@
-import { ArchitectureScore, DependencyEdge, AntiPattern, ScoreComponent } from './types/core.js';
+import { ArchitectureScore, DependencyEdge, AntiPattern} from './types/core.js';
 import { basename } from 'path';
 
 export class ArchitectureScorer {
-  private modularity: number = 0;
-  private coupling: number = 0;
-  private cohesion: number = 0;
-  private layering: number = 0;
-
   /**
    * Barrel/index files that naturally have many connections and should be
    * excluded from coupling max-edge penalty calculations.
@@ -21,39 +16,36 @@ export class ArchitectureScorer {
     antiPatterns: AntiPattern[],
     totalFiles: number
   ): ArchitectureScore {
-    this.calculateModularity(edges, totalFiles);
-    this.calculateCoupling(edges, totalFiles);
-    this.calculateCohesion(edges);
-    this.calculateLayering(antiPatterns, totalFiles);
+    const modularity = this.calculateModularity(edges, totalFiles);
+    const coupling = this.calculateCoupling(edges, totalFiles);
+    const cohesion = this.calculateCohesion(edges);
+    const layering = this.calculateLayering(antiPatterns, totalFiles);
 
     const components = [
       {
         name: 'Modularity',
-        score: Math.round(this.modularity),
+        score: Math.round(modularity),
         maxScore: 100,
         weight: 0.4,
-        explanation:
-          'Measures appropriate module boundaries and single responsibility principle adherence',
+        explanation: 'Measures appropriate module boundaries and single responsibility principle adherence',
       },
       {
         name: 'Coupling',
-        score: Math.round(this.coupling),
+        score: Math.round(coupling),
         maxScore: 100,
         weight: 0.25,
-        explanation:
-          'Evaluates interdependencies between modules; lower coupling is better',
+        explanation: 'Evaluates interdependencies between modules; lower coupling is better',
       },
       {
         name: 'Cohesion',
-        score: Math.round(this.cohesion),
+        score: Math.round(cohesion),
         maxScore: 100,
         weight: 0.2,
-        explanation:
-          'Assesses how closely related functionality is grouped together',
+        explanation: 'Assesses how closely related functionality is grouped together',
       },
       {
         name: 'Layering',
-        score: Math.round(this.layering),
+        score: Math.round(layering),
         maxScore: 100,
         weight: 0.15,
         explanation: 'Checks adherence to architectural layer separation',
@@ -62,52 +54,38 @@ export class ArchitectureScorer {
 
     const overall = Math.round(
       components[0].score * components[0].weight +
-        components[1].score * components[1].weight +
-        components[2].score * components[2].weight +
-        components[3].score * components[3].weight
+      components[1].score * components[1].weight +
+      components[2].score * components[2].weight +
+      components[3].score * components[3].weight
     );
 
     return {
       overall: Math.min(100, Math.max(0, overall)),
       components,
       breakdown: {
-        modularity: Math.round(this.modularity),
-        coupling: Math.round(this.coupling),
-        cohesion: Math.round(this.cohesion),
-        layering: Math.round(this.layering),
+        modularity: Math.round(modularity),
+        coupling: Math.round(coupling),
+        cohesion: Math.round(cohesion),
+        layering: Math.round(layering),
       },
     };
   }
 
-  private calculateModularity(edges: DependencyEdge[], totalFiles: number): void {
-    if (totalFiles === 0) {
-      this.modularity = 50;
-      return;
-    }
+  private calculateModularity(edges: DependencyEdge[], totalFiles: number): number {
+    if (totalFiles === 0) return 50;
 
     const avgEdgesPerFile = edges.length / totalFiles;
 
-    if (avgEdgesPerFile < 2) {
-      this.modularity = 100;
-    } else if (avgEdgesPerFile < 4) {
-      this.modularity = 85;
-    } else if (avgEdgesPerFile < 6) {
-      this.modularity = 70;
-    } else if (avgEdgesPerFile < 10) {
-      this.modularity = 50;
-    } else {
-      this.modularity = 30;
-    }
+    if (avgEdgesPerFile < 2) return 100;
+    if (avgEdgesPerFile < 4) return 85;
+    if (avgEdgesPerFile < 6) return 70;
+    if (avgEdgesPerFile < 10) return 50;
+    return 30;
   }
 
-  private calculateCoupling(edges: DependencyEdge[], totalFiles: number): void {
-    if (totalFiles === 0 || totalFiles === 1) {
-      this.coupling = 50;
-      return;
-    }
+  private calculateCoupling(edges: DependencyEdge[], totalFiles: number): number {
+    if (totalFiles === 0 || totalFiles === 1) return 50;
 
-    // Exclude barrel/index files from max-edge calculation —
-    // they naturally have many connections by design.
     const nonBarrelEdges = edges.filter((e) => {
       const fromFile = basename(e.from);
       const toFile = basename(e.to);
@@ -118,31 +96,19 @@ export class ArchitectureScorer {
     const nodeWithMaxEdges = this.findNodeWithMaxEdges(nonBarrelEdges);
     const maxEdgeCount = nodeWithMaxEdges ? nodeWithMaxEdges.count : 0;
 
-    // Use non-barrel file count for ratio calculation
     const effectiveFiles = Math.max(totalFiles - 1, 1);
     const couplingRatio = maxEdgeCount / effectiveFiles;
 
-    // More granular thresholds
-    if (couplingRatio < 0.15) {
-      this.coupling = 100;
-    } else if (couplingRatio < 0.25) {
-      this.coupling = 85;
-    } else if (couplingRatio < 0.35) {
-      this.coupling = 75;
-    } else if (couplingRatio < 0.5) {
-      this.coupling = 65;
-    } else if (couplingRatio < 0.7) {
-      this.coupling = 50;
-    } else if (couplingRatio < 0.85) {
-      this.coupling = 35;
-    } else {
-      this.coupling = 20;
-    }
+    if (couplingRatio < 0.15) return 100;
+    if (couplingRatio < 0.25) return 85;
+    if (couplingRatio < 0.35) return 75;
+    if (couplingRatio < 0.5) return 65;
+    if (couplingRatio < 0.7) return 50;
+    if (couplingRatio < 0.85) return 35;
+    return 20;
   }
 
-  private findNodeWithMaxEdges(
-    edges: DependencyEdge[]
-  ): { node: string; count: number } | null {
+  private findNodeWithMaxEdges(edges: DependencyEdge[]): { node: string; count: number } | null {
     const nodeEdgeCount: Record<string, number> = {};
 
     for (const edge of edges) {
@@ -163,11 +129,8 @@ export class ArchitectureScorer {
     return maxNode ? { node: maxNode, count: maxCount } : null;
   }
 
-  private calculateCohesion(edges: DependencyEdge[]): void {
-    if (edges.length === 0) {
-      this.cohesion = 50;
-      return;
-    }
+  private calculateCohesion(edges: DependencyEdge[]): number {
+    if (edges.length === 0) return 50;
 
     const internalEdges = edges.filter((e) =>
       this.isInternalDependency(e.from, e.to)
@@ -175,45 +138,27 @@ export class ArchitectureScorer {
 
     const cohesionRatio = internalEdges / edges.length;
 
-    // More granular thresholds
-    if (cohesionRatio > 0.8) {
-      this.cohesion = 100;
-    } else if (cohesionRatio > 0.6) {
-      this.cohesion = 85;
-    } else if (cohesionRatio > 0.45) {
-      this.cohesion = 75;
-    } else if (cohesionRatio > 0.3) {
-      this.cohesion = 65;
-    } else if (cohesionRatio > 0.15) {
-      this.cohesion = 50;
-    } else {
-      this.cohesion = 30;
-    }
+    if (cohesionRatio > 0.8) return 100;
+    if (cohesionRatio > 0.6) return 85;
+    if (cohesionRatio > 0.45) return 75;
+    if (cohesionRatio > 0.3) return 65;
+    if (cohesionRatio > 0.15) return 50;
+    return 30;
   }
 
-  /**
-   * Determines if a dependency is "internal" (cohesive).
-   * Two files are considered cohesive if they share the same top-level
-   * package/directory (e.g., deepguard/cli.py → deepguard/analyzer.py).
-   * This is crucial for Python flat packages where all files live in
-   * one directory but ARE cohesive.
-   */
   private isInternalDependency(from: string, to: string): boolean {
     const fromParts = from.split('/');
     const toParts = to.split('/');
 
-    // If both are in root (no directory), they're cohesive
     if (fromParts.length <= 1 && toParts.length <= 1) return true;
 
-    // Compare top-level directory (package name)
-    // e.g., "deepguard/cli.py" and "deepguard/analyzer.py" → same package
     const fromTopLevel = fromParts.length > 1 ? fromParts[0] : '';
     const toTopLevel = toParts.length > 1 ? toParts[0] : '';
 
     return fromTopLevel === toTopLevel;
   }
 
-  private calculateLayering(antiPatterns: AntiPattern[], totalFiles?: number): void {
+  private calculateLayering(antiPatterns: AntiPattern[], totalFiles?: number): number {
     const layeringViolations = antiPatterns.filter(
       (p) =>
         p.name === 'Leaky Abstraction' ||
@@ -221,34 +166,16 @@ export class ArchitectureScorer {
         p.name === 'Circular Dependency'
     ).length;
 
-    if (layeringViolations === 0) {
-      this.layering = 100;
-      return;
-    }
+    if (layeringViolations === 0) return 100;
 
-    // Use ratio-based scoring: violations per 100 files
-    // This makes scoring fair regardless of project size
     const fileCount = Math.max(totalFiles || 50, 10);
     const violationRatio = layeringViolations / fileCount;
 
-    if (violationRatio < 0.05) {
-      // < 5% — Very clean architecture
-      this.layering = 95;
-    } else if (violationRatio < 0.15) {
-      // < 15% — Normal OSS level (e.g. Nest/Express with utilities)
-      this.layering = 85;
-    } else if (violationRatio < 0.25) {
-      // < 25% — Moderate issues
-      this.layering = 70;
-    } else if (violationRatio < 0.40) {
-      // < 40% — Significant issues
-      this.layering = 50;
-    } else if (violationRatio < 0.60) {
-      this.layering = 35;
-    } else {
-      // > 60% — Severe problems
-      this.layering = 20;
-    }
+    if (violationRatio < 0.05) return 95;
+    if (violationRatio < 0.15) return 85;
+    if (violationRatio < 0.25) return 70;
+    if (violationRatio < 0.40) return 50;
+    if (violationRatio < 0.60) return 35;
+    return 20;
   }
 }
-

@@ -2,7 +2,7 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 import { FrameworkInfo } from '../types/stack.js';
 import { BaseDetector } from './base-detector.js';
-import { FRAMEWORK_MAP } from './framework-registry.js';
+// import { FRAMEWORK_MAP } from './framework-registry.js';
 
 export class RubyDetector extends BaseDetector {
 public detect(projectPath: string, out: FrameworkInfo[]): void {

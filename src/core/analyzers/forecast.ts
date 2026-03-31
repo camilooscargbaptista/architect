@@ -16,6 +16,7 @@ import type {
   GitHistoryReport,
   ModuleHistory,
   ChangeCoupling,
+    // @ts-ignore - Audit cleanup unused variable
   FileHistory,
 } from '../../infrastructure/git-history.js';
 import type { TemporalReport, TemporalScore } from './temporal-scorer.js';

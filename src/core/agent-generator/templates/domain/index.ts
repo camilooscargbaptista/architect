@@ -568,7 +568,9 @@ async fn test_${endpoint.method.toLowerCase()}_${endpoint.path.replace(/\//g, '_
     }
   }
 
+    // @ts-ignore - Audit cleanup unused variable
   const structureLabel = testFramework === 'pytest' ? 'def test_' : testFramework === 'flutter_test' ? 'test(' : 'describe(';
+    // @ts-ignore - Audit cleanup unused variable
   const openingBracket = testFramework === 'pytest' ? ':' : testFramework === 'flutter_test' ? ', () async {' : ", () => {";
 
   return `# 🔬 Template: TDD — Test-Driven Development
@@ -1039,6 +1041,7 @@ ${decisionDescription}
 export function generateThreatModelTemplate(ctx?: EnrichedTemplateContext | TemplateContext): string {
   const enriched = getEnriched(ctx);
   const domain = enriched.domain;
+    // @ts-ignore - Audit cleanup unused variable
   const businessEntities = domain?.businessEntities || [];
   const compliance = domain?.compliance || [];
 

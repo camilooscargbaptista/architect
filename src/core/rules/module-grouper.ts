@@ -11,7 +11,7 @@ export class ModuleGrouperRule implements RefactorRule {
   name = 'module-grouper';
   tier = 1 as const;
 
-  analyze(report: AnalysisReport, projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
     const steps: RefactorStep[] = [];
 
     // Build co-import matrix: which files are imported together?
@@ -25,7 +25,7 @@ export class ModuleGrouperRule implements RefactorRule {
     }
 
     // Count co-imports
-    for (const [source, targets] of Object.entries(importsBySource)) {
+    for (const [_source, targets] of Object.entries(importsBySource)) {
       for (let i = 0; i < targets.length; i++) {
         for (let j = i + 1; j < targets.length; j++) {
           const a = targets[i];

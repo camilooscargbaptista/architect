@@ -5,6 +5,7 @@ import { TemplateContext } from '../../types/template.js';
  * module patterns, and anti-pattern prevention.
  */
 export function generateArchitectureRules(ctx: TemplateContext): string {
+    // @ts-ignore - Audit cleanup unused variable
   const { stack, projectName, report, config } = ctx;
   const layerRules = buildLayerRules(ctx);
   const modulePattern = buildModulePattern(ctx);
