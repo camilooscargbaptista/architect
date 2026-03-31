@@ -5,12 +5,15 @@ export default {
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@girardelli/architect-core/(.*)\\.js$': '<rootDir>/packages/architect-core/$1',
+    '^@girardelli/architect-agents/(.*)\\.js$': '<rootDir>/packages/architect-agents/$1'
   },
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
         useESM: true,
+        tsconfig: 'tsconfig.base.json'
       },
     ],
   },

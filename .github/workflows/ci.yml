@@ -49,4 +49,4 @@ jobs:
         if: matrix.node-version == '20.x' && github.event_name == 'pull_request'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node dist/adapters/cli.js pr-review ./src
+        run: node packages/architect/dist/src/adapters/cli.js pr-review .
