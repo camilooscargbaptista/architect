@@ -69,9 +69,9 @@ export class AnthropicProvider implements AIProvider {
   private apiKey: string;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'claude-3-7-sonnet-20250219') {
+  constructor(apiKey: string, model?: string) {
     this.apiKey = apiKey;
-    this.model = model;
+    this.model = model || process.env.ANTHROPIC_MODEL_NAME || 'claude-3-5-sonnet-20241022';
   }
 
   async executeRefactoringPrompt(fileContent: string, prompt: string): Promise<string> {
