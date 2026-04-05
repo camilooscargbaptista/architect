@@ -1,4 +1,5 @@
 import { AgentSuggestion } from '@girardelli/architect-agents/src/core/agent-generator/index.js';
+import type { AgentItem, AgentAuditFinding } from '@girardelli/architect-agents/src/core/agent-generator/types/agent.js';
 
 // import { escapeHtml } from "../utils_sections.js";
 
@@ -36,8 +37,8 @@ import { AgentSuggestion } from '@girardelli/architect-agents/src/core/agent-gen
         'CREATE': { icon: '🟡', label: 'NEW', color: '#f59e0b' },
         'DELETE': { icon: '🔴', label: 'REMOVE', color: '#ef4444' },
       };
-      const s = map[status] || map['CREATE'];
-      return `<span class="agent-status-badge" style="background:${s.color}20;color:${s.color};border:1px solid ${s.color}40">${s.icon} ${s.label}</span>`;
+      const s = map[status] || map['CREATE']!;
+      return `<span class="agent-status-badge" style="background:${s!.color}20;color:${s!.color};border:1px solid ${s!.color}40">${s!.icon} ${s!.label}</span>`;
     };
 
     const statusBorder = (status: string): string => {
@@ -47,7 +48,7 @@ import { AgentSuggestion } from '@girardelli/architect-agents/src/core/agent-gen
       return map[status] || '#334155';
     };
 
-    const agentCards = s.suggestedAgents.map((a: any) =>
+    const agentCards = s.suggestedAgents.map((a: AgentItem) =>
       `<label class="agent-toggle-card" data-category="agents" data-name="${a.name}">
         <input type="checkbox" class="agent-check" ${a.status !== 'DELETE' ? 'checked' : ''} data-type="agents" data-item="${a.name}">
         <div class="agent-toggle-inner" style="border-color:${statusBorder(a.status)}">
@@ -77,11 +78,11 @@ import { AgentSuggestion } from '@girardelli/architect-agents/src/core/agent-gen
         </div>
       </label>`;
 
-    const ruleCards = s.suggestedRules.map((r: any) => miniCard(r, '\u{1F4CF}', 'rules')).join('\n');
-    const guardCards = s.suggestedGuards.map((g: any) => miniCard(g, '\u{1F6E1}\uFE0F', 'guards')).join('\n');
-    const workflowCards = s.suggestedWorkflows.map((w: any) => miniCard(w, '\u26A1', 'workflows')).join('\n');
+    const ruleCards = s.suggestedRules.map((r: AgentItem) => miniCard(r, '\u{1F4CF}', 'rules')).join('\n');
+    const guardCards = s.suggestedGuards.map((g: AgentItem) => miniCard(g, '\u{1F6E1}\uFE0F', 'guards')).join('\n');
+    const workflowCards = s.suggestedWorkflows.map((w: AgentItem) => miniCard(w, '\u26A1', 'workflows')).join('\n');
 
-    const skillCards = s.suggestedSkills.map((sk: any) =>
+    const skillCards = s.suggestedSkills.map((sk) =>
       `<label class="agent-toggle-card" data-category="skills">
         <input type="checkbox" class="agent-check" checked data-type="skills" data-item="${sk.source}">
         <div class="agent-toggle-inner" style="border-color:${statusBorder(sk.status)}">
@@ -96,11 +97,11 @@ import { AgentSuggestion } from '@girardelli/architect-agents/src/core/agent-gen
       </label>`
     ).join('\n');
 
-    const auditSection = s.audit.filter((f: any) => f.type !== 'OK').length > 0 ? `
+    const auditSection = s.audit.filter((f: AgentAuditFinding) => f.type !== 'OK').length > 0 ? `
     <div class="agent-audit-section">
       <h3 class="agent-section-subtitle">\u{1F50D} Audit Findings</h3>
       <div class="agent-audit-grid">
-        ${s.audit.filter((f: any) => f.type !== 'OK').map((f: any) => {
+        ${s.audit.filter((f: AgentAuditFinding) => f.type !== 'OK').map((f: AgentAuditFinding) => {
           const icon = f.type === 'MISSING' ? '\u274C' : f.type === 'IMPROVEMENT' ? '\u{1F4A1}' : '\u26A0\uFE0F';
           const cls = f.type === 'MISSING' ? 'audit-missing' : 'audit-improvement';
           return `<div class="agent-audit-item ${cls}">

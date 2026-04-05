@@ -1,5 +1,5 @@
 import { basename } from 'path';
-import { AnalysisReport } from '../types/core.js';
+import { AnalysisReport, DependencyIndex } from '../types/core.js';
 import { RefactorRule, RefactorStep, FileOperation } from '../types/rules.js';
 
 /**
@@ -20,16 +20,23 @@ export class DeadCodeDetectorRule implements RefactorRule {
     'index.html', 'setup.py', 'setup.cfg', 'pyproject.toml',
   ]);
 
-  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string, index?: DependencyIndex): RefactorStep[] {
     const steps: RefactorStep[] = [];
     const edges = report.dependencyGraph.edges;
 
     // Build a set of ALL referenced targets (both path and dot-notation)
     const allTargets = new Set<string>();
     const allSources = new Set<string>();
-    for (const edge of edges) {
-      allTargets.add(edge.to);
-      allSources.add(edge.from);
+
+    // ── Fase 2.6: Use pre-computed index for O(1) lookups ──
+    if (index) {
+      for (const key of index.incomingByFile.keys()) allTargets.add(key);
+      for (const key of index.outgoingByFile.keys()) allSources.add(key);
+    } else {
+      for (const edge of edges) {
+        allTargets.add(edge.to);
+        allSources.add(edge.from);
+      }
     }
 
     // Only consider actual files (with path separators) as candidates
@@ -41,14 +48,10 @@ export class DeadCodeDetectorRule implements RefactorRule {
     const incomingCount: Record<string, number> = {};
 
     for (const file of fileNodes) {
-      incomingCount[file] = 0;
-
-      // Direct incoming edges
-      for (const edge of edges) {
-        if (edge.to === file) {
-          incomingCount[file]++;
-        }
-      }
+      // ── Fase 2.6: O(1) fan-in lookup instead of O(E) scan ──
+      incomingCount[file] = index
+        ? (index.fanIn.get(file) ?? 0)
+        : edges.filter(e => e.to === file).length;
 
       // Check dot-notation references:
       // deepguard/report.py might be referenced as deepguard.report or .report
@@ -71,7 +74,7 @@ export class DeadCodeDetectorRule implements RefactorRule {
       if (fileName.startsWith('__')) continue;
       if (fileName.startsWith('.')) continue;
       if (fileName.endsWith('.test.ts') || fileName.endsWith('.spec.ts')) continue;
-      if (fileName.endsWith('_test.py') || fileName.endsWith('.test.py')) continue;
+      if (fileName.endsWith('_test.py') || fileName.endsWith('.test.py') || fileName.startsWith('test_')) continue;
 
       // Also skip if the file has outgoing edges (it's active code)
       if (allSources.has(file)) continue;
@@ -125,7 +128,7 @@ export class DeadCodeDetectorRule implements RefactorRule {
     // Relative dot-notation: .report
     const parts = filePath.split('/');
     if (parts.length >= 2) {
-      const lastPart = parts[parts.length - 1].replace(/\.[^.]+$/, '');
+      const lastPart = parts[parts.length - 1]!.replace(/\.[^.]+$/, '');
       variants.push(`.${lastPart}`);
     }
 

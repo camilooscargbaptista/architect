@@ -3,7 +3,8 @@ import { dirname } from 'path';
 import { execSync } from 'child_process';
 import { RefactoringPlan, RefactorStep, FileOperation } from '@girardelli/architect-core/src/core/types/rules.js';
 import { HumanGate } from './human-gate.js';
-import { ModelProviderFactory } from './ai-provider.js';
+import { ModelProviderFactory, type AIProvider } from './ai-provider.js';
+import { select } from '@inquirer/prompts';
 
 export class AgentExecutor {
   private gate: HumanGate;
@@ -18,7 +19,7 @@ export class AgentExecutor {
   /**
    * Main entrypoint for Agent Runtime.
    */
-  async executePlan(plan: RefactoringPlan) {
+  async executePlan(plan: RefactoringPlan, providerType?: string) {
     console.log(`\n\x1b[35m=== 🤖 Architect Autonomous Agent ===\x1b[0m`);
     console.log(`Loaded Refactoring Plan: ${plan.steps.length} procedural steps.\n`);
 
@@ -27,13 +28,17 @@ export class AgentExecutor {
 
     // 2. Load AI Provider if needed
     const needsAI = plan.steps.some((s) => !!s.aiPrompt);
-    let aiProvider = null;
+    let aiProvider: AIProvider | undefined;
     if (needsAI) {
       try {
-        aiProvider = ModelProviderFactory.createProvider();
+        if (providerType) {
+          aiProvider = ModelProviderFactory.createSpecificProvider(providerType);
+        } else {
+          aiProvider = ModelProviderFactory.createProvider();
+        }
         console.log(`\x1b[32m[AI Engine Ready]\x1b[0m Linked to external LLM provider.\n`);
       } catch (e: any) {
-        console.warn(`\x1b[33m[AI Warning]\x1b[0m Could not connect AI Provider (` + e.message + `). Steps requiring AI will be skipped.\n`);
+        console.warn(`\x1b[33m[AI Warning]\x1b[0m Could not connect AI Provider (` + e.message + `). Steps requiring AI will fail.\n`);
       }
     }
 
@@ -48,13 +53,58 @@ export class AgentExecutor {
 
       console.log(`\n\x1b[36mExecuting Step #${step.id}...\x1b[0m`);
       let successCount = 0;
+      let stepAborted = false;
 
       for (const op of step.operations) {
-        try {
-          await this.executeOperation(op, step.aiPrompt, aiProvider);
-          successCount++;
-        } catch (e: any) {
-          console.error(`\x1b[31mFailed to execute operation on ${op.path}:\x1b[0m ${e.message}`);
+        if (stepAborted) break;
+        let opSuccess = false;
+        
+        while (!opSuccess) {
+          try {
+            await this.executeOperation(op, step.aiPrompt, aiProvider);
+            opSuccess = true;
+            successCount++;
+          } catch (e: any) {
+            console.error(`\x1b[31mFailed to execute operation on ${op.path}:\x1b[0m ${e.message}`);
+            
+            const recoveryAction = await select({
+               message: '🚨 Operation Failed. What should we do?',
+               choices: [
+                 { name: '🔄 Retry with current AI Provider', value: 'retry' },
+                 { name: '🤖 Switch AI Provider (Claude/GPT/Gemini)', value: 'switch' },
+                 { name: '⏪ Rollback current step (git restore) & Skip', value: 'rollback' },
+                 { name: '⏭️ Skip this file and leave as is', value: 'skip' },
+                 { name: '🚪 Abort execution entirely', value: 'abort' }
+               ]
+            });
+
+            if (recoveryAction === 'skip') {
+               break; 
+            } else if (recoveryAction === 'abort') {
+               throw new Error("User aborted execution during error recovery.");
+            } else if (recoveryAction === 'rollback') {
+               try { execSync('git restore .'); } catch(err) {} 
+               console.log('\x1b[33m⏪ Git restore executed. Uncommitted step changes wiped.\x1b[0m');
+               stepAborted = true;
+               successCount = 0; // Prevent committing this step
+               break; 
+            } else if (recoveryAction === 'switch') {
+               const newProviderType = await select({
+                 message: 'Select new AI Provider:',
+                 choices: [
+                   { name: 'Anthropic (Claude)', value: 'Anthropic' },
+                   { name: 'OpenAI (GPT)', value: 'OpenAI' },
+                   { name: 'Google (Gemini)', value: 'Gemini' }
+                 ]
+               });
+               try {
+                 aiProvider = ModelProviderFactory.createSpecificProvider(newProviderType);
+                 console.log(`\x1b[32m✔ Switched to ${newProviderType}\x1b[0m`);
+               } catch(err: any) {
+                 console.error('\x1b[31mError connecting to new provider: ' + err.message + '\x1b[0m');
+               }
+            } // If 'retry', it loops again passively
+          }
         }
       }
 
@@ -69,7 +119,7 @@ export class AgentExecutor {
     console.log(`Changes are safed in the current feature branch. Review, test, and push to remote!`);
   }
 
-  private async executeOperation(op: FileOperation, aiPrompt?: string, aiProvider?: any) {
+  private async executeOperation(op: FileOperation, aiPrompt?: string, aiProvider?: AIProvider) {
     const targetPath = op.path;
 
     if (op.type === 'CREATE') {
@@ -115,7 +165,7 @@ export class AgentExecutor {
   }
 
   private ensureProtectiveBranch() {
-    if (process.env.NODE_ENV === 'test') return;
+    if (process.env['NODE_ENV'] === 'test') return;
     try {
       const currentBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
       const needsNewBranch = ['main', 'master', 'develop'].includes(currentBranch);
@@ -134,7 +184,7 @@ export class AgentExecutor {
   }
 
   private commitStep(step: RefactorStep) {
-    if (process.env.NODE_ENV === 'test') return;
+    if (process.env['NODE_ENV'] === 'test') return;
     try {
       execSync('git add .');
       const msg = `refactor(architect): apply rule ${step.rule}\n\nAuto-applied by Architect Agent.\nMotivation: ${step.title}`;

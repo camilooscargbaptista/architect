@@ -83,10 +83,10 @@ import { escapeHtml } from "../utils_sections.js";
       const getModule = (filePath: string): string => {
         const parts = filePath.split('/');
         if (parts.length < 2) return 'root';
-        const first = parts[0];
+        const first = parts[0]!;
         // If first dir is common source dir, use second level
         if (['src', 'lib', 'app', 'packages', 'modules', 'features', 'apps'].includes(first)) {
-          return parts.length > 2 ? parts[1] : first;
+          return parts.length > 2 ? parts[1]! : first;
         }
         return first;
       };
@@ -94,7 +94,7 @@ import { escapeHtml } from "../utils_sections.js";
       // Assign colors to modules
       const moduleNames = [...new Set(allNodes.map(n => getModule(n.id)))];
       moduleNames.forEach((mod, i) => {
-        moduleColorMap[mod] = modulePalette[i % modulePalette.length];
+        moduleColorMap[mod] = modulePalette[i % modulePalette.length]!;
       });
 
       // Reassign layer field to module name for coloring

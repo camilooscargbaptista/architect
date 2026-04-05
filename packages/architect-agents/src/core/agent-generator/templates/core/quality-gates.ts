@@ -1,4 +1,5 @@
 import { TemplateContext, EnrichedTemplateContext } from '@girardelli/architect-agents/src/core/agent-generator/types/template.js';
+import type { ComplianceRequirement } from '@girardelli/architect-agents/src/core/agent-generator/types/domain.js';
     // @ts-ignore - Audit cleanup unused variable
 import { getEnriched, depthAtLeast, complianceBadges, depthIndicator } from '../template-helpers.js';
 
@@ -80,7 +81,7 @@ ${enriched.domain?.compliance?.length ? `---
 
 ## 🔒 Compliance-Specific Gates
 
-${enriched.domain?.compliance?.map((comp: any) => {
+${enriched.domain?.compliance?.map((comp: ComplianceRequirement) => {
   const checks: Record<string, string> = {
     'LGPD': '□ Dados pessoais anonimizados em logs/cache\n□ Direito ao esquecimento implementado\n□ Consentimento explícito documentado',
     'HIPAA': '□ Criptografia AES-256 para PHI em repouso\n□ TLS 1.2+ para PHI em trânsito\n□ Auditoria de acesso a PHI registrada\n□ Business Associate Agreement (BAA) em vigor',
@@ -98,7 +99,7 @@ ${enriched.untestedModules?.length ? `---
 
 Os seguintes módulos **DEVEM TER** cobertura de testes antes de merge:
 
-${enriched.untestedModules.map((m: any) => `- ⚠️ \`${m}\``).join('\n')}
+${enriched.untestedModules.map((m: string) => `- ⚠️ \`${m}\``).join('\n')}
 
 **Ação Obrigatória:** Criar testes para cada módulo listado acima. Se a cobertura for impossível, documentar no BLOCKERS.` : ''}
 
@@ -115,7 +116,7 @@ ${enriched.domain?.compliance?.length ? `
 ### Domain-Specific Blockers (Compliance)
 
 \`\`\`
-${enriched.domain?.compliance?.map((comp: any) => {
+${enriched.domain?.compliance?.map((comp: ComplianceRequirement) => {
   const blockers: Record<string, string> = {
     'LGPD': '❌ Senhas/tokens em logs (violação de privacidade)',
     'HIPAA': '❌ PHI (Protected Health Information) em texto claro',

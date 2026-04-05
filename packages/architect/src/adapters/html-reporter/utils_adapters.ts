@@ -8,9 +8,9 @@ export function groupAntiPatterns(
     if (!grouped[p.name]) {
       grouped[p.name] = { count: 0, severity: p.severity, locations: [], suggestion: p.suggestion };
     }
-    grouped[p.name].count++;
-    if (grouped[p.name].locations.length < 10) {
-      grouped[p.name].locations.push(p.location);
+    grouped[p.name]!.count++;
+    if (grouped[p.name]!.locations.length < 10) {
+      grouped[p.name]!.locations.push(p.location);
     }
   }
   return grouped;

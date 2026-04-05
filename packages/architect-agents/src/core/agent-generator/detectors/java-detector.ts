@@ -14,7 +14,7 @@ public detect(projectPath: string, out: FrameworkInfo[]): void {
       for (const dep of deps) {
         const match = dep.match(/<artifactId>([^<]+)<\/artifactId>/i);
         if (match) {
-          const artifact = match[1].toLowerCase();
+          const artifact = match[1]!.toLowerCase();
           const fwInfo = FRAMEWORK_MAP[artifact];
           if (fwInfo) {
             out.push({ name: fwInfo.name, version: null, category: fwInfo.category, confidence: 0.85 });

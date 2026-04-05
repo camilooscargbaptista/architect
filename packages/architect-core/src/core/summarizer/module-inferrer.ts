@@ -100,11 +100,11 @@ public inferModulesFromStructure(report: AnalysisReport): ProjectSummary['module
 
       // Get the module directory (2nd level, or 1st level for flat projects)
       let moduleName: string;
-      const firstDir = parts[0];
+      const firstDir = parts[0]!;
 
       // Common source directories — go one level deeper
       if (['src', 'lib', 'app', 'packages', 'modules', 'features', 'apps'].includes(firstDir)) {
-        moduleName = parts.length > 2 ? parts[1] : firstDir;
+        moduleName = parts.length > 2 ? parts[1]! : firstDir;
       } else if (firstDir === 'tests' || firstDir === 'test' || firstDir === '__tests__') {
         continue; // Skip test directories for module inference
       } else {

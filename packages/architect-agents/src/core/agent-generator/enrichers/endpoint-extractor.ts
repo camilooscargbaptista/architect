@@ -92,7 +92,7 @@ public extractEndpoints(report: AnalysisReport, _modules: ModuleDetail[]): Detec
 
 public extractResourceFromFile(filePath: string): string {
     const parts = filePath.split('/');
-    const fileName = parts[parts.length - 1]
+    const fileName = parts[parts.length - 1]!
       .replace(/\.[^.]+$/, '')
       .replace(/(Controller|Router|Route|View|Handler|Endpoint|Resource|Blueprint)$/i, '')
       .replace(/[-_]/g, '')

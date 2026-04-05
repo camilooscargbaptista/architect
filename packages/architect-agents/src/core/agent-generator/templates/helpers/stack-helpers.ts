@@ -1,7 +1,5 @@
-    // @ts-ignore - Audit cleanup unused variable
-import { TemplateContext, EnrichedTemplateContext } from '@girardelli/architect-agents/src/core/agent-generator/types/template.js';
-    // @ts-ignore - Audit cleanup unused variable
-import { FrameworkInfo } from '@girardelli/architect-agents/src/core/agent-generator/types/stack.js';
+import { TemplateContext } from '@girardelli/architect-agents/src/core/agent-generator/types/template.js';
+import type { FrameworkInfo } from '@girardelli/architect-agents/src/core/agent-generator/types/stack.js';
 
 import { getEnriched } from './base-helpers.js';
 
@@ -10,16 +8,16 @@ export function frameworkBadge(ctx: TemplateContext): string {
   if (!enriched.detectedFrameworks?.length) return '';
 
   const fws = enriched.detectedFrameworks
-    .filter((f: any) => f.category === 'web' || f.category === 'orm')
-    .map((f: any) => `**${f.name}**${f.version ? ` ${f.version}` : ''}`);
+    .filter((f: FrameworkInfo) => f.category === 'web' || f.category === 'orm')
+    .map((f: FrameworkInfo) => `**${f.name}**${f.version ? ` ${f.version}` : ''}`);
 
   const testFws = enriched.detectedFrameworks
-    .filter((f: any) => f.category === 'test')
-    .map((f: any) => f.name);
+    .filter((f: FrameworkInfo) => f.category === 'test')
+    .map((f: FrameworkInfo) => f.name);
 
   const lintFws = enriched.detectedFrameworks
-    .filter((f: any) => f.category === 'lint')
-    .map((f: any) => f.name);
+    .filter((f: FrameworkInfo) => f.category === 'lint')
+    .map((f: FrameworkInfo) => f.name);
 
   const parts: string[] = [];
   if (fws.length) parts.push(fws.join(' + '));
@@ -31,7 +29,7 @@ export function frameworkBadge(ctx: TemplateContext): string {
 
 export function projectStructureBadge(ctx: TemplateContext): string {
   const enriched = getEnriched(ctx);
-  const structure = enriched.projectStructure || 'unknown';
+  const structure = (enriched.projectStructure ?? 'unknown') as string;
 
   const labels: Record<string, string> = {
     'clean-architecture': '🏛️ Clean Architecture / DDD',
@@ -42,7 +40,7 @@ export function projectStructureBadge(ctx: TemplateContext): string {
     'unknown': '❓ Estrutura não identificada',
   };
 
-  return labels[structure] || labels['unknown'];
+  return labels[structure]! || labels['unknown']!;
 }
 
 export function toolchainCommands(ctx: TemplateContext): string {

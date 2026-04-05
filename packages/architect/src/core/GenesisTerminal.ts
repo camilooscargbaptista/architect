@@ -2,6 +2,7 @@ import { select, confirm } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import { Architect, ProgressEvent } from './architect.js';
+import type { RefactoringPlan } from '@girardelli/architect-core/src/core/types/rules.js';
 import { AgentExecutor } from '@girardelli/architect-agents/src/core/agent-runtime/executor.js';
 import { ProgressReporter, c } from '../adapters/progress-logger.js';
 import { HtmlReportGenerator } from '../adapters/html-reporter.js';
@@ -125,13 +126,29 @@ export class GenesisTerminal {
       }
 
       // ── Post-Scan Autonomous Trigger ──
-      const autoRun = await confirm({
-        message: chalk.yellow(`\n⚠️ I have generated the O(N²) Matrix and found ${plan.steps.length} Refactoring Steps. Shall I take control of your IDE and autonomously execute this plan?`),
-        default: false
+      console.log(chalk.yellow(`\n⚠️ I have generated the O(N²) Matrix and found ${plan.steps.length} Refactoring Steps.`));
+      
+      const executionMode = await select({
+        message: 'Select AI Execution Mode:',
+        choices: [
+          { name: '🤖 Execute via Anthropic (Claude)', value: 'Anthropic' },
+          { name: '🤖 Execute via OpenAI (GPT)', value: 'OpenAI' },
+          { name: '🤖 Execute via Google (Gemini)', value: 'Gemini' },
+          { name: '📄 Export Offline Prompts (Manual Web UI Mode)', value: 'offline' },
+          { name: '🚪 Abort Refactoring', value: 'abort' }
+        ]
       });
 
-      if (autoRun) {
-        await this.runAutonomousExecution(plan);
+      if (executionMode === 'abort') {
+        console.log(chalk.yellow('Refactor Aborted. Returning to orbit.'));
+      } else if (executionMode === 'offline') {
+        console.log(chalk.cyan('\n[System] Initializing Offline Prompt Generator...'));
+        const { OfflinePromptGenerator } = await import('@girardelli/architect-agents/src/core/agent-runtime/offline-prompt-generator.js');
+        const generator = new OfflinePromptGenerator();
+        generator.generate(plan);
+        console.log(chalk.green(`\n✅ Offline Prompts exported successfully to packages/architect/prompts/!`));
+      } else {
+        await this.runAutonomousExecution(plan, executionMode);
       }
 
     } catch (e: any) {
@@ -144,13 +161,35 @@ export class GenesisTerminal {
     try {
       const report = await this.architect.analyze('.');
       const plan = this.architect.refactor(report, '.');
-      await this.runAutonomousExecution(plan);
+      
+      const executionMode = await select({
+        message: 'Select AI Execution Mode:',
+        choices: [
+          { name: '🤖 Execute via Anthropic (Claude)', value: 'Anthropic' },
+          { name: '🤖 Execute via OpenAI (GPT)', value: 'OpenAI' },
+          { name: '🤖 Execute via Google (Gemini)', value: 'Gemini' },
+          { name: '📄 Export Offline Prompts (Manual Web UI Mode)', value: 'offline' },
+          { name: '🚪 Abort Refactoring', value: 'abort' }
+        ]
+      });
+
+      if (executionMode === 'abort') {
+        return;
+      } else if (executionMode === 'offline') {
+        const { OfflinePromptGenerator } = await import('@girardelli/architect-agents/src/core/agent-runtime/offline-prompt-generator.js');
+        const generator = new OfflinePromptGenerator();
+        generator.generate(plan);
+        console.log(chalk.green(`\n✅ Offline Prompts exported successfully to packages/architect/prompts/!`));
+        return;
+      }
+
+      await this.runAutonomousExecution(plan, executionMode);
     } catch (e: any) {
       console.error(chalk.red(`\n❌ Scan Failed: ${e.message}`));
     }
   }
 
-  private async runAutonomousExecution(plan: any) {
+  private async runAutonomousExecution(plan: RefactoringPlan, providerType?: string) {
     console.log(chalk.blue('\n[System] Initializing AgentExecutor Runtime...'));
     
     // Confirm Action
@@ -170,7 +209,7 @@ export class GenesisTerminal {
       const executor = new AgentExecutor(isDangerous);
 
       spinner.succeed(chalk.green('Refactor Protocol Engaged!'));
-      await executor.executePlan(plan);
+      await executor.executePlan(plan, providerType);
       
       console.log(chalk.gray('Check your `git diff` to review the Agent changes before committing.'));
       

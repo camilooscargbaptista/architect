@@ -43,7 +43,7 @@ export class ProjectScanner {
       totalLines,
       primaryLanguages: languages,
       fileTree,
-      workspaces: workspaces.length > 0 ? workspaces : undefined,
+      ...(workspaces.length > 0 && { workspaces }),
     };
   }
 
@@ -183,16 +183,17 @@ export class ProjectScanner {
       let current = root;
 
       for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
+        const part = parts[i]!;
         const isFile = i === parts.length - 1;
 
         let child = (current.children || []).find((c) => c.name === part);
         if (!child) {
+          const ext = isFile ? extname(part) : undefined;
           child = {
             path: join(current.path, part),
             name: part,
             type: isFile ? 'file' : 'directory',
-            extension: isFile ? extname(part) : undefined,
+            ...(ext !== undefined && { extension: ext }),
           };
 
           if (isFile) {
@@ -204,7 +205,7 @@ export class ProjectScanner {
           current.children.push(child);
         }
 
-        current = child;
+        current = child!;
       }
     }
 

@@ -204,11 +204,16 @@ export class Architect implements ArchitectCommand {
       return p;
     };
 
-    report.antiPatterns = report.antiPatterns.map((p) => ({
-      ...p,
-      location: rel(p.location),
-      affectedFiles: p.affectedFiles?.map(rel),
-    }));
+    report.antiPatterns = report.antiPatterns.map((p) => {
+      const mapped = {
+        ...p,
+        location: rel(p.location),
+      };
+      if (p.affectedFiles) {
+        (mapped as any).affectedFiles = p.affectedFiles.map(rel);
+      }
+      return mapped;
+    });
 
     report.layers = report.layers.map((l) => ({
       ...l,
@@ -331,7 +336,7 @@ export class Architect implements ArchitectCommand {
         const toDir = edge.to.split('/').slice(0, -1).join('/');
         if (fromDir !== toDir) {
           if (!crossBoundary[edge.from]) crossBoundary[edge.from] = new Set();
-          crossBoundary[edge.from].add(toDir);
+          crossBoundary[edge.from]!.add(toDir);
         }
       }
 
@@ -351,7 +356,7 @@ export class Architect implements ArchitectCommand {
     }
 
     // 4. Score-based suggestions (only if no specific suggestions cover it)
-    if (score.breakdown.coupling < 70 && !suggestions.some(s => s.title.startsWith('Hub File'))) {
+    if ((score.breakdown['coupling'] ?? 100) < 70 && !suggestions.some(s => s.title.startsWith('Hub File'))) {
       suggestions.push({
         priority: 'HIGH',
         title: 'Reduce Coupling',
@@ -360,7 +365,7 @@ export class Architect implements ArchitectCommand {
       });
     }
 
-    if (score.breakdown.cohesion < 70 && !suggestions.some(s => s.title.startsWith('Cross-boundary'))) {
+    if ((score.breakdown['cohesion'] ?? 100) < 70 && !suggestions.some(s => s.title.startsWith('Cross-boundary'))) {
       suggestions.push({
         priority: 'MEDIUM',
         title: 'Improve Cohesion',

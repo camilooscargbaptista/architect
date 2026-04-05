@@ -183,8 +183,8 @@ describe('ContextEnricher', () => {
       }, tempDir);
 
       // Users has 3 files, auth has 1 file → users should come first
-      expect(result.modules[0].name).toBe('users');
-      expect(result.modules[0].fileCount).toBe(3);
+      expect(result.modules[0]!.name).toBe('users');
+      expect(result.modules[0]!.fileCount).toBe(3);
     });
 
     it('should generate smart descriptions for known patterns', () => {

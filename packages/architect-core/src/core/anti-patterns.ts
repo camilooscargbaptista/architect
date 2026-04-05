@@ -74,7 +74,7 @@ export class AntiPatternDetector {
         MEDIUM: 2,
         LOW: 3,
       };
-      return severityOrder[a.severity] - severityOrder[b.severity];
+      return (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4);
     });
   }
 

@@ -1,0 +1,4 @@
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "~4.2.0"
+sqlalchemy = "^2.0"

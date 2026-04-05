@@ -231,7 +231,7 @@ function makeEnrichedContext(
     criticalPaths: ['src/payment/payment.service.ts'],
     projectDepth: 'large',
     detectedFrameworks,
-    primaryFramework: detectedFrameworks[0],
+    primaryFramework: detectedFrameworks[0] ?? null,
     toolchain,
     projectStructure: 'modular',
     ...overrides,

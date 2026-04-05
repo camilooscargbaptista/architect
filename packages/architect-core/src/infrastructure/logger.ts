@@ -14,21 +14,21 @@ class Logger {
     if (options.json !== undefined) this.isJson = options.json;
   }
 
-  debug(message: string, meta?: Record<string, any>): void {
+  debug(message: string, meta?: Record<string, unknown>): void {
     if (!this.isVerbose) return;
     this.log('debug', message, meta);
   }
 
-  info(message: string, meta?: Record<string, any>): void {
+  info(message: string, meta?: Record<string, unknown>): void {
     if (!this.isVerbose) return; // Info behaves like verbose debug by default unless needed
     this.log('info', message, meta);
   }
 
-  warn(message: string, meta?: Record<string, any>): void {
+  warn(message: string, meta?: Record<string, unknown>): void {
     this.log('warn', message, meta);
   }
 
-  error(message: string, error?: Error | unknown, meta?: Record<string, any>): void {
+  error(message: string, error?: Error | unknown, meta?: Record<string, unknown>): void {
     const errorMeta = error instanceof Error 
       ? { errorMessage: error.message, stack: this.isVerbose ? error.stack : undefined, ...meta } 
       : { rawError: String(error), ...meta };
@@ -36,7 +36,7 @@ class Logger {
     this.log('error', message, errorMeta);
   }
 
-  private log(level: LogLevel, message: string, meta?: Record<string, any>): void {
+  private log(level: LogLevel, message: string, meta?: Record<string, unknown>): void {
     if (this.isJson) {
       // In JSON mode, output minimal structured error logic inside stderr so it doesn't break stdout pipes.
       process.stderr.write(JSON.stringify({ level, message, timestamp: new Date().toISOString(), ...meta }) + '\n');
@@ -44,7 +44,7 @@ class Logger {
     }
 
     // Human-readable CLI formatting
-    const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+    const timestamp = new Date().toISOString().split('T')[1]!.slice(0, 12);
     const color = {
       debug: '\x1b[38;5;240m', // gray
       info: '\x1b[38;5;33m',   // blue

@@ -79,7 +79,7 @@ export function generateC4Template(ctx?: EnrichedTemplateContext | TemplateConte
 └── Tests: [lista de testes]`;
 
   if (modules.length > 0) {
-    const firstModule = modules[0];
+    const firstModule = modules[0]!;
     const controllers = firstModule.controllers.slice(0, 2).join(', ') || '[Controllers]';
     const services = firstModule.services.slice(0, 2).join(', ') || '[Services]';
     const entities = firstModule.entities.slice(0, 1).join(', ') || '[Entities]';
@@ -135,7 +135,7 @@ export function generateC4Template(ctx?: EnrichedTemplateContext | TemplateConte
   }
 
   if (endpoints.length > 0) {
-    const firstEndpoint = endpoints[0];
+    const firstEndpoint = endpoints[0]!;
     if (isPython) {
       level4Content = `class I${firstEndpoint.handler}Service(ABC):
     # ${firstEndpoint.method} ${firstEndpoint.path}
@@ -242,7 +242,7 @@ export function generateBddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
 
   // Generate example scenario from first business entity
   if (businessEntities.length > 0) {
-    const entity = businessEntities[0];
+    const entity = businessEntities[0]!;
     featureName = `Criar e Validar ${entity.name}`;
     exampleScenario = `  Scenario: Criar ${entity.name} com sucesso
     Given o usuário está no formulário de criação de ${entity.name}
@@ -259,7 +259,7 @@ export function generateBddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
 
   // Add compliance-specific scenario if applicable
   if (compliance.length > 0) {
-    const comp = compliance[0];
+    const comp = compliance[0]!;
     if (comp.name === 'LGPD') {
       complianceScenario = `  Scenario: Usuário solicita exclusão de dados sob LGPD
     Given um usuário autenticado no sistema
@@ -405,7 +405,7 @@ export function generateTddTemplate(ctx?: EnrichedTemplateContext | TemplateCont
 
   if (exampleModule) {
     moduleName = exampleModule.name;
-    const service = exampleModule.services[0] || 'Service';
+    const service = exampleModule.services[0]! || 'Service';
     methodName = `create${service.replace('Service', '')}`;
 
     if (testFramework === 'pytest') {
@@ -487,7 +487,7 @@ fn test_should_create_${moduleName.toLowerCase()}_successfully() {
 
   let endpointTest = '';
   if (endpoints.length > 0) {
-    const endpoint = endpoints[0];
+    const endpoint = endpoints[0]!;
     if (testFramework === 'pytest') {
       endpointTest = `
 
