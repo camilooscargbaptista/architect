@@ -15,7 +15,7 @@ public buildTechStack(report: AnalysisReport, packageInfo: Record<string, unknow
     stack.push(...report.projectInfo.frameworks);
 
     // Dependencies from package.json
-    const deps = { ...(packageInfo.dependencies as Record<string, string> || {}), ...(packageInfo.devDependencies as Record<string, string> || {}) };
+    const deps = { ...(packageInfo['dependencies'] as Record<string, string> || {}), ...(packageInfo['devDependencies'] as Record<string, string> || {}) };
     const notable = [
       'express', 'fastify', 'nestjs', '@nestjs/core', 'koa', 'hapi',
       'react', 'next', 'angular', 'vue', 'svelte',
@@ -34,7 +34,7 @@ public buildTechStack(report: AnalysisReport, packageInfo: Record<string, unknow
     ];
 
     for (const dep of Object.keys(deps)) {
-      const cleaned = dep.replace('@', '').split('/')[0];
+      const cleaned = dep.replace('@', '').split('/')[0]!;
       if (notable.some(n => dep.includes(n))) {
         if (!stack.some(s => s.toLowerCase() === cleaned.toLowerCase())) {
           stack.push(dep);
@@ -47,8 +47,8 @@ public buildTechStack(report: AnalysisReport, packageInfo: Record<string, unknow
 
 public buildDescription(packageInfo: Record<string, unknown>, readme: string, report: AnalysisReport): string {
     // Priority 1: package.json description
-    if (typeof packageInfo.description === 'string' && packageInfo.description.trim()) {
-      return packageInfo.description.trim();
+    if (typeof packageInfo['description'] === 'string' && packageInfo['description'].trim()) {
+      return packageInfo['description'].trim();
     }
 
     // Priority 2: First paragraph of README (skip badges, titles)

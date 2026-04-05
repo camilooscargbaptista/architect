@@ -1,4 +1,5 @@
 import { TemplateContext } from '@girardelli/architect-agents/src/core/agent-generator/types/template.js';
+import type { FrameworkInfo } from '@girardelli/architect-agents/src/core/agent-generator/types/stack.js';
 import { getEnriched } from '../template-helpers.js';
 
 /**
@@ -74,7 +75,7 @@ ${config.goldenRules.map((r, i) => `║  ${i + 1}. ${r.padEnd(55)}║`).join('\n
 | **Stack** | ${stackLabel} |
 | **Score** | ${report.score.overall}/100 |
 | **Linguagens** | ${stack.languages.join(', ')} |
-| **Frameworks** | ${enriched.detectedFrameworks?.filter((f: any) => f.category === 'web' || f.category === 'orm').map((f: any) => `${f.name}${f.version ? ` v${f.version}` : ''}`).join(', ') || stack.frameworks.join(', ') || 'Nenhum detectado'} |
+| **Frameworks** | ${enriched.detectedFrameworks?.filter((f: FrameworkInfo) => f.category === 'web' || f.category === 'orm').map((f: FrameworkInfo) => `${f.name}${f.version ? ` v${f.version}` : ''}`).join(', ') || stack.frameworks.join(', ') || 'Nenhum detectado'} |
 | **Cobertura Mínima** | ${config.coverageMinimum}% |
 | **Score Mínimo** | ${config.scoreThreshold}/100 |
 

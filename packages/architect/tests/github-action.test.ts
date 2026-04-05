@@ -93,16 +93,16 @@ describe('GithubActionAdapter', () => {
 
   it('should output validation errors in the comment', async () => {
     await adapter.postComment(mockHeadReport, mockBaseReport, mockValidation);
-    
-    const callArgs = createCommentMock.mock.calls[0][0] as any;
+
+    const callArgs = createCommentMock.mock.calls[0]![0] as any;
     expect(callArgs.body).toContain('❌ **Quality Gates Failed!**');
     expect(callArgs.body).toContain('`min_overall_score`');
   });
 
   it('should list anti-patterns in the report', async () => {
     await adapter.postComment(mockHeadReport, null);
-    
-    const callArgs = createCommentMock.mock.calls[0][0] as any;
+
+    const callArgs = createCommentMock.mock.calls[0]![0] as any;
     expect(callArgs.body).toContain('### ⚠️ Anti-Patterns Detected');
     expect(callArgs.body).toContain('God Class');
   });

@@ -39,7 +39,7 @@ export class StackDetector {
     }
 
     // ── Derived Properties ──
-    const primary = languages.size > 0 ? [...languages][0] : 'Unknown';
+    const primary = languages.size > 0 ? [...languages][0]! : 'Unknown';
 
     // Frontend frameworks that indicate hasFrontend
     const FRONTEND_FRAMEWORKS = new Set([

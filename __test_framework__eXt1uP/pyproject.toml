@@ -1,0 +1,5 @@
+[project]
+dependencies = [
+  "fastapi>=0.109.0",
+  "sqlalchemy>=2.0.0"
+]

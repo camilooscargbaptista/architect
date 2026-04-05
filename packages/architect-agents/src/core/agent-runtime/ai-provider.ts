@@ -11,6 +11,23 @@ export interface AIProvider {
   executeRefactoringPrompt(fileContent: string, prompt: string): Promise<string>;
 }
 
+// ── API Response Types (Fase 2.3 — eliminates `data: any`) ──────────
+
+/** OpenAI Chat Completion response shape. */
+interface OpenAIResponse {
+  choices: Array<{ message: { content: string } }>;
+}
+
+/** Anthropic Messages API response shape. */
+interface AnthropicResponse {
+  content: Array<{ text: string }>;
+}
+
+/** Google Gemini generateContent response shape. */
+interface GeminiResponse {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+}
+
 export class OpenAIProvider implements AIProvider {
   private apiKey: string;
   private model: string;
@@ -50,8 +67,8 @@ Do NOT include explanations or prefix/suffix text. Your complete response must b
       throw new Error(`OpenAI API Error (${response.status}): ${err}`);
     }
 
-    const data: any = await response.json();
-    let newCode = data.choices[0].message.content.trim();
+    const data = (await response.json()) as OpenAIResponse;
+    let newCode = data.choices[0]!.message.content.trim();
     
     // Safety check just in case LLM injected markdown blocks
     if (newCode.startsWith('```') && newCode.endsWith('```')) {
@@ -71,7 +88,7 @@ export class AnthropicProvider implements AIProvider {
 
   constructor(apiKey: string, model?: string) {
     this.apiKey = apiKey;
-    this.model = model || process.env.ANTHROPIC_MODEL_NAME || 'claude-3-5-sonnet-20241022';
+    this.model = model || process.env['ANTHROPIC_MODEL_NAME'] || 'claude-3-5-sonnet-20241022';
   }
 
   async executeRefactoringPrompt(fileContent: string, prompt: string): Promise<string> {
@@ -99,8 +116,8 @@ export class AnthropicProvider implements AIProvider {
       throw new Error(`Anthropic API Error (${response.status}): ${err}`);
     }
 
-    const data: any = await response.json();
-    let newCode = data.content[0].text.trim();
+    const data = (await response.json()) as AnthropicResponse;
+    let newCode = data.content[0]!.text.trim();
     if (newCode.startsWith('```') && newCode.endsWith('```')) {
       const lines = newCode.split('\n');
       lines.shift(); lines.pop();
@@ -141,7 +158,7 @@ export class GeminiProvider implements AIProvider {
       throw new Error(`Gemini API Error (${response.status}): ${err}`);
     }
 
-    const data: any = await response.json();
+    const data = (await response.json()) as GeminiResponse;
     const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     let newCode = candidate.trim();
     
@@ -155,24 +172,49 @@ export class GeminiProvider implements AIProvider {
 }
 
 export class ModelProviderFactory {
-  static createProvider(): AIProvider {
-    if (process.env.ANTHROPIC_API_KEY) {
-      return new AnthropicProvider(process.env.ANTHROPIC_API_KEY);
+  static getAvailableProviders(): string[] {
+    const list: string[] = [];
+    if (process.env['ANTHROPIC_API_KEY']) list.push('Anthropic (Claude)');
+    if (process.env['OPENAI_API_KEY']) list.push('OpenAI/Compatible');
+    if (process.env['GEMINI_API_KEY']) list.push('Gemini');
+    return list;
+  }
+
+  static createSpecificProvider(providerType: string): AIProvider {
+    if (providerType.includes('Anthropic') && process.env['ANTHROPIC_API_KEY']) {
+      return new AnthropicProvider(process.env['ANTHROPIC_API_KEY']);
     }
-    
-    if (process.env.OPENAI_API_KEY) {
-      // Allow overriding API URL for OpenAI compatibles (e.g. DeepSeek, Groq, local LMStudio)
-      const model = process.env.OPENAI_MODEL_NAME || 'gpt-4o';
-      const apiUrl = process.env.OPENAI_BASE_URL 
-        ? `${process.env.OPENAI_BASE_URL.replace(/\/$/, '')}/chat/completions`
+    if (providerType.includes('OpenAI') && process.env['OPENAI_API_KEY']) {
+      const model = process.env['OPENAI_MODEL_NAME'] || 'gpt-4o';
+      const apiUrl = process.env['OPENAI_BASE_URL']
+        ? `${process.env['OPENAI_BASE_URL']!.replace(/\/$/, '')}/chat/completions`
         : undefined;
-      return new OpenAIProvider(process.env.OPENAI_API_KEY, model, apiUrl);
+      return new OpenAIProvider(process.env['OPENAI_API_KEY']!, model, apiUrl);
+    }
+    if (providerType.includes('Gemini') && process.env['GEMINI_API_KEY']) {
+      return new GeminiProvider(process.env['GEMINI_API_KEY']);
+    }
+    throw new Error(`Provider ${providerType} not configured or missing API key.`);
+  }
+
+  static createProvider(): AIProvider {
+    if (process.env['ANTHROPIC_API_KEY']) {
+      return new AnthropicProvider(process.env['ANTHROPIC_API_KEY']);
     }
 
-    if (process.env.GEMINI_API_KEY) {
-      return new GeminiProvider(process.env.GEMINI_API_KEY);
+    if (process.env['OPENAI_API_KEY']) {
+      // Allow overriding API URL for OpenAI compatibles (e.g. DeepSeek, Groq, local LMStudio)
+      const model = process.env['OPENAI_MODEL_NAME'] || 'gpt-4o';
+      const apiUrl = process.env['OPENAI_BASE_URL']
+        ? `${process.env['OPENAI_BASE_URL']!.replace(/\/$/, '')}/chat/completions`
+        : undefined;
+      return new OpenAIProvider(process.env['OPENAI_API_KEY']!, model, apiUrl);
     }
-    
+
+    if (process.env['GEMINI_API_KEY']) {
+      return new GeminiProvider(process.env['GEMINI_API_KEY']);
+    }
+
     throw new Error('No AI API Key found in environment variables. Define OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY to execute AI-based refactoring.');
   }
 }

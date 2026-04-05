@@ -14,7 +14,7 @@ public detect(projectPath: string, out: FrameworkInfo[]): void {
     for (const line of lines) {
       const match = line.match(/^\s*(github\.com\/[^\s]+)/);
       if (match) {
-        const modPath = match[1].toLowerCase();
+        const modPath = match[1]!.toLowerCase();
         for (const [key, fwInfo] of Object.entries(FRAMEWORK_MAP)) {
           if (modPath.includes(key.toLowerCase())) {
             out.push({ name: fwInfo.name, version: null, category: fwInfo.category, confidence: 0.9 });

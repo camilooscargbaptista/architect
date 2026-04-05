@@ -91,7 +91,7 @@ public inferModuleName(filePath: string): string | null {
     const lower = filePath.toLowerCase();
 
     // Skip __init__.py / index files as standalone modules
-    const fileName = parts[parts.length - 1].toLowerCase();
+    const fileName = parts[parts.length - 1]!.toLowerCase();
     if (fileName === '__init__.py' || fileName === 'index.ts' || fileName === 'index.js' || fileName === 'index.py') {
       // Only process if it's in a meaningful directory
     }
@@ -99,8 +99,8 @@ public inferModuleName(filePath: string): string | null {
     // ── Strategy 1: Explicit module markers ──
     const moduleMarkers = ['modules', 'features', 'apps', 'domains', 'packages', 'components', 'pages', 'bundles'];
     for (let i = 0; i < parts.length; i++) {
-      if (moduleMarkers.includes(parts[i].toLowerCase()) && parts[i + 1]) {
-        return parts[i + 1];
+      if (moduleMarkers.includes(parts[i]!.toLowerCase()) && parts[i + 1]) {
+        return parts[i + 1]!;
       }
     }
 
@@ -110,8 +110,8 @@ public inferModuleName(filePath: string): string | null {
       'core', 'adapters', 'ports', 'usecases', 'use_cases',
     ]);
     for (let i = 0; i < parts.length - 1; i++) {
-      if (cleanArchLayers.has(parts[i].toLowerCase()) && parts[i + 1]) {
-        const nextDir = parts[i + 1].toLowerCase();
+      if (cleanArchLayers.has(parts[i]!.toLowerCase()) && parts[i + 1]) {
+        const nextDir = parts[i + 1]!.toLowerCase();
         const subLayers = new Set([
           'services', 'entities', 'models', 'repositories', 'interfaces',
           'value_objects', 'events', 'exceptions', 'enums', 'dto', 'dtos',
@@ -123,14 +123,14 @@ public inferModuleName(filePath: string): string | null {
         ]);
 
         if (subLayers.has(nextDir)) {
-          if (parts[i + 2] && !parts[i + 2].includes('.')) {
-            return parts[i + 2]; // e.g., infrastructure/extraction/extractors → extractors
+          if (parts[i + 2] && !parts[i + 2]!.includes('.')) {
+            return parts[i + 2]!; // e.g., infrastructure/extraction/extractors → extractors
           }
-          return `${parts[i]}/${parts[i + 1]}`;
+          return `${parts[i]!}/${parts[i + 1]!}`;
         }
 
         if (!this.layerClassifier.isGenericDir(nextDir) && nextDir.length > 2 && !nextDir.startsWith('__')) {
-          return parts[i + 1];
+          return parts[i + 1]!;
         }
       }
     }
@@ -138,7 +138,7 @@ public inferModuleName(filePath: string): string | null {
     // ── Strategy 3: Django apps pattern ──
     const djangoMarkers = ['views.py', 'models.py', 'urls.py', 'serializers.py', 'admin.py', 'apps.py', 'forms.py'];
     if (djangoMarkers.some(m => lower.endsWith(m))) {
-      const parentDir = parts[parts.length - 2];
+      const parentDir = parts[parts.length - 2]!;
       if (parentDir && !this.layerClassifier.isGenericDir(parentDir.toLowerCase())) {
         return parentDir;
       }
@@ -147,18 +147,18 @@ public inferModuleName(filePath: string): string | null {
     // ── Strategy 4: Java/PHP package-based ──
     const javaPackageMarkers = ['com', 'org', 'net', 'io', 'br'];
     for (let i = 0; i < parts.length; i++) {
-      if (javaPackageMarkers.includes(parts[i].toLowerCase()) && parts[i + 2]) {
-        return parts[i + 2];
+      if (javaPackageMarkers.includes(parts[i]!.toLowerCase()) && parts[i + 2]) {
+        return parts[i + 2]!;
       }
     }
 
     // PHP namespace: App/Http/Controllers/UserController.php → user
     if (lower.includes('/http/controllers/') || lower.includes('/http/requests/')) {
-      const parentDir = parts[parts.length - 2];
+      const parentDir = parts[parts.length - 2]!;
       if (parentDir && parentDir.toLowerCase() !== 'controllers' && parentDir.toLowerCase() !== 'requests') {
         return parentDir;
       }
-      const baseName = parts[parts.length - 1]
+      const baseName = parts[parts.length - 1]!
         .replace(/\.[^.]+$/, '')
         .replace(/(Controller|Request|Resource|Policy|Observer|Event)$/i, '');
       if (baseName.length > 2) return baseName;
@@ -166,7 +166,7 @@ public inferModuleName(filePath: string): string | null {
 
     // ── Strategy 5: Go package ──
     if (lower.endsWith('.go')) {
-      const parentDir = parts[parts.length - 2];
+      const parentDir = parts[parts.length - 2]!;
       if (parentDir && !this.layerClassifier.isGenericDir(parentDir.toLowerCase()) && parentDir !== 'cmd' && parentDir !== 'internal' && parentDir !== 'pkg') {
         return parentDir;
       }
@@ -175,15 +175,18 @@ public inferModuleName(filePath: string): string | null {
     // ── Strategy 6: Fallback — walk from end, find first non-generic dir ──
     const extraGenericForFallback = new Set(['__pycache__', 'node_modules', 'dist', 'build', '.git', 'vendor', 'target']);
     for (let i = parts.length - 2; i >= 0; i--) {
-      const dir = parts[i].toLowerCase();
-      if (
-        !this.layerClassifier.isGenericDir(dir) &&
-        !extraGenericForFallback.has(dir) &&
-        dir.length > 2 &&
-        !dir.startsWith('.') &&
-        !dir.startsWith('__')
-      ) {
-        return parts[i];
+      const part = parts[i];
+      if (part) {
+        const dir = part.toLowerCase();
+        if (
+          !this.layerClassifier.isGenericDir(dir) &&
+          !extraGenericForFallback.has(dir) &&
+          dir.length > 2 &&
+          !dir.startsWith('.') &&
+          !dir.startsWith('__')
+        ) {
+          return part;
+        }
       }
     }
 

@@ -211,9 +211,9 @@ export class GitHistoryAnalyzer {
         const parts = line.split('|');
         if (parts.length >= 4) {
           current = {
-            hash: parts[0],
-            author: parts[1],
-            date: new Date(parts[2]),
+            hash: parts[0]!,
+            author: parts[1]!,
+            date: new Date(parts[2]!),
             message: parts.slice(3).join('|'),
             files: [],
           };
@@ -227,8 +227,8 @@ export class GitHistoryAnalyzer {
         if (filePath && !filePath.includes('{') /* skip renames */) {
           current.files.push({
             path: filePath,
-            additions: parseInt(add, 10) || 0,
-            deletions: parseInt(del, 10) || 0,
+            additions: parseInt(add!, 10) || 0,
+            deletions: parseInt(del!, 10) || 0,
           });
         }
       }
@@ -419,13 +419,13 @@ export class GitHistoryAnalyzer {
 
       const [fileA, fileB] = key.split('|||');
       const maxCommits = Math.max(
-        fileCommitCount.get(fileA) || 1,
-        fileCommitCount.get(fileB) || 1,
+        fileCommitCount.get(fileA!) || 1,
+        fileCommitCount.get(fileB!) || 1,
       );
 
       couplings.push({
-        fileA,
-        fileB,
+        fileA: fileA!,
+        fileB: fileB!,
         cochangeCount: count,
         confidence: Math.round((count / maxCommits) * 100) / 100,
       });
@@ -445,7 +445,7 @@ export class GitHistoryAnalyzer {
     const toMonday = (d: Date): string => {
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-      return d.toISOString().split('T')[0];
+      return d.toISOString().split('T')[0]!;
     };
     const now = new Date();
 
@@ -485,12 +485,12 @@ export class GitHistoryAnalyzer {
   private getSinceDate(): string {
     const d = new Date();
     d.setDate(d.getDate() - (this.config.periodWeeks * 7));
-    return d.toISOString().split('T')[0];
+    return d.toISOString().split('T')[0]!;
   }
 
   private getModulePath(filePath: string): string {
     const parts = filePath.split('/');
     // Use first directory as module, or "root" if no directory
-    return parts.length > 1 ? parts[0] : 'root';
+    return parts.length > 1 ? parts[0]! : 'root';
   }
 }

@@ -1,8 +1,8 @@
 {
-  "name": "architect-vscode",
+  "name": "architect-intelligence",
   "displayName": "Architect Intelligence",
-  "description": "Enterprise architecture guardrail and AI autonomous agent orchestrator",
-  "version": "8.1.0",
+  "description": "Enterprise architecture analysis — inline scores, hub detection, forecast overlays, and AI-powered refactoring",
+  "version": "9.0.0",
   "publisher": "camilooscargbaptista",
   "repository": {
     "type": "git",
@@ -14,35 +14,131 @@
   "categories": [
     "Machine Learning",
     "Testing",
-    "Programming Languages"
+    "Programming Languages",
+    "Linters"
   ],
+  "keywords": [
+    "architecture",
+    "code-quality",
+    "anti-patterns",
+    "refactoring",
+    "forecast",
+    "dependency-analysis"
+  ],
+  "icon": "icon.png",
   "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onLanguage:python",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:java"
+  ],
   "contributes": {
     "commands": [
       {
         "command": "architect.analyze",
-        "title": "Architect: Analyze Security & Patterns"
+        "title": "Architect: Analyze Architecture",
+        "icon": "$(circuit-board)"
       },
       {
         "command": "architect.refactor",
-        "title": "Architect: Generate Refactoring Plan"
+        "title": "Architect: Interactive Refactoring",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "architect.forecast",
+        "title": "Architect: Forecast Score Decay",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "architect.genesis",
+        "title": "Architect: Open Genesis Terminal",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "architect.genesisFile",
+        "title": "Architect: Generate Refactoring Prompt for This File",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "architect.pluginList",
+        "title": "Architect: List Plugins"
+      },
+      {
+        "command": "architect.showAntiPatterns",
+        "title": "Architect: Show Anti-Patterns",
+        "icon": "$(bug)"
+      },
+      {
+        "command": "architect.splitHub",
+        "title": "Architect: Split Hub File",
+        "icon": "$(split-horizontal)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "architect.genesisFile",
+          "group": "architect@1",
+          "when": "resourceLangId =~ /typescript|javascript|python|go|rust|java/"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "architect.analyze",
+          "group": "navigation",
+          "when": "resourceLangId =~ /typescript|javascript|python|go|rust|java/"
+        }
+      ],
+      "commandPalette": [
+        { "command": "architect.analyze" },
+        { "command": "architect.refactor" },
+        { "command": "architect.forecast" },
+        { "command": "architect.genesis" },
+        { "command": "architect.genesisFile" },
+        { "command": "architect.pluginList" },
+        { "command": "architect.showAntiPatterns" },
+        { "command": "architect.splitHub", "when": "false" }
+      ]
+    },
+    "configuration": {
+      "title": "Architect Intelligence",
+      "properties": {
+        "architect.autoAnalyzeOnOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically run architecture analysis when opening a workspace"
+        },
+        "architect.analyzeOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Re-run architecture analysis whenever a file is saved"
+        },
+        "architect.hubThreshold": {
+          "type": "number",
+          "default": 5,
+          "minimum": 2,
+          "maximum": 50,
+          "description": "Minimum number of dependents for a file to be flagged as a Hub in Code Lens"
+        }
+      }
+    }
   },
-  "activationEvents": [],
   "scripts": {
     "vscode:prepublish": "npm run build",
-    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
-    "watch": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --watch"
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=es2022",
+    "watch": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --target=es2022 --watch",
+    "package": "npm run build && vsce package --no-dependencies",
+    "publish:vscode": "npm run build && vsce publish --no-dependencies",
+    "publish:openvsx": "npm run build && npx ovsx publish --no-dependencies"
   },
-  "files": [
-    "dist"
-  ],
   "dependencies": {},
   "devDependencies": {
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.20.2",
     "typescript": "^5.5.0",
-    "vsce": "^2.15.0"
+    "@vscode/vsce": "^2.26.0"
   }
 }

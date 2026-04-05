@@ -1,25 +1,45 @@
-import { ArchitectureScore, DependencyEdge, AntiPattern} from './types/core.js';
+import { ArchitectureScore, DependencyEdge, AntiPattern } from './types/core.js';
 import { basename } from 'path';
 
+/**
+ * Barrel/index files that naturally have many connections and should be
+ * excluded from coupling max-edge penalty calculations.
+ * Promoted from class static to module-level for clarity (Fase 2.2).
+ */
+const BARREL_FILES = new Set([
+  '__init__.py', 'index.ts', 'index.js', 'index.tsx', 'index.jsx',
+  'mod.rs', '__init__.pyi', 'types.ts', 'types.js', 'logger.ts', 'logger.js',
+]);
+
+/**
+ * Architecture Scorer — Pure Function Implementation.
+ *
+ * All methods are stateless: they take input and return output with zero
+ * side effects. The class is used for encapsulation only, not for state.
+ *
+ * Fase 2.2: Confirmed pure — no mutable instance state. All calculation
+ * methods are now static to enforce this guarantee at the type level.
+ *
+ * Scoring weights:
+ *   Modularity  40%  — module boundaries and SRP
+ *   Coupling    25%  — inter-module dependencies
+ *   Cohesion    20%  — related functionality co-location
+ *   Layering    15%  — architectural layer adherence
+ */
 export class ArchitectureScorer {
   /**
-   * Barrel/index files that naturally have many connections and should be
-   * excluded from coupling max-edge penalty calculations.
+   * Compute a complete architecture score from edges, anti-patterns, and file count.
+   * Pure function — no side effects, no instance state mutation.
    */
-  private static readonly BARREL_FILES = new Set([
-    '__init__.py', 'index.ts', 'index.js', 'index.tsx', 'index.jsx',
-    'mod.rs', '__init__.pyi', 'types.ts', 'types.js', 'logger.ts', 'logger.js'
-  ]);
-
   score(
     edges: DependencyEdge[],
     antiPatterns: AntiPattern[],
-    totalFiles: number
+    totalFiles: number,
   ): ArchitectureScore {
-    const modularity = this.calculateModularity(edges, totalFiles);
-    const coupling = this.calculateCoupling(edges, totalFiles);
-    const cohesion = this.calculateCohesion(edges);
-    const layering = this.calculateLayering(antiPatterns, totalFiles);
+    const modularity = ArchitectureScorer.calculateModularity(edges, totalFiles);
+    const coupling = ArchitectureScorer.calculateCoupling(edges, totalFiles);
+    const cohesion = ArchitectureScorer.calculateCohesion(edges);
+    const layering = ArchitectureScorer.calculateLayering(antiPatterns, totalFiles);
 
     const components = [
       {
@@ -53,10 +73,10 @@ export class ArchitectureScorer {
     ];
 
     const overall = Math.round(
-      components[0].score * components[0].weight +
-      components[1].score * components[1].weight +
-      components[2].score * components[2].weight +
-      components[3].score * components[3].weight
+      components[0]!.score * components[0]!.weight +
+      components[1]!.score * components[1]!.weight +
+      components[2]!.score * components[2]!.weight +
+      components[3]!.score * components[3]!.weight
     );
 
     return {
@@ -71,7 +91,7 @@ export class ArchitectureScorer {
     };
   }
 
-  private calculateModularity(edges: DependencyEdge[], totalFiles: number): number {
+  static calculateModularity(edges: DependencyEdge[], totalFiles: number): number {
     if (totalFiles === 0) return 50;
 
     const avgEdgesPerFile = edges.length / totalFiles;
@@ -83,17 +103,17 @@ export class ArchitectureScorer {
     return 30;
   }
 
-  private calculateCoupling(edges: DependencyEdge[], totalFiles: number): number {
+  static calculateCoupling(edges: DependencyEdge[], totalFiles: number): number {
     if (totalFiles === 0 || totalFiles === 1) return 50;
 
     const nonBarrelEdges = edges.filter((e) => {
       const fromFile = basename(e.from);
       const toFile = basename(e.to);
-      return !ArchitectureScorer.BARREL_FILES.has(fromFile) &&
-             !ArchitectureScorer.BARREL_FILES.has(toFile);
+      return !BARREL_FILES.has(fromFile) &&
+             !BARREL_FILES.has(toFile);
     });
 
-    const nodeWithMaxEdges = this.findNodeWithMaxEdges(nonBarrelEdges);
+    const nodeWithMaxEdges = ArchitectureScorer.findNodeWithMaxEdges(nonBarrelEdges);
     const maxEdgeCount = nodeWithMaxEdges ? nodeWithMaxEdges.count : 0;
 
     const effectiveFiles = Math.max(totalFiles - 1, 1);
@@ -108,7 +128,7 @@ export class ArchitectureScorer {
     return 20;
   }
 
-  private findNodeWithMaxEdges(edges: DependencyEdge[]): { node: string; count: number } | null {
+  static findNodeWithMaxEdges(edges: DependencyEdge[]): { node: string; count: number } | null {
     const nodeEdgeCount: Record<string, number> = {};
 
     for (const edge of edges) {
@@ -129,11 +149,11 @@ export class ArchitectureScorer {
     return maxNode ? { node: maxNode, count: maxCount } : null;
   }
 
-  private calculateCohesion(edges: DependencyEdge[]): number {
+  static calculateCohesion(edges: DependencyEdge[]): number {
     if (edges.length === 0) return 50;
 
     const internalEdges = edges.filter((e) =>
-      this.isInternalDependency(e.from, e.to)
+      ArchitectureScorer.isInternalDependency(e.from, e.to)
     ).length;
 
     const cohesionRatio = internalEdges / edges.length;
@@ -146,7 +166,7 @@ export class ArchitectureScorer {
     return 30;
   }
 
-  private isInternalDependency(from: string, to: string): boolean {
+  static isInternalDependency(from: string, to: string): boolean {
     const fromParts = from.split('/');
     const toParts = to.split('/');
 
@@ -158,7 +178,7 @@ export class ArchitectureScorer {
     return fromTopLevel === toTopLevel;
   }
 
-  private calculateLayering(antiPatterns: AntiPattern[], totalFiles?: number): number {
+  static calculateLayering(antiPatterns: AntiPattern[], totalFiles?: number): number {
     const layeringViolations = antiPatterns.filter(
       (p) =>
         p.name === 'Leaky Abstraction' ||

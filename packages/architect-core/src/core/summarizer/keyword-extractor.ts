@@ -20,8 +20,8 @@ public extractKeywords(
     const keywords = new Set<string>();
 
     // From package.json keywords
-    if (Array.isArray(packageInfo.keywords)) {
-      for (const kw of packageInfo.keywords) {
+    if (Array.isArray(packageInfo['keywords'])) {
+      for (const kw of packageInfo['keywords']) {
         if (typeof kw === 'string') keywords.add(kw.toLowerCase());
       }
     }

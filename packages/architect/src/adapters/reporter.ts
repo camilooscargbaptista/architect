@@ -135,7 +135,7 @@ export class ReportGenerator {
       section += `### ${severity} Priority\n\n`;
 
       for (let i = 0; i < suggestions.length; i++) {
-        const suggestion = suggestions[i];
+        const suggestion = suggestions[i]!;
         section += `${i + 1}. **${suggestion.title}**\n`;
         section += `   ${suggestion.description}\n`;
         section += `   Impact: ${suggestion.impact}\n\n`;
@@ -157,7 +157,7 @@ export class ReportGenerator {
 
     for (const suggestion of suggestions) {
       if (grouped[suggestion.priority]) {
-        grouped[suggestion.priority].push(suggestion);
+        grouped[suggestion.priority]!.push(suggestion);
       }
     }
 

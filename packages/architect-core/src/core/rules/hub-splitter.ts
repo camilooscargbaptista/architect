@@ -1,48 +1,64 @@
-import { basename, dirname} from 'path';
-import { AnalysisReport } from '../types/core.js';
+import { basename, dirname } from 'path';
+import { AnalysisReport, DependencyIndex } from '../types/core.js';
 import { RefactorRule, RefactorStep, FileOperation } from '../types/rules.js';
+import { detectLanguage } from '../utils/stdlib-registry.js';
+import { getExtension, getBarrelFilenames, generateSplitFileContent } from '../utils/language-utils.js';
 
 /**
  * Hub Splitter Rule (Tier 1)
- * Detects files with many connections and generates split plans.
+ *
+ * Detects files with many incoming connections (8+) and generates split plans.
  * A "hub" is a file that many other files depend on, creating tight coupling.
+ *
+ * v8.2.0 — External dependency filtering is now centralized in RefactorEngine.
+ * This rule receives a pre-cleaned graph with only internal project files.
  */
 export class HubSplitterRule implements RefactorRule {
   name = 'hub-splitter';
   tier = 1 as const;
 
-  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string, index?: DependencyIndex): RefactorStep[] {
     const steps: RefactorStep[] = [];
+    const language = detectLanguage(report.projectInfo);
 
-    // Count connections per node
+    // ── Fase 2.6: Use pre-computed index for O(1) per-file lookups ──
+    // Falls back to O(E) scan if index not provided (backward compat).
     const connectionCount: Record<string, { incoming: string[]; outgoing: string[] }> = {};
 
-    for (const edge of report.dependencyGraph.edges) {
-      if (!connectionCount[edge.from]) connectionCount[edge.from] = { incoming: [], outgoing: [] };
-      if (!connectionCount[edge.to]) connectionCount[edge.to] = { incoming: [], outgoing: [] };
-      connectionCount[edge.from].outgoing.push(edge.to);
-      connectionCount[edge.to].incoming.push(edge.from);
+    if (index) {
+      for (const node of report.dependencyGraph.nodes) {
+        connectionCount[node] = {
+          incoming: (index.incomingByFile.get(node) ?? []).map(e => e.from),
+          outgoing: (index.outgoingByFile.get(node) ?? []).map(e => e.to),
+        };
+      }
+    } else {
+      for (const edge of report.dependencyGraph.edges) {
+        if (!connectionCount[edge.from]) connectionCount[edge.from] = { incoming: [], outgoing: [] };
+        if (!connectionCount[edge.to]) connectionCount[edge.to] = { incoming: [], outgoing: [] };
+        connectionCount[edge.from]!.outgoing.push(edge.to);
+        connectionCount[edge.to]!.incoming.push(edge.from);
+      }
     }
 
-    // Find hubs (5+ incoming connections, not barrel files)
-    const barrelFiles = new Set(['__init__.py', 'index.ts', 'index.js', 'index.tsx', 'mod.rs']);
+    const barrelFiles = getBarrelFilenames(language);
 
     for (const [file, connections] of Object.entries(connectionCount)) {
       const fileName = basename(file);
       if (barrelFiles.has(fileName)) continue;
-      
-      // Ignora Tipos base/DTOs - Alto acoplamento em tipos é sinal de maturidade, não gargalo
+
+      // Ignora Tipos base/DTOs — alto acoplamento em tipos é sinal de maturidade, não gargalo
       const lowerFile = file.toLowerCase();
       if (lowerFile.includes('types') || lowerFile.includes('interface') || lowerFile.includes('/types/')) {
         continue;
       }
-      
-      // Tolerância Arquitetural: Eleva de 5 pra 8 dependentes pra engatilhar quebra (Módulos Coesos maduros)
+
+      // Tolerância Arquitetural: 8+ dependentes para engatilhar quebra
       if (connections.incoming.length < 8) continue;
 
       const operations: FileOperation[] = [];
 
-      // Determine if this is a dot-notation module or a real file
+      // Determine if this is a dot-notation module or a real file path
       const isDotNotation = !file.includes('/') && !file.includes('\\');
       const moduleName = isDotNotation
         ? file.split('.').pop() || file
@@ -50,7 +66,10 @@ export class HubSplitterRule implements RefactorRule {
       const moduleDir = isDotNotation
         ? file.split('.').slice(0, -1).join('/')
         : dirname(file);
-      const ext = isDotNotation ? 'py' : (fileName.split('.').pop() || 'py');
+
+      const ext = fileName.includes('.')
+        ? (fileName.split('.').pop() || getExtension(language))
+        : getExtension(language);
 
       // Analyze what dependents import to suggest groupings
       const dependentGroups = this.groupDependents(connections.incoming);
@@ -65,9 +84,7 @@ export class HubSplitterRule implements RefactorRule {
             type: 'CREATE',
             path: newPath,
             description: `Create \`${newFileName}\` with functionality used by: ${group.dependents.join(', ')}`,
-            content: ext === 'py'
-              ? `"""${moduleName}_${group.name} — extracted from ${moduleName}."""\n# Used by: ${group.dependents.join(', ')}\n`
-              : `// ${moduleName}_${group.name} — extracted from ${moduleName}\n// Used by: ${group.dependents.join(', ')}\n`,
+            content: generateSplitFileContent(language, moduleName, group.name, group.dependents),
           });
         }
 
@@ -115,16 +132,16 @@ export class HubSplitterRule implements RefactorRule {
   }
 
   private groupDependents(
-    dependents: string[]
+    dependents: string[],
   ): Array<{ name: string; dependents: string[] }> {
     // Group by top-level directory
     const groups: Record<string, string[]> = {};
 
     for (const dep of dependents) {
       const parts = dep.includes('/') ? dep.split('/') : dep.split('.');
-      const groupName = parts.length >= 2 ? parts[parts.length - 2] : 'core';
+      const groupName = parts.length >= 2 ? parts[parts.length - 2]! : 'core';
       if (!groups[groupName]) groups[groupName] = [];
-      groups[groupName].push(basename(dep));
+      groups[groupName]!.push(basename(dep));
     }
 
     return Object.entries(groups).map(([name, deps]) => ({

@@ -116,37 +116,37 @@ export class ProgressReporter {
     const parts: string[] = [];
     switch (phase) {
       case 'scan':
-        parts.push(`${c.white}${m.files}${c.reset}${c.dim} files${c.reset}`);
-        parts.push(`${c.white}${Number(m.lines).toLocaleString()}${c.reset}${c.dim} lines${c.reset}`);
-        parts.push(`${c.white}${m.languages}${c.reset}${c.dim} langs${c.reset}`);
+        parts.push(`${c.white}${m['files']}${c.reset}${c.dim} files${c.reset}`);
+        parts.push(`${c.white}${Number(m['lines']).toLocaleString()}${c.reset}${c.dim} lines${c.reset}`);
+        parts.push(`${c.white}${m['languages']}${c.reset}${c.dim} langs${c.reset}`);
         break;
       case 'dependencies':
-        parts.push(`${c.white}${m.edges}${c.reset}${c.dim} edges${c.reset}`);
-        parts.push(`${c.white}${m.modules}${c.reset}${c.dim} modules${c.reset}`);
+        parts.push(`${c.white}${m['edges']}${c.reset}${c.dim} edges${c.reset}`);
+        parts.push(`${c.white}${m['modules']}${c.reset}${c.dim} modules${c.reset}`);
         break;
       case 'layers':
-        parts.push(`${c.white}${m.layers}${c.reset}${c.dim} layers${c.reset}`);
-        parts.push(`${c.white}${m.classified}${c.reset}${c.dim} classified${c.reset}`);
+        parts.push(`${c.white}${m['layers']}${c.reset}${c.dim} layers${c.reset}`);
+        parts.push(`${c.white}${m['classified']}${c.reset}${c.dim} classified${c.reset}`);
         break;
       case 'antipatterns':
-        if (Number(m.total) === 0) {
+        if (Number(m['total']) === 0) {
           parts.push(`${c.green}clean${c.reset}`);
         } else {
-          parts.push(`${c.yellow}${m.total}${c.reset}${c.dim} found${c.reset}`);
-          if (Number(m.critical) > 0) parts.push(`${c.red}${m.critical} critical${c.reset}`);
-          if (Number(m.high) > 0) parts.push(`${c.orange}${m.high} high${c.reset}`);
+          parts.push(`${c.yellow}${m['total']}${c.reset}${c.dim} found${c.reset}`);
+          if (Number(m['critical']) > 0) parts.push(`${c.red}${m['critical']} critical${c.reset}`);
+          if (Number(m['high']) > 0) parts.push(`${c.orange}${m['high']} high${c.reset}`);
         }
         break;
       case 'scoring': {
-        const overall = Number(m.overall);
+        const overall = Number(m['overall']);
         const scoreColor = overall >= 80 ? c.green : overall >= 60 ? c.yellow : c.red;
         parts.push(`${scoreColor}${c.bold}${overall}/100${c.reset}`);
-        parts.push(`${c.dim}M:${m.modularity} C:${m.coupling} Co:${m.cohesion} L:${m.layering}${c.reset}`);
+        parts.push(`${c.dim}M:${m['modularity']} C:${m['coupling']} Co:${m['cohesion']} L:${m['layering']}${c.reset}`);
         break;
       }
       case 'summarize':
-        parts.push(`${c.white}${m.modules}${c.reset}${c.dim} modules${c.reset}`);
-        parts.push(`${c.white}${m.techStack}${c.reset}${c.dim} technologies${c.reset}`);
+        parts.push(`${c.white}${m['modules']}${c.reset}${c.dim} modules${c.reset}`);
+        parts.push(`${c.white}${m['techStack']}${c.reset}${c.dim} technologies${c.reset}`);
         break;
     }
     return parts.length ? `  ${c.dim}│${c.reset} ${parts.join(`${c.dim} · ${c.reset}`)}` : '';
@@ -204,10 +204,10 @@ export class ProgressReporter {
     w.write(`  ${c.bold}  ARCHITECTURE SCORE${c.reset}\n`);
     w.write(`  ${meter} ${scoreColor}${c.bold}${score}/100${c.reset} ${c.dim}(${grade})${c.reset}\n`);
     w.write('\n');
-    w.write(`  ${c.dim}  Modularity${c.reset}  ${this.miniBar(breakdown.modularity)} ${c.white}${breakdown.modularity}${c.reset}\n`);
-    w.write(`  ${c.dim}  Coupling${c.reset}    ${this.miniBar(breakdown.coupling)} ${c.white}${breakdown.coupling}${c.reset}\n`);
-    w.write(`  ${c.dim}  Cohesion${c.reset}    ${this.miniBar(breakdown.cohesion)} ${c.white}${breakdown.cohesion}${c.reset}\n`);
-    w.write(`  ${c.dim}  Layering${c.reset}    ${this.miniBar(breakdown.layering)} ${c.white}${breakdown.layering}${c.reset}\n`);
+    w.write(`  ${c.dim}  Modularity${c.reset}  ${this.miniBar(breakdown['modularity']!)} ${c.white}${breakdown['modularity']}${c.reset}\n`);
+    w.write(`  ${c.dim}  Coupling${c.reset}    ${this.miniBar(breakdown['coupling']!)} ${c.white}${breakdown['coupling']}${c.reset}\n`);
+    w.write(`  ${c.dim}  Cohesion${c.reset}    ${this.miniBar(breakdown['cohesion']!)} ${c.white}${breakdown['cohesion']}${c.reset}\n`);
+    w.write(`  ${c.dim}  Layering${c.reset}    ${this.miniBar(breakdown['layering']!)} ${c.white}${breakdown['layering']}${c.reset}\n`);
     w.write('\n');
 
     // Stats line

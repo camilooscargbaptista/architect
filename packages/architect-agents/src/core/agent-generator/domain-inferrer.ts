@@ -363,7 +363,7 @@ export class DomainInferrer {
       for (const pattern of entityPatterns) {
         const match = filePath.match(pattern);
         if (match) {
-          const name = match[1].replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).trim();
+          const name = match[1]!.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).trim();
           if (name && name !== 'Index' && name !== 'Base' && name !== 'Init') {
             const layer = this.inferEntityLayer(filePath);
             entities.push({
@@ -548,7 +548,7 @@ export class DomainInferrer {
         // Extract description
         const descMatch = content.match(/description\s*=\s*"([^"]+)"/);
         if (descMatch) {
-          const words = descMatch[1].toLowerCase().split(/\s+/);
+          const words = descMatch[1]!.toLowerCase().split(/\s+/);
           for (const w of words) {
             if (w.length > 3) keywords.push(w.replace(/[^a-z0-9]/g, ''));
           }
@@ -557,7 +557,7 @@ export class DomainInferrer {
         // Extract classifiers (e.g., "Topic :: Office/Business :: Financial")
         const classifiers = content.match(/classifiers\s*=\s*\[([\s\S]*?)\]/);
         if (classifiers) {
-          const topics = classifiers[1].match(/"Topic\s*::\s*([^"]+)"/g);
+          const topics = classifiers[1]!.match(/"Topic\s*::\s*([^"]+)"/g);
           if (topics) {
             for (const topic of topics) {
               const parts = topic.replace(/"/g, '').split('::').map(p => p.trim().toLowerCase());
@@ -571,7 +571,7 @@ export class DomainInferrer {
         // Extract project name
         const nameMatch = content.match(/\[project\]\s*\n(?:[\s\S]*?)name\s*=\s*"([^"]+)"/);
         if (nameMatch) {
-          for (const part of this.splitIdentifier(nameMatch[1])) {
+          for (const part of this.splitIdentifier(nameMatch[1]!)) {
             keywords.push(part.toLowerCase());
           }
         }

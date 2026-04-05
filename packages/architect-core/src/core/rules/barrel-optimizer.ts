@@ -1,5 +1,5 @@
 import { basename, dirname } from 'path';
-import { AnalysisReport } from '../types/core.js';
+import { AnalysisReport, DependencyIndex } from '../types/core.js';
 import { RefactorRule, RefactorStep, FileOperation } from '../types/rules.js';
 
 /**
@@ -15,7 +15,7 @@ export class BarrelOptimizerRule implements RefactorRule {
     '__init__.py', 'index.ts', 'index.js', 'index.tsx', 'index.jsx',
   ]);
 
-  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string, index?: DependencyIndex): RefactorStep[] {
     const steps: RefactorStep[] = [];
 
     // Find barrel files in the dependency graph
@@ -24,13 +24,13 @@ export class BarrelOptimizerRule implements RefactorRule {
     );
 
     for (const barrel of barrelNodes) {
-      // Count how many things this barrel re-exports (outgoing edges)
-      const outgoing = report.dependencyGraph.edges.filter(
-        (e) => e.from === barrel
-      );
-      const incoming = report.dependencyGraph.edges.filter(
-        (e) => e.to === barrel
-      );
+      // ── Fase 2.6: O(1) lookup via pre-computed index ──
+      const outgoing = index
+        ? (index.outgoingByFile.get(barrel) ?? [])
+        : report.dependencyGraph.edges.filter((e) => e.from === barrel);
+      const incoming = index
+        ? (index.incomingByFile.get(barrel) ?? [])
+        : report.dependencyGraph.edges.filter((e) => e.to === barrel);
 
       if (outgoing.length < 3) continue;
 
@@ -45,12 +45,19 @@ export class BarrelOptimizerRule implements RefactorRule {
 
       // Suggest direct imports instead of barrel
       for (const consumer of incoming) {
+        // ── Fase 2.6: Use index for O(1) consumer edge lookup ──
+        const consumerOutgoing = index
+          ? new Set((index.outgoingByFile.get(consumer.from) ?? []).map(e => e.to))
+          : null;
+
         const consumedModules = outgoing
           .filter((e) => {
             // Check if consumer actually needs this module
-            return report.dependencyGraph.edges.some(
-              (edge) => edge.from === consumer.from && edge.to === e.to
-            );
+            return consumerOutgoing
+              ? consumerOutgoing.has(e.to)
+              : report.dependencyGraph.edges.some(
+                  (edge) => edge.from === consumer.from && edge.to === e.to
+                );
           })
           .map((e) => e.to);
 

@@ -87,39 +87,45 @@ export class ConfigLoader {
       ? normalizeIgnorePatterns(user.ignore)
       : defaults.ignore;
 
-    return {
-      ignore: userIgnore,
-      plugins: user.plugins ?? defaults.plugins,
+    const detect = user.frameworks?.detect ?? defaults.frameworks?.detect;
+    const linesThreshold = user.antiPatterns?.godClass?.linesThreshold ?? defaults.antiPatterns?.godClass?.linesThreshold;
+    const methodsThreshold = user.antiPatterns?.godClass?.methodsThreshold ?? defaults.antiPatterns?.godClass?.methodsThreshold;
+    const changePropagationThreshold = user.antiPatterns?.shotgunSurgery?.changePropagationThreshold ?? defaults.antiPatterns?.shotgunSurgery?.changePropagationThreshold;
+    const modularity = user.score?.modularity ?? defaults.score?.modularity;
+    const coupling = user.score?.coupling ?? defaults.score?.coupling;
+    const cohesion = user.score?.cohesion ?? defaults.score?.cohesion;
+    const layering = user.score?.layering ?? defaults.score?.layering;
+    const enabled = user.monorepo?.enabled ?? defaults.monorepo?.enabled;
+    const treatPackagesAsModules = user.monorepo?.treatPackagesAsModules ?? defaults.monorepo?.treatPackagesAsModules;
+    const plugins = user.plugins ?? defaults.plugins;
+
+    const config: ArchitectConfig = {
+      ...(userIgnore !== undefined && { ignore: userIgnore }),
+      ...(plugins !== undefined && { plugins }),
       frameworks: {
-        detect: user.frameworks?.detect ?? defaults.frameworks?.detect,
+        ...(detect !== undefined && { detect }),
       },
       antiPatterns: {
         godClass: {
-          linesThreshold:
-            user.antiPatterns?.godClass?.linesThreshold ??
-            defaults.antiPatterns?.godClass?.linesThreshold,
-          methodsThreshold:
-            user.antiPatterns?.godClass?.methodsThreshold ??
-            defaults.antiPatterns?.godClass?.methodsThreshold,
+          ...(linesThreshold !== undefined && { linesThreshold }),
+          ...(methodsThreshold !== undefined && { methodsThreshold }),
         },
         shotgunSurgery: {
-          changePropagationThreshold:
-            user.antiPatterns?.shotgunSurgery?.changePropagationThreshold ??
-            defaults.antiPatterns?.shotgunSurgery?.changePropagationThreshold,
+          ...(changePropagationThreshold !== undefined && { changePropagationThreshold }),
         },
       },
       score: {
-        modularity: user.score?.modularity ?? defaults.score?.modularity,
-        coupling: user.score?.coupling ?? defaults.score?.coupling,
-        cohesion: user.score?.cohesion ?? defaults.score?.cohesion,
-        layering: user.score?.layering ?? defaults.score?.layering,
+        ...(modularity !== undefined && { modularity }),
+        ...(coupling !== undefined && { coupling }),
+        ...(cohesion !== undefined && { cohesion }),
+        ...(layering !== undefined && { layering }),
       },
       monorepo: {
-        enabled: user.monorepo?.enabled ?? defaults.monorepo?.enabled,
-        treatPackagesAsModules:
-          user.monorepo?.treatPackagesAsModules ??
-          defaults.monorepo?.treatPackagesAsModules,
+        ...(enabled !== undefined && { enabled }),
+        ...(treatPackagesAsModules !== undefined && { treatPackagesAsModules }),
       },
     };
+
+    return config;
   }
 }

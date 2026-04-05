@@ -73,7 +73,7 @@ public inferFileLayer(filePath: string): string {
     // Monorepo package-level classification
     const packagesMatch = lower.match(/packages\/([^/]+)/);
     if (packagesMatch) {
-      const pkgName = packagesMatch[1];
+      const pkgName = packagesMatch[1]!;
       // Classify by package name semantics
       if (['dashboard', 'web', 'frontend', 'app', 'ui'].includes(pkgName)) return 'UI';
       if (['api', 'cloud', 'server', 'backend'].includes(pkgName)) return 'API';
@@ -117,7 +117,7 @@ public inferFileLayer(filePath: string): string {
 
 public extractEntityName(filePath: string): string | null {
     const parts = filePath.split('/');
-    const fileName = parts[parts.length - 1];
+    const fileName = parts[parts.length - 1]!;
     const name = fileName
       .replace(/\.[^.]+$/, '')
       .replace(/\.(model|entity|schema|dto)$/i, '')

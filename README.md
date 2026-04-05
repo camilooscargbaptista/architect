@@ -22,9 +22,22 @@ Most AI tools just write code. **Architect Genesis actually reads your architect
 
 Understand your codebase topology in seconds. Detect severe anti-patterns, generate step-by-step refactoring execution plans, and dispatch **Context-Aware AI Agents** to autonomously fix technical debt without breaking Clean Architecture constraints.
 
+## ⚠️ Critical Notice: v8.1.0 Known Issues
+
+**v8.1.0 ships with 6 Phase 0 critical bugs** that impact Genesis output quality. **Use only for exploration, not production analysis.**
+
+See [PHASE_0_CRITICAL_BUGS.md](./PHASE_0_CRITICAL_BUGS.md) for complete list. Estimated fix time: 19 hours.
+
+Current issues:
+- Standard library modules (fs, path, os, etc) incorrectly flagged as refactoring candidates
+- Prompt generation exceeds chat UI limits (500KB+ with 52 files)
+- Generated file extensions may be incorrect for non-TypeScript projects
+
+---
+
 ## 🚀 What's New in v8.0.0 (The Genesis Monorepo)
 
-* **Architecture Intent Compiler**: Genesis doesn't just generate text; it compiles your business intent into a declarative `execution-plan.md` mapped strictly against your AST (Abstract Syntax Tree). 
+* **Architecture Intent Compiler**: Genesis doesn't just generate text; it compiles your business intent into a declarative `execution-plan.md` mapped strictly against your AST (Abstract Syntax Tree).
 * **NPM Workspaces Ecosystem**: The monolithic `architect` package has been modularized:
   * 🧠 `@girardelli/architect-core`: The headless graph analysis and AST scoring engine.
   * 🤖 `@girardelli/architect-agents`: The autonomous workflows, LLM runtime, and AI Agent generator.

@@ -219,8 +219,8 @@ describe('GitHistoryAnalyzer', () => {
       const report = await analyzer.analyze(TEST_DIR);
 
       for (let i = 1; i < report.modules.length; i++) {
-        expect(report.modules[i - 1].aggregateChurn).toBeGreaterThanOrEqual(
-          report.modules[i].aggregateChurn
+        expect(report.modules[i - 1]!.aggregateChurn).toBeGreaterThanOrEqual(
+          report.modules[i]!.aggregateChurn
         );
       }
     });
