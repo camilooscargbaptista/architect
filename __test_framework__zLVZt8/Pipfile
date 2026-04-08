@@ -1,6 +1,0 @@
-[packages]
-tornado = "*"
-peewee = ">=3.0"
-
-[dev-packages]
-pytest = "*"

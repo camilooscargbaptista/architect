@@ -1,3 +1,0 @@
-fastapi==0.109.0
-django>=4.0
-flask~=2.3.0

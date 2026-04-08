@@ -1,7 +1,0 @@
-[package]
-name = "myapp"
-version = "0.1.0"
-
-[dependencies]
-actix-web = "4.4"
-axum = "0.7"

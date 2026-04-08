@@ -1,2 +1,0 @@
-[project]
-dependencies = ["fastapi>=0.100.0"]

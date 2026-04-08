@@ -1,6 +1,0 @@
-[project]
-dependencies = ["fastapi>=0.109.0"]
-
-[project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.1.0"]
-test = ["hypothesis>=6.0"]

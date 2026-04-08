@@ -1,1 +1,0 @@
-{"name":"test-app","dependencies":{"express":"^4.18.0","@nestjs/core":"^10.0.0"},"devDependencies":{"jest":"^29.0.0","eslint":"^8.0.0"}}

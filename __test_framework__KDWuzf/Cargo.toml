@@ -1,4 +1,0 @@
-[package]
-name = "myapp"
-[dependencies]
-actix-web = "4.4"
