@@ -155,6 +155,14 @@ export interface ArchitectConfig {
     cohesion?: number;
     layering?: number;
   };
+  /**
+   * Scoring profile for adaptive weights.
+   * Options: 'auto' (default), 'frontend-spa', 'backend-monolith',
+   * 'microservices', 'data-pipeline', 'library', 'default'.
+   * 'auto' detects the best profile from frameworks and languages.
+   * @since v9.0.0
+   */
+  scoringProfile?: string;
   monorepo?: {
     enabled?: boolean;
     treatPackagesAsModules?: boolean;

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "acorn": "^8.11.0",
+    "better-sqlite3": "11.10.0",
     "glob": "^10.3.10",
     "tree-sitter": "^0.25.0",
     "tree-sitter-go": "^0.25.0",
@@ -25,5 +26,8 @@
     "tree-sitter-rust": "^0.24.0",
     "tree-sitter-typescript": "^0.23.2",
     "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13"
   }
 }

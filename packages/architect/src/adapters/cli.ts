@@ -28,6 +28,7 @@ import { writeFileSync, existsSync,  readFileSync } from 'fs';
 import { resolve, basename,  join } from 'path';
 import { logger } from '@girardelli/architect-core/src/infrastructure/logger.js';
 import { i18n } from '@girardelli/architect-core/src/core/i18n.js';
+import { KnowledgeBase } from '@girardelli/architect-core/src/core/knowledge-base/index.js';
 import * as yaml from 'yaml';
 import chokidar from 'chokidar';
 import { ArchitectRules, ValidationResult } from '@girardelli/architect-core/src/core/types/architect-rules.js';
@@ -100,6 +101,7 @@ ${c.bold}Commands:${c.reset}
   ${c.cyan}refactor${c.reset}        Generate refactoring plan (use --interactive for guided mode)
   ${c.cyan}forecast${c.reset}        Predict architecture score decay using ML regression
   ${c.cyan}plugin${c.reset}          Manage plugins (install, list, search, remove)
+  ${c.cyan}kb${c.reset}              Knowledge Base — history, trends, export, LLM context
   ${c.cyan}agents${c.reset}          Generate/audit .agent/ directory with AI agents
   ${c.cyan}diagram${c.reset}         Generate architecture diagram only
   ${c.cyan}score${c.reset}           Calculate quality score only
@@ -191,6 +193,24 @@ async function main(): Promise<void> {
           const outputPath = options.output || `architect-report-${projectName}.json`;
           writeFileSync(outputPath, JSON.stringify({ report, plan, agentSuggestion }, null, 2));
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
+        }
+
+        // Knowledge Base persistence
+        try {
+          progress.printExtraPhase('KNOWLEDGE BASE', 'Persisting analysis to KB', c.cyan);
+          const kb = new KnowledgeBase(options.path);
+          const analysisId = kb.persistAnalysis(report);
+          const stats = kb.getStats();
+          const delta = kb.getScoreDelta(kb.getProjectByPath(report.projectInfo.path)?.id ?? 0);
+          const deltaStr = delta
+            ? ` · ${delta.delta >= 0 ? '+' : ''}${delta.delta.toFixed(1)} pts since last`
+            : ' · first analysis';
+          progress.printExtraComplete(
+            `${c.white}#${analysisId}${c.reset}${c.dim} saved · ${stats.totalAnalyses} total analyses${deltaStr}${c.reset}`
+          );
+          kb.close();
+        } catch (kbErr: any) {
+          progress.printExtraComplete(`${c.dim}KB skipped: ${kbErr.message}${c.reset}`);
         }
 
         // Summary
@@ -717,6 +737,131 @@ async function main(): Promise<void> {
             process.stderr.write(`  ${c.cyan}architect plugin remove <name>${c.reset}              Remove a plugin\n`);
             process.stderr.write(`  ${c.cyan}architect plugin enable <name>${c.reset}              Enable a plugin\n`);
             process.stderr.write(`  ${c.cyan}architect plugin disable <name>${c.reset}             Disable a plugin\n\n`);
+        }
+        break;
+      }
+
+      case 'kb': {
+        const subCommand = args[1] ?? 'list';
+        const kb = new KnowledgeBase(options.path);
+
+        try {
+          switch (subCommand) {
+            case 'list': {
+              const projects = kb.listProjects();
+              process.stderr.write(`\n  ${c.bold}KNOWLEDGE BASE${c.reset} — ${projects.length} projects\n\n`);
+
+              if (projects.length === 0) {
+                process.stderr.write(`  ${c.dim}No analyses stored yet. Run 'architect analyze' to start building the KB.${c.reset}\n\n`);
+              } else {
+                for (const p of projects) {
+                  const latest = kb.getLatestAnalysis(p.id);
+                  const scoreStr = latest ? `${c.white}${latest.score.overall.toFixed(1)}${c.reset}/100` : `${c.dim}no analyses${c.reset}`;
+                  const analysisCount = kb.listAnalyses(p.id).length;
+                  process.stderr.write(
+                    `  ${c.cyan}●${c.reset} ${c.bold}${p.name}${c.reset} ${c.dim}(${p.path})${c.reset}\n` +
+                    `    Score: ${scoreStr} · ${analysisCount} analyses · ${p.primaryLanguages.join(', ')}\n\n`
+                  );
+                }
+              }
+              break;
+            }
+
+            case 'history': {
+              const project = kb.getProjectByPath(resolve(options.path));
+              if (!project) {
+                process.stderr.write(`\n  ${c.dim}No KB data for this project. Run 'architect analyze' first.${c.reset}\n\n`);
+                break;
+              }
+
+              const history = kb.getScoreHistory(project.id);
+              process.stderr.write(`\n  ${c.bold}SCORE HISTORY${c.reset} — ${project.name} (${history.length} analyses)\n\n`);
+
+              for (const point of history) {
+                const bar = '█'.repeat(Math.round(point.overall / 5));
+                const empty = '░'.repeat(20 - Math.round(point.overall / 5));
+                process.stderr.write(
+                  `  ${c.dim}${point.timestamp}${c.reset} ${c.cyan}${bar}${c.reset}${c.dim}${empty}${c.reset} ${c.white}${point.overall.toFixed(1)}${c.reset}\n`
+                );
+              }
+              process.stderr.write('\n');
+              break;
+            }
+
+            case 'trends': {
+              const project = kb.getProjectByPath(resolve(options.path));
+              if (!project) {
+                process.stderr.write(`\n  ${c.dim}No KB data for this project.${c.reset}\n\n`);
+                break;
+              }
+
+              const trends = kb.getAntiPatternTrends(project.id);
+              process.stderr.write(`\n  ${c.bold}ANTI-PATTERN TRENDS${c.reset} — ${project.name}\n\n`);
+
+              if (trends.length === 0) {
+                process.stderr.write(`  ${c.dim}No anti-patterns recorded yet.${c.reset}\n\n`);
+              } else {
+                for (const t of trends) {
+                  const severityColor = t.severity === 'CRITICAL' ? c.red : t.severity === 'HIGH' ? c.orange : c.yellow;
+                  process.stderr.write(
+                    `  ${severityColor}${t.severity.padEnd(8)}${c.reset} ${c.bold}${t.name}${c.reset} — ${t.occurrences}x (${t.firstSeen} → ${t.lastSeen})\n`
+                  );
+                }
+                process.stderr.write('\n');
+              }
+              break;
+            }
+
+            case 'export': {
+              const project = kb.getProjectByPath(resolve(options.path));
+              if (!project) {
+                process.stderr.write(`\n  ${c.dim}No KB data for this project.${c.reset}\n\n`);
+                break;
+              }
+
+              const data = kb.exportProjectHistory(project.id);
+              const outputPath = options.output || `architect-kb-${project.name.replace(/[^a-zA-Z0-9-]/g, '-')}.json`;
+              writeFileSync(outputPath, JSON.stringify(data, null, 2));
+              process.stderr.write(`\n  ${c.green}✓${c.reset} KB exported to ${c.bold}${outputPath}${c.reset}\n\n`);
+              break;
+            }
+
+            case 'context': {
+              const project = kb.getProjectByPath(resolve(options.path));
+              if (!project) {
+                process.stderr.write(`\n  ${c.dim}No KB data for this project.${c.reset}\n\n`);
+                break;
+              }
+
+              const context = kb.generateLLMContext(project.id);
+              console.log(context);
+              break;
+            }
+
+            case 'stats': {
+              const stats = kb.getStats();
+              process.stderr.write(`\n  ${c.bold}KNOWLEDGE BASE STATS${c.reset}\n\n`);
+              process.stderr.write(`  Projects:       ${c.white}${stats.totalProjects}${c.reset}\n`);
+              process.stderr.write(`  Analyses:       ${c.white}${stats.totalAnalyses}${c.reset}\n`);
+              process.stderr.write(`  Anti-patterns:  ${c.white}${stats.totalAntiPatterns}${c.reset}\n`);
+              process.stderr.write(`  Decisions:      ${c.white}${stats.totalDecisions}${c.reset}\n`);
+              process.stderr.write(`  Forecasts:      ${c.white}${stats.totalForecasts}${c.reset}\n`);
+              process.stderr.write(`  DB size:        ${c.white}${(stats.dbSizeBytes / 1024).toFixed(1)} KB${c.reset}\n`);
+              process.stderr.write(`  DB path:        ${c.dim}${kb.getDatabasePath()}${c.reset}\n\n`);
+              break;
+            }
+
+            default:
+              process.stderr.write(`\n  ${c.bold}Knowledge Base Commands:${c.reset}\n`);
+              process.stderr.write(`  ${c.cyan}architect kb list${c.reset}               List all tracked projects\n`);
+              process.stderr.write(`  ${c.cyan}architect kb history .${c.reset}           Show score history for project\n`);
+              process.stderr.write(`  ${c.cyan}architect kb trends .${c.reset}            Show anti-pattern trends\n`);
+              process.stderr.write(`  ${c.cyan}architect kb stats${c.reset}               Show KB statistics\n`);
+              process.stderr.write(`  ${c.cyan}architect kb export .${c.reset}            Export project history as JSON\n`);
+              process.stderr.write(`  ${c.cyan}architect kb context .${c.reset}           Generate LLM context summary\n\n`);
+          }
+        } finally {
+          kb.close();
         }
         break;
       }

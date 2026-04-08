@@ -9,7 +9,7 @@
 [![npm](https://img.shields.io/npm/v/@girardelli/architect?color=blue)](https://www.npmjs.com/package/@girardelli/architect)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-440%20passing-22c55e.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1034%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <p align="center">
@@ -52,16 +52,22 @@ Parses your codebase using [Tree-Sitter](https://tree-sitter.github.io/tree-sitt
 
 Builds a full dependency graph, detects architectural layers (View, Core, Data, Infrastructure), and infers your stack and domain.
 
-### Architecture Score (0-100)
+### Architecture Score (0-100) — Adaptive
 
-Scores your project on four weighted dimensions:
+Scores your project on four weighted dimensions. Weights adapt automatically to your stack:
 
-| Dimension | Weight | What it measures |
-|-----------|--------|------------------|
-| Modularity | 40% | How well-separated are your modules |
-| Coupling | 25% | Cross-boundary dependency count |
-| Cohesion | 20% | How related are elements within a module |
-| Layering | 15% | Clean layer separation |
+| Dimension | Default | Frontend SPA | Backend Monolith | Microservices |
+|-----------|---------|-------------|-----------------|---------------|
+| Modularity | 40% | 35% | 35% | 30% |
+| Coupling | 25% | 15% | 30% | 20% |
+| Cohesion | 20% | 35% | 15% | 25% |
+| Layering | 15% | 15% | 20% | 25% |
+
+6 built-in profiles: `default`, `frontend-spa`, `backend-monolith`, `microservices`, `data-pipeline`, `library`. Auto-detected from your frameworks, or set explicitly in `.architect.json`:
+
+```json
+{ "scoringProfile": "frontend-spa" }
+```
 
 ### Anti-Pattern Detection
 
@@ -114,6 +120,20 @@ Generates a tiered plan with 5 rule-based transformations:
 - Creates a protective git branch before changes
 - Each approved step gets its own commit
 - Switch AI provider mid-execution if one gives bad results
+
+### Architecture Knowledge Base
+
+Every `architect analyze` run is automatically persisted to a local SQLite database (`.architect/knowledge-base.sqlite`). Zero config — just keep analyzing and the KB tracks your history.
+
+```bash
+architect kb history .     # Score timeline with visual bars
+architect kb trends .      # Recurring anti-patterns over time
+architect kb stats         # Projects, analyses, DB size
+architect kb export .      # Full history as JSON
+architect kb context .     # Generate LLM-ready summary
+```
+
+Supports Architecture Decision Records (ADRs), validation tracking, and forecast history. The `kb context` command generates a text summary you can inject into AI prompts for architecture-aware code generation.
 
 ### Architecture Forecast
 
@@ -178,6 +198,11 @@ Monorepo with npm workspaces. Use the full CLI or just the core engine:
 | `architect score .` | Quick score output |
 | `architect anti-patterns .` | List detected anti-patterns |
 | `architect layers .` | Show layer classification |
+| `architect kb list` | List tracked projects in Knowledge Base |
+| `architect kb history .` | Show score timeline for a project |
+| `architect kb trends .` | Show anti-pattern trends over time |
+| `architect kb export .` | Export full project history as JSON |
+| `architect kb context .` | Generate LLM context summary |
 | `architect agents .` | Generate/audit `.agent/` directory |
 | `architect pr-review .` | GitHub Actions PR review |
 | `architect diagram .` | Generate architecture diagram |

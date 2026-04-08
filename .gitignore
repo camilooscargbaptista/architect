@@ -46,3 +46,6 @@ architect-diagram.mmd
 architect-report*.html
 referencia*.html
 docs/
+
+# Knowledge Base (local SQLite)
+.architect/

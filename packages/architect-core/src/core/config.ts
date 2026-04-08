@@ -34,6 +34,7 @@ const DEFAULT_CONFIG: ArchitectConfig = {
     cohesion: 0.2,
     layering: 0.15,
   },
+  scoringProfile: 'auto',
   monorepo: {
     enabled: true,
     treatPackagesAsModules: true,
@@ -98,6 +99,7 @@ export class ConfigLoader {
     const enabled = user.monorepo?.enabled ?? defaults.monorepo?.enabled;
     const treatPackagesAsModules = user.monorepo?.treatPackagesAsModules ?? defaults.monorepo?.treatPackagesAsModules;
     const plugins = user.plugins ?? defaults.plugins;
+    const scoringProfile = user.scoringProfile ?? defaults.scoringProfile;
 
     const config: ArchitectConfig = {
       ...(userIgnore !== undefined && { ignore: userIgnore }),
@@ -120,6 +122,7 @@ export class ConfigLoader {
         ...(cohesion !== undefined && { cohesion }),
         ...(layering !== undefined && { layering }),
       },
+      ...(scoringProfile !== undefined && { scoringProfile }),
       monorepo: {
         ...(enabled !== undefined && { enabled }),
         ...(treatPackagesAsModules !== undefined && { treatPackagesAsModules }),

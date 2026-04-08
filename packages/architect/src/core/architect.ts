@@ -2,6 +2,7 @@ import { ProjectScanner } from '@girardelli/architect-core/src/infrastructure/sc
 import { ArchitectureAnalyzer } from '@girardelli/architect-core/src/core/analyzer.js';
 import { AntiPatternDetector } from '@girardelli/architect-core/src/core/anti-patterns.js';
 import { ArchitectureScorer } from '@girardelli/architect-core/src/core/scorer.js';
+import { resolveProfile, mergeWeights } from '@girardelli/architect-core/src/core/scoring-profiles.js';
 import { DiagramGenerator } from '@girardelli/architect-core/src/core/diagram.js';
 // import { ReportGenerator } from '../adapters/reporter.js';
 // import { HtmlReportGenerator } from '../adapters/html-reporter.js';
@@ -106,9 +107,21 @@ export class Architect implements ArchitectCommand {
       },
     });
 
-    // ── Phase 5: Architecture Scoring ──
+    // ── Phase 5: Architecture Scoring (Adaptive) ──
     emit({ phase: 'scoring', status: 'start' });
-    const scorer = new ArchitectureScorer();
+
+    // Resolve scoring profile from config + detected stack
+    const resolveOpts: { explicitProfile?: string; frameworks?: string[]; languages?: string[]; isMonorepo?: boolean } = {
+      frameworks: projectInfo.frameworks,
+      languages: projectInfo.primaryLanguages,
+      isMonorepo: !!(projectInfo.workspaces && projectInfo.workspaces.length > 1),
+    };
+    if (config.scoringProfile && config.scoringProfile !== 'auto') {
+      resolveOpts.explicitProfile = config.scoringProfile;
+    }
+    const profile = resolveProfile(resolveOpts);
+    const weights = mergeWeights(profile, config.score);
+    const scorer = new ArchitectureScorer(weights, profile.thresholds, profile.name);
     const score = scorer.score(edges, antiPatterns, projectInfo.totalFiles);
     emit({
       phase: 'scoring', status: 'complete',
@@ -118,6 +131,7 @@ export class Architect implements ArchitectCommand {
         coupling: score.breakdown.coupling,
         cohesion: score.breakdown.cohesion,
         layering: score.breakdown.layering,
+        profile: profile.name,
       },
     });
 
