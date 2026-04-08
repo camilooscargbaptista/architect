@@ -1,0 +1,22 @@
+{
+  "name": "@girardelli/architect-mcp",
+  "version": "10.0.0",
+  "type": "module",
+  "description": "MCP Server for Architect Genesis — expose architecture analysis as tools for any LLM",
+  "main": "dist/src/server.js",
+  "types": "dist/src/server.d.ts",
+  "bin": {
+    "architect-mcp": "dist/src/server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "peerDependencies": {
+    "@girardelli/architect-core": ">=8.0.0"
+  },
+  "keywords": ["mcp", "architecture", "code-analysis", "llm-tools"]
+}

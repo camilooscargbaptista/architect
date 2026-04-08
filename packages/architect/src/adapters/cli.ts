@@ -29,6 +29,7 @@ import { resolve, basename,  join } from 'path';
 import { logger } from '@girardelli/architect-core/src/infrastructure/logger.js';
 import { i18n } from '@girardelli/architect-core/src/core/i18n.js';
 import { KnowledgeBase } from '@girardelli/architect-core/src/core/knowledge-base/index.js';
+import { registerSelfImprovingLoop, emitViolationEvents, emitAnalysisCompleted, suggestRules } from '@girardelli/architect-core/src/core/self-improving-loop.js';
 import * as yaml from 'yaml';
 import chokidar from 'chokidar';
 import { ArchitectRules, ValidationResult } from '@girardelli/architect-core/src/core/types/architect-rules.js';
@@ -38,6 +39,20 @@ import { GithubActionAdapter } from './github-action.js';
 import * as github from '@actions/github';
 
 type OutputFormat = 'json' | 'markdown' | 'html';
+
+/** Deep merge two objects (for YAML rule merging) */
+function deepMerge(target: any, source: any): any {
+  const result = { ...target };
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) &&
+        target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+      result[key] = deepMerge(target[key], source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  }
+  return result;
+}
 
 interface CliOptions {
   command: string;
@@ -102,6 +117,7 @@ ${c.bold}Commands:${c.reset}
   ${c.cyan}forecast${c.reset}        Predict architecture score decay using ML regression
   ${c.cyan}plugin${c.reset}          Manage plugins (install, list, search, remove)
   ${c.cyan}kb${c.reset}              Knowledge Base — history, trends, export, LLM context
+  ${c.cyan}rules${c.reset}           Rule suggestions from KB history (suggest, apply)
   ${c.cyan}agents${c.reset}          Generate/audit .agent/ directory with AI agents
   ${c.cyan}diagram${c.reset}         Generate architecture diagram only
   ${c.cyan}score${c.reset}           Calculate quality score only
@@ -195,10 +211,11 @@ async function main(): Promise<void> {
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
         }
 
-        // Knowledge Base persistence
+        // Knowledge Base persistence + Self-improving loop
         try {
           progress.printExtraPhase('KNOWLEDGE BASE', 'Persisting analysis to KB', c.cyan);
           const kb = new KnowledgeBase(options.path);
+          const cleanupLoop = registerSelfImprovingLoop(kb, options.path);
           const analysisId = kb.persistAnalysis(report);
           const stats = kb.getStats();
           const delta = kb.getScoreDelta(kb.getProjectByPath(report.projectInfo.path)?.id ?? 0);
@@ -208,6 +225,10 @@ async function main(): Promise<void> {
           progress.printExtraComplete(
             `${c.white}#${analysisId}${c.reset}${c.dim} saved · ${stats.totalAnalyses} total analyses${deltaStr}${c.reset}`
           );
+
+          // Emit event for self-improving loop
+          emitAnalysisCompleted(report.projectInfo.path, report.score.overall, report.antiPatterns.length, analysisId);
+          cleanupLoop();
           kb.close();
         } catch (kbErr: any) {
           progress.printExtraComplete(`${c.dim}KB skipped: ${kbErr.message}${c.reset}`);
@@ -288,6 +309,25 @@ async function main(): Promise<void> {
           const report = await architect.analyze(options.path);
           const engine = new RulesEngine();
           const result = engine.validate(report, rules);
+
+          // Self-improving loop: emit events + persist to KB
+          let kbCleanup: (() => void) | undefined;
+          try {
+            const kb = new KnowledgeBase(options.path);
+            kbCleanup = registerSelfImprovingLoop(kb, options.path);
+            const analysisId = kb.persistAnalysis(report);
+            kb.persistValidation(analysisId, result);
+
+            if (result.violations.length > 0) {
+              emitViolationEvents(result.violations, report.projectInfo.path, report.score.overall, report.antiPatterns.length);
+            }
+            emitAnalysisCompleted(report.projectInfo.path, report.score.overall, report.antiPatterns.length, analysisId);
+
+            kbCleanup();
+            kb.close();
+          } catch {
+            kbCleanup?.();
+          }
 
           if (result.violations.length === 0) {
             process.stderr.write(`\n  ${c.green}✓ All quality gates and boundaries passed!${c.reset} ${c.dim}(Score: ${report.score.overall}/100)${c.reset}\n\n`);
@@ -859,6 +899,82 @@ async function main(): Promise<void> {
               process.stderr.write(`  ${c.cyan}architect kb stats${c.reset}               Show KB statistics\n`);
               process.stderr.write(`  ${c.cyan}architect kb export .${c.reset}            Export project history as JSON\n`);
               process.stderr.write(`  ${c.cyan}architect kb context .${c.reset}           Generate LLM context summary\n\n`);
+          }
+        } finally {
+          kb.close();
+        }
+        break;
+      }
+
+      case 'rules': {
+        const subCommand = args[1] ?? 'suggest';
+        const kb = new KnowledgeBase(options.path);
+
+        try {
+          switch (subCommand) {
+            case 'suggest': {
+              const projectAbsPath = resolve(options.path);
+              const suggestions = suggestRules(kb, projectAbsPath);
+
+              process.stderr.write(`\n  ${c.bold}RULE SUGGESTIONS${c.reset} — based on KB history\n\n`);
+
+              if (suggestions.length === 0) {
+                process.stderr.write(`  ${c.dim}No suggestions yet. Run 'architect check' a few more times to build history.${c.reset}\n\n`);
+              } else {
+                for (const s of suggestions) {
+                  const confColor = s.confidence === 'high' ? c.green : s.confidence === 'medium' ? c.yellow : c.dim;
+                  process.stderr.write(
+                    `  ${confColor}[${s.confidence.toUpperCase()}]${c.reset} ${c.bold}${s.type}${c.reset}\n` +
+                    `  ${c.dim}${s.reason}${c.reset}\n` +
+                    `  ${c.cyan}${s.yaml.split('\n').join('\n  ')}${c.reset}\n\n`
+                  );
+                }
+
+                process.stderr.write(`  ${c.dim}Add these to your .architect.rules.yml to enforce governance.${c.reset}\n\n`);
+              }
+              break;
+            }
+
+            case 'apply': {
+              const projectAbsPath = resolve(options.path);
+              const suggestions = suggestRules(kb, projectAbsPath);
+              const highConfidence = suggestions.filter(s => s.confidence === 'high');
+
+              if (highConfidence.length === 0) {
+                process.stderr.write(`\n  ${c.dim}No high-confidence suggestions to apply.${c.reset}\n\n`);
+                break;
+              }
+
+              // Read existing rules or create new
+              const rulesPath = join(options.path, '.architect.rules.yml');
+              let existingYaml = '';
+              if (existsSync(rulesPath)) {
+                existingYaml = readFileSync(rulesPath, 'utf8');
+              }
+
+              let rules: any = existingYaml ? yaml.parse(existingYaml) : {};
+
+              // Merge suggestions
+              for (const s of highConfidence) {
+                const parsed = yaml.parse(s.yaml);
+                rules = deepMerge(rules, parsed);
+              }
+
+              const newYaml = yaml.stringify(rules, { indent: 2 });
+              writeFileSync(rulesPath, newYaml);
+
+              process.stderr.write(`\n  ${c.green}✓${c.reset} Applied ${highConfidence.length} high-confidence rules to ${c.bold}.architect.rules.yml${c.reset}\n\n`);
+              for (const s of highConfidence) {
+                process.stderr.write(`  ${c.green}+${c.reset} ${s.type}: ${s.reason.slice(0, 80)}\n`);
+              }
+              process.stderr.write('\n');
+              break;
+            }
+
+            default:
+              process.stderr.write(`\n  ${c.bold}Rules Commands:${c.reset}\n`);
+              process.stderr.write(`  ${c.cyan}architect rules suggest .${c.reset}     Suggest rules based on KB history\n`);
+              process.stderr.write(`  ${c.cyan}architect rules apply .${c.reset}        Auto-apply high-confidence suggestions to .rules.yml\n\n`);
           }
         } finally {
           kb.close();

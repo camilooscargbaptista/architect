@@ -9,7 +9,7 @@
 [![npm](https://img.shields.io/npm/v/@girardelli/architect?color=blue)](https://www.npmjs.com/package/@girardelli/architect)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-1034%20passing-22c55e.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1801%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <p align="center">
@@ -135,6 +135,51 @@ architect kb context .     # Generate LLM-ready summary
 
 Supports Architecture Decision Records (ADRs), validation tracking, and forecast history. The `kb context` command generates a text summary you can inject into AI prompts for architecture-aware code generation.
 
+### Self-Improving Loop
+
+The analysis engine learns from your project history. When you run `architect check`, it:
+
+- Persists violations as constraints in the Knowledge Base
+- Detects score regressions and emits `score.degraded` events
+- Suggests governance rules based on recurring patterns
+
+```bash
+architect rules suggest .   # Show rule suggestions with confidence levels
+architect rules apply .     # Auto-apply high-confidence suggestions
+```
+
+### Architecture Agents
+
+Four autonomous agents for different architecture tasks:
+
+- **Review Agent** — analyzes project state against rules, detects regressions
+- **Forecast Agent** — predicts score trends using linear regression on KB history
+- **Refactor Agent** — generates and optionally executes refactoring plans
+- **Scaffold Agent** — generates module templates matching your detected architecture style
+
+```typescript
+import { agentRegistry } from '@girardelli/architect-agents';
+
+const result = await agentRegistry.execute('review-agent', {
+  projectPath: './my-project',
+  autoMode: false,
+  verbose: true,
+});
+```
+
+### MCP Server (Model Context Protocol)
+
+Expose all architecture tools to any MCP-compatible LLM client:
+
+```bash
+# Add to Claude Code config
+npx @girardelli/architect-mcp
+```
+
+8 tools available: `analyze_project`, `get_score`, `get_anti_patterns`, `check_rules`, `query_kb`, `suggest_refactoring`, `suggest_rules`, `get_kb_context`.
+
+Works with Claude Code, Cursor, Windsurf, and any MCP client.
+
 ### Architecture Forecast
 
 `architect forecast` reads your git history and predicts score decay:
@@ -182,7 +227,8 @@ Monorepo with npm workspaces. Use the full CLI or just the core engine:
 |---------|-------------|
 | [`@girardelli/architect`](packages/architect/) | CLI, GitHub Actions adapter, HTML/JSON/Markdown reports |
 | [`@girardelli/architect-core`](packages/architect-core/) | AST parsing, scoring engine, rules engine, anti-pattern detection |
-| [`@girardelli/architect-agents`](packages/architect-agents/) | AI execution runtime, stack/framework detection, domain inference |
+| [`@girardelli/architect-agents`](packages/architect-agents/) | AI execution runtime, architecture agents, stack/framework detection |
+| [`@girardelli/architect-mcp`](packages/architect-mcp/) | MCP Server — expose architecture tools to any LLM (Claude Code, Cursor, etc.) |
 
 ---
 
@@ -203,6 +249,8 @@ Monorepo with npm workspaces. Use the full CLI or just the core engine:
 | `architect kb trends .` | Show anti-pattern trends over time |
 | `architect kb export .` | Export full project history as JSON |
 | `architect kb context .` | Generate LLM context summary |
+| `architect rules suggest .` | Suggest governance rules from KB history |
+| `architect rules apply .` | Auto-apply high-confidence rule suggestions |
 | `architect agents .` | Generate/audit `.agent/` directory |
 | `architect pr-review .` | GitHub Actions PR review |
 | `architect diagram .` | Generate architecture diagram |

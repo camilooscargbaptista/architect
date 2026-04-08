@@ -123,9 +123,11 @@ describe('ArchitectureScorer', () => {
       expect(result.breakdown.modularity).toBe(70);
     });
 
-    it('should score 50 when avgEdgesPerFile is 6-10', () => {
-      // 2 files, 18 edges → avgEdgesPerFile = 9
-      const edges: DependencyEdge[] = Array(18)
+    it('should score 50 when avgEdgesPerFile is between modularityGood and modularityGood*1.5', () => {
+      // 2 files, 14 edges → avgEdgesPerFile = 7
+      // Default thresholds: modularityGood=6, modularityGood*1.5=9
+      // 7 < 9 → should score 50
+      const edges: DependencyEdge[] = Array(14)
         .fill(null)
         .map((_, i) => ({
           from: i % 2 === 0 ? 'src/a.ts' : 'src/b.ts',
