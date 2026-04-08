@@ -1,54 +1,134 @@
-# Architect Genesis (v8.0)
+# Architect Genesis
 
 <p align="center">
-  <img src="assets/cover.png" alt="Architect Holographic Cover Art" width="600" />
+  <img src="assets/cover.png" alt="Architect Genesis" width="600" />
 </p>
 
-**The First Architecture Intent Compiler & Autonomous Agent Orchestrator**
+**Architecture scoring and refactoring across 7 languages using AST analysis.**
 
+[![npm](https://img.shields.io/npm/v/@girardelli/architect?color=blue)](https://www.npmjs.com/package/@girardelli/architect)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
-[![npm workspaces](https://img.shields.io/badge/npm-workspaces-orange.svg)](https://docs.npmjs.com/cli/v7/using-npm/workspaces)
 [![Tests](https://img.shields.io/badge/Tests-440%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-<br/>
 <p align="center">
   <img src="assets/demo.gif" alt="Architect CLI Demo" width="800" />
 </p>
-<br/>
 
-Most AI tools just write code. **Architect Genesis actually reads your architecture.** 
-
-Understand your codebase topology in seconds. Detect severe anti-patterns, generate step-by-step refactoring execution plans, and dispatch **Context-Aware AI Agents** to autonomously fix technical debt without breaking Clean Architecture constraints.
-
-## ⚠️ Critical Notice: v8.1.0 Known Issues
-
-**v8.1.0 ships with 6 Phase 0 critical bugs** that impact Genesis output quality. **Use only for exploration, not production analysis.**
-
-See [PHASE_0_CRITICAL_BUGS.md](./PHASE_0_CRITICAL_BUGS.md) for complete list. Estimated fix time: 19 hours.
-
-Current issues:
-- Standard library modules (fs, path, os, etc) incorrectly flagged as refactoring candidates
-- Prompt generation exceeds chat UI limits (500KB+ with 52 files)
-- Generated file extensions may be incorrect for non-TypeScript projects
+Point it at any codebase. It builds the dependency graph, scores your architecture 0-100, detects anti-patterns, and can refactor autonomously with AI.
 
 ---
 
-## 🚀 What's New in v8.0.0 (The Genesis Monorepo)
+## Quick Start
 
-* **Architecture Intent Compiler**: Genesis doesn't just generate text; it compiles your business intent into a declarative `execution-plan.md` mapped strictly against your AST (Abstract Syntax Tree).
-* **NPM Workspaces Ecosystem**: The monolithic `architect` package has been modularized:
-  * 🧠 `@girardelli/architect-core`: The headless graph analysis and AST scoring engine.
-  * 🤖 `@girardelli/architect-agents`: The autonomous workflows, LLM runtime, and AI Agent generator.
-  * ⚡ `@girardelli/architect`: The CLI orchestrator and HTML reporting interface.
-* **Autonomous GitHub PR Reports**: The `architect pr-review .` Action automatically drops highly visual architecture scorecards and Refactoring Plans directly inside your Pull Requests!
-* **Zero V8 Memory Leaks**: Tree-Sitter components are tightly sealed, pushing past 440 tests structurally clean with complete `composite: true` TypeScript isolation.
+```bash
+npm install -g @girardelli/architect
 
-## 📦 Quick Start
+# Analyze your project
+architect analyze ./src
 
-### 1. GitHub Native App (Marketplace)
-Architect runs entirely via GitHub Actions natively in your Pull Requests. Add the following file to `.github/workflows/architecture-review.yml`:
+# Validate against your rules
+architect check ./src
+
+# Predict architecture decay
+architect forecast ./src
+
+# Refactor with AI assistance
+architect execute ./src
+```
+
+No config needed to start. It infers your stack, framework, and domain automatically.
+
+---
+
+## What It Does
+
+### AST Analysis (7 Languages)
+
+Parses your codebase using [Tree-Sitter](https://tree-sitter.github.io/tree-sitter/) AST:
+
+**TypeScript** · **Python** · **Go** · **Java** · **Rust** · **Ruby** · **PHP**
+
+Builds a full dependency graph, detects architectural layers (View, Core, Data, Infrastructure), and infers your stack and domain.
+
+### Architecture Score (0-100)
+
+Scores your project on four weighted dimensions:
+
+| Dimension | Weight | What it measures |
+|-----------|--------|------------------|
+| Modularity | 40% | How well-separated are your modules |
+| Coupling | 25% | Cross-boundary dependency count |
+| Cohesion | 20% | How related are elements within a module |
+| Layering | 15% | Clean layer separation |
+
+### Anti-Pattern Detection
+
+Finds structural problems from the AST — not heuristics:
+
+- **God Classes** — files with too many dependents
+- **Circular Dependencies** — import cycles between modules
+- **Leaky Abstractions** — layer boundary violations
+- **Spaghetti Modules** — high coupling with no clear interface
+
+### Architecture Rules (`.architect.rules.yml`)
+
+Declare your architecture rules in YAML. Validate in CI with `architect check`:
+
+```yaml
+quality_gates:
+  min_overall_score: 60
+  max_critical_anti_patterns: 0
+  max_high_anti_patterns: 3
+
+boundaries:
+  allow_circular_dependencies: false
+  banned_imports:
+    - from: "presentation/*"
+      to: "infrastructure/*"
+    - from: "domain/*"
+      to: "framework/*"
+```
+
+```bash
+architect check ./src
+# Exit code 0 = pass, 1 = fail → plug into CI/CD
+```
+
+### Refactoring Plan
+
+Generates a tiered plan with 5 rule-based transformations:
+
+1. **Hub Splitting** — breaks God Classes into focused modules
+2. **Barrel Optimization** — cleans up index/init file re-exports
+3. **Import Organization** — restructures import paths
+4. **Module Grouping** — reorganizes related files
+5. **Dead Code Detection** — finds unreferenced exports
+
+### AI-Assisted Execution
+
+`architect execute` runs refactoring steps using Claude, GPT, or Gemini:
+
+- Human gating on every step: **approve / skip / retry / rollback**
+- Creates a protective git branch before changes
+- Each approved step gets its own commit
+- Switch AI provider mid-execution if one gives bad results
+
+### Architecture Forecast
+
+`architect forecast` reads your git history and predicts score decay:
+
+- Velocity-adjusted scoring from commit history
+- ML-based regression projecting 3-6 months ahead
+- Identifies which modules are trending downward
+
+---
+
+## GitHub Actions
+
+Drop this into `.github/workflows/architecture-review.yml` for automated PR reviews:
+
 ```yaml
 name: Architecture Review
 on: [pull_request]
@@ -62,66 +142,51 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 2. Global Installation (CLI)
-```bash
-npm install -g @girardelli/architect
-```
+---
 
-### 2. Run the Analysis
-```bash
-# Scan the current directory and generate an HTML report
-architect analyze .
+## VS Code Extension
 
-# Audit and Generate AI Agents tailored for your stack
-architect agents .
-```
+Install **Architect Intelligence** from the VS Code Marketplace:
 
-## 🏗️ Core Packages (Monorepo)
-
-Architect is split into specialized packages. Depending on your use case, you can consume the entire CLI or just the core graphing engine for your proprietary SaaS:
-
-| Package | Description | Status |
-|---------|-------------|--------|
-| [`@girardelli/architect`](packages/architect/) | The command-line interface, Github Actions adapters, and HTML Report generators. | Active |
-| [`@girardelli/architect-core`](packages/architect-core/) | Pure graph analysis. AST Parsing, Anti-Pattern detection, and Architecture Scoring (0-100). | Active |
-| [`@girardelli/architect-agents`](packages/architect-agents/) | AI Runtime. Maps core reports to autonomous refactoring workflows and custom templates. | Active |
-
-## 🧬 Features
-
-### 1. Universal AST Scanning & Topology
-Architect maps your codebase using advanced Tree-Sitter AST across languages (TypeScript, Python, Go, Java, Rust, Ruby, PHP). It understands import semantics, identifies cyclic dependencies, and categorizes layers (View, Core, Data, Infra).
-
-### 2. Anti-Pattern Detection (The Punisher)
-Automatically catches architectural sins that humans miss in fast code reviews:
-* **God Classes**: Files that know too much and do too much.
-* **Leaky Abstractions**: DTOs or DB interfaces crossing into React Components.
-* **Shotgun Surgery**: Changes that force edits across 15 different files.
-* **Spaghetti Modules**: High O(N²) coupling with no clear interface boundary.
-
-### 3. Context-Aware AI Generation
-Architect doesn't spit out generic `agent.md` files. It detects your precise toolchain (e.g., NestJS, Prisma, Jest vs. FastAPI, SQLAlchemy, Pytest). 
-
-It dynamically generates an `.agent/` folder containing:
-* **AGENTS**: `ORCHESTRATOR.md`, `BACKEND-DEVELOPER.md`, `TECH-DEBT-CONTROLLER.md`
-* **RULES**: Strict boundary rules and OWASP security constraints mapped to your language.
-* **WORKFLOWS**: Automated execution plans for `feature`, `bug`, and `refactor`.
-
-### 4. Enterprise Refactoring Engine
-Every run produces a tiered Refactoring Plan:
-* **Tier 1**: Quick wins (Move variable, rename interface).
-* **Tier 2**: Strategic Hub-splits (Break God Class into Facades).
-
-## 📊 The 100-Point Architecture Score
-Your project is graded on a strict algorithm measuring:
-* **Modularity**: Is the codebase properly separated?
-* **Coupling**: How tightly intertwined are the files?
-* **Cohesion**: Do the files in a layer actually belong together?
-* **Layering**: Does the data flow linearly (UI -> Domain -> DB)?
+- CodeLens integration showing architecture scores inline
+- Commands: analyze, refactor, forecast, show anti-patterns
+- Inline hub detection and scoring
 
 ---
 
-## 🤝 Contributing
-We welcome contributions! See the workspaces internally to get started:
+## Packages
+
+Monorepo with npm workspaces. Use the full CLI or just the core engine:
+
+| Package | Description |
+|---------|-------------|
+| [`@girardelli/architect`](packages/architect/) | CLI, GitHub Actions adapter, HTML/JSON/Markdown reports |
+| [`@girardelli/architect-core`](packages/architect-core/) | AST parsing, scoring engine, rules engine, anti-pattern detection |
+| [`@girardelli/architect-agents`](packages/architect-agents/) | AI execution runtime, stack/framework detection, domain inference |
+
+---
+
+## All Commands
+
+| Command | Description |
+|---------|-------------|
+| `architect analyze .` | Full analysis with HTML/JSON/Markdown report |
+| `architect check .` | Validate against `.architect.rules.yml` (CI/CD) |
+| `architect execute .` | AI-assisted refactoring with human gating |
+| `architect forecast .` | ML-based score decay prediction |
+| `architect refactor .` | Generate refactoring plan |
+| `architect score .` | Quick score output |
+| `architect anti-patterns .` | List detected anti-patterns |
+| `architect layers .` | Show layer classification |
+| `architect agents .` | Generate/audit `.agent/` directory |
+| `architect pr-review .` | GitHub Actions PR review |
+| `architect diagram .` | Generate architecture diagram |
+| `architect genesis .` | Interactive TUI terminal |
+
+---
+
+## Contributing
+
 ```bash
 git clone https://github.com/camilooscargbaptista/architect.git
 cd architect
@@ -130,5 +195,8 @@ npm run build
 npm test
 ```
 
-## 📜 License
-MIT License. Created to put Tech Leads back in control of their scaling repositories.
+---
+
+## License
+
+MIT
