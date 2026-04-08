@@ -36,9 +36,6 @@ tmp/
 temp/
 .cache/
 
-# Test framework artifacts
-__test_framework__*/
-
 # Analysis outputs
 *.architect.json
 architect-report.md
