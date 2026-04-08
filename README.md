@@ -9,7 +9,7 @@
 [![npm](https://img.shields.io/npm/v/@girardelli/architect?color=blue)](https://www.npmjs.com/package/@girardelli/architect)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-1814%20passing-22c55e.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1842%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <p align="center">

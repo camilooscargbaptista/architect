@@ -1,6 +1,6 @@
 {
   "name": "@girardelli/architect-core",
-  "version": "8.2.0",
+  "version": "10.0.0",
   "type": "module",
   "main": "dist/src/core/index.js",
   "types": "dist/src/core/index.d.ts",

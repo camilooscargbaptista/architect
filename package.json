@@ -1,6 +1,6 @@
 {
   "name": "architect-workspace",
-  "version": "8.1.0",
+  "version": "10.0.0",
   "description": "Genesis: Next-gen autonomous AI coding assistant and architecture analyzer.",
   "type": "module",
   "private": true,
