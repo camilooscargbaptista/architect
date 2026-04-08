@@ -84,8 +84,8 @@ ${this.renderFooter()}
 
     const metrics = Object.keys(current.breakdown) as Array<keyof typeof current.breakdown>;
     const bars = metrics.map(metric => {
-      const before = current.breakdown[metric];
-      const after = estimated.breakdown[metric];
+      const before = current.breakdown[metric]!;
+      const after = estimated.breakdown[metric]!;
       const diff = after - before;
       return `
       <div class="comparison-row">

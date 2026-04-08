@@ -71,8 +71,8 @@ describe('AntiPatternDetector', () => {
         };
 
         for (let i = 0; i < patterns.length - 1; i++) {
-          const current = severityOrder[patterns[i].severity];
-          const next = severityOrder[patterns[i + 1].severity];
+          const current = severityOrder[patterns[i]!.severity]!;
+          const next = severityOrder[patterns[i + 1]!.severity]!;
           expect(current).toBeLessThanOrEqual(next);
         }
       }

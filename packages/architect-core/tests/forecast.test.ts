@@ -171,7 +171,7 @@ describe('ForecastEngine', () => {
 
       const godClass = forecast.preAntiPatterns.filter(p => p.type === 'emerging-god-class');
       expect(godClass.length).toBeGreaterThanOrEqual(1);
-      expect(godClass[0].module).toBe('src');
+      expect(godClass[0]!.module).toBe('src');
     });
 
     it('should NOT detect god class when churn is below threshold', () => {
@@ -218,7 +218,7 @@ describe('ForecastEngine', () => {
 
       const shotgun = forecast.preAntiPatterns.filter(p => p.type === 'emerging-shotgun-surgery');
       expect(shotgun.length).toBe(1);
-      expect(shotgun[0].module).toBe('src');
+      expect(shotgun[0]!.module).toBe('src');
     });
 
     it('should NOT detect shotgun when coupling count is below threshold', () => {
@@ -357,7 +357,7 @@ describe('ForecastEngine', () => {
 
       const forecast = engine.forecast(gitReport, temporalReport);
 
-      expect(forecast.modules[0].currentHealth).toBe('critical');
+      expect(forecast.modules[0]!.currentHealth).toBe('critical');
     });
 
     it('should classify healthy for high temporal score', () => {
@@ -371,7 +371,7 @@ describe('ForecastEngine', () => {
 
       const forecast = engine.forecast(gitReport, temporalReport);
 
-      expect(forecast.modules[0].currentHealth).toBe('healthy');
+      expect(forecast.modules[0]!.currentHealth).toBe('healthy');
     });
 
     it('should forecast breakdown for modules with alerts', () => {
@@ -400,7 +400,7 @@ describe('ForecastEngine', () => {
       const forecast = engine.forecast(gitReport, temporalReport);
 
       // Either breakdown or declining due to degrading trend
-      expect(['breakdown', 'declining']).toContain(forecast.modules[0].forecast6Months);
+      expect(['breakdown', 'declining']).toContain(forecast.modules[0]!.forecast6Months);
     });
   });
 
@@ -451,7 +451,7 @@ describe('ForecastEngine', () => {
       const forecast = engine.forecast(gitReport, temporalReport);
 
       expect(forecast.recommendations.length).toBeGreaterThan(0);
-      expect(forecast.recommendations[0]).toContain('src');
+      expect(forecast.recommendations[0]!).toContain('src');
     });
 
     it('should return healthy message when no issues', () => {
@@ -470,7 +470,7 @@ describe('ForecastEngine', () => {
       const forecast = engine.forecast(gitReport, temporalReport);
 
       expect(forecast.recommendations.length).toBeGreaterThan(0);
-      expect(forecast.recommendations[0].toLowerCase()).toContain('healthy');
+      expect(forecast.recommendations[0]!.toLowerCase()).toContain('healthy');
     });
   });
 

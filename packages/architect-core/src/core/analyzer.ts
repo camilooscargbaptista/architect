@@ -232,29 +232,29 @@ export class ArchitectureAnalyzer {
           /(?:import|require)\s*(?:\{[^}]+\}|[^\s]+)\s*from\s*['"]([^'"]+)['"]/g;
         let match;
         while ((match = importRegex.exec(content)) !== null) {
-          const importPath = match[1];
+          const importPath = match[1]!;
           // Regex antigo considerava apenas './' ou '../'.
           // O Resolver depois lida com aliases. Para não quebrar legados guardamos tudo.
           imports.push(importPath);
         }
-        
+
         // Match dynamic imports
         const dynamicImportRegex = /import\s*\(['"]([^'"]+)['"]\)/g;
         while ((match = dynamicImportRegex.exec(content)) !== null) {
-            imports.push(match[1]);
+            imports.push(match[1]!);
         }
       } else if (ext === '.py') {
         const fromImportRegex = /^from\s+([\w.]+)\s+import\b/gm;
         let match;
         while ((match = fromImportRegex.exec(content)) !== null) {
-          const moduleName = match[1];
+          const moduleName = match[1]!;
           if (this.isInternalPythonImport(moduleName)) {
             imports.push(moduleName);
           }
         }
         const directImportRegex = /^import\s+([\w.]+)(?:\s+as\s+\w+)?$/gm;
         while ((match = directImportRegex.exec(content)) !== null) {
-          const moduleName = match[1];
+          const moduleName = match[1]!;
           if (this.isInternalPythonImport(moduleName)) {
             imports.push(moduleName);
           }
@@ -263,7 +263,7 @@ export class ArchitectureAnalyzer {
         const importRegex = /import\s+([^\s;]+);/g;
         let match;
         while ((match = importRegex.exec(content)) !== null) {
-          imports.push(match[1]);
+          imports.push(match[1]!);
         }
       }
 
@@ -283,7 +283,7 @@ export class ArchitectureAnalyzer {
     if (moduleName.startsWith('.')) return true;
 
     // Get the top-level module name (e.g., "deepguard" from "deepguard.cli")
-    const topLevel = moduleName.split('.')[0];
+    const topLevel = moduleName.split('.')[0]!;
 
     // Check against Python stdlib
     if (ArchitectureAnalyzer.PYTHON_STDLIB.has(topLevel)) return false;

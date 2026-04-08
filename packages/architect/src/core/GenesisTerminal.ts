@@ -2,10 +2,12 @@ import { select, confirm } from '@inquirer/prompts';
 import chalk from 'chalk';
 import ora from 'ora';
 import { Architect, ProgressEvent } from './architect.js';
+import type { RefactoringPlan } from '@girardelli/architect-core/src/core/types/rules.js';
 import { AgentExecutor } from '@girardelli/architect-agents/src/core/agent-runtime/executor.js';
 import { ProgressReporter, c } from '../adapters/progress-logger.js';
 import { HtmlReportGenerator } from '../adapters/html-reporter.js';
 import * as fs from 'fs';
+import { execSync } from 'child_process';
 
 export class GenesisTerminal {
   private architect: Architect;
@@ -19,37 +21,67 @@ export class GenesisTerminal {
     console.log(chalk.cyan.bold('\nWelcome to Architect Genesis v8.0'));
     console.log(chalk.gray('The Autonomous Architecture Intent Compiler\n'));
 
-    const action = await select({
-      message: 'What would you like to build today?',
-      choices: [
-        {
-          name: '🛡️  Scan Security & Anti-Pattern Boundaries',
-          value: 'scan',
-          description: 'Runs an O(N²) Matrix Analysis on your Codebase',
-        },
-        {
-          name: '🛠️  Refactor System Anti-Patterns (God Mode)',
-          value: 'refactor',
-          description: 'Let AI Autonomous Agents rewrite your technical debt',
-        },
-        {
-          name: '🏗️  Architect a New Technical Feature',
-          value: 'feature',
-          description: 'Build a new cross-layer feature dynamically',
-        },
-      ],
-    });
+    let active = true;
+    while (active) {
+      const action = await select({
+        message: 'What would you like to build today?',
+        choices: [
+          {
+            name: '🛡️  Scan Security & Anti-Pattern Boundaries',
+            value: 'scan',
+            description: 'Runs an O(N²) Matrix Analysis on your Codebase',
+          },
+          {
+            name: '🛠️  Refactor System Anti-Patterns (God Mode)',
+            value: 'refactor',
+            description: 'Let AI Autonomous Agents rewrite your technical debt',
+          },
+          {
+            name: '🏗️  Architect a New Technical Feature',
+            value: 'feature',
+            description: 'Build a new cross-layer feature dynamically',
+          },
+          {
+            name: '✅ Validate Architecture & PR Deltas',
+            value: 'validate',
+            description: 'Check architecture rules and PR diffs against standards',
+          },
+          {
+            name: '🚪 Exit',
+            value: 'exit',
+            description: 'Return to orbit',
+          }
+        ],
+      });
 
-    switch (action) {
-      case 'scan':
-        await this.runScan();
-        break;
-      case 'refactor':
-        await this.runAutonomousRefactor();
-        break;
-      case 'feature':
-        console.log(chalk.yellow('\nFeature architecture mode is coming in Phase 7.0!'));
-        break;
+      switch (action) {
+        case 'scan':
+          await this.runScan();
+          break;
+        case 'refactor':
+          await this.runAutonomousRefactor();
+          break;
+        case 'feature':
+          console.log(chalk.yellow('\nFeature architecture mode is coming in Phase 7.0!'));
+          break;
+        case 'validate':
+          console.log(chalk.cyan('\n[System] Invoking Rules Engine...'));
+          console.log(chalk.gray('> architect check'));
+          try {
+            execSync('node dist/src/adapters/cli.js check', { stdio: 'inherit' });
+          } catch(e) {
+            // Error is handled by inheritance
+          }
+          break;
+        case 'exit':
+          console.log(chalk.gray('\nGoodbye! Closing Genesis terminal.'));
+          active = false;
+          break;
+      }
+      
+      if (active) {
+        console.log('\n' + chalk.gray('──────────────────────────────────────────────────') + '\n');
+      }
     }
   }
 
@@ -86,7 +118,38 @@ export class GenesisTerminal {
         antiPatterns: report.antiPatterns.length
       });
       
-      console.log(chalk.green(`\n🚀 Done! Open ${chalk.bold.cyan(htmlPath)} in your browser to see the graphics!`));
+      console.log(chalk.green(`\n🚀 Done! Opening ${chalk.bold.cyan(htmlPath)} in your browser to see the graphics!`));
+      try {
+        execSync(`open "${htmlPath}"`);
+      } catch (err) {
+        console.error(chalk.yellow(`Could not automatically open browser. Please open ${htmlPath} manually.`));
+      }
+
+      // ── Post-Scan Autonomous Trigger ──
+      console.log(chalk.yellow(`\n⚠️ I have generated the O(N²) Matrix and found ${plan.steps.length} Refactoring Steps.`));
+      
+      const executionMode = await select({
+        message: 'Select AI Execution Mode:',
+        choices: [
+          { name: '🤖 Execute via Anthropic (Claude)', value: 'Anthropic' },
+          { name: '🤖 Execute via OpenAI (GPT)', value: 'OpenAI' },
+          { name: '🤖 Execute via Google (Gemini)', value: 'Gemini' },
+          { name: '📄 Export Offline Prompts (Manual Web UI Mode)', value: 'offline' },
+          { name: '🚪 Abort Refactoring', value: 'abort' }
+        ]
+      });
+
+      if (executionMode === 'abort') {
+        console.log(chalk.yellow('Refactor Aborted. Returning to orbit.'));
+      } else if (executionMode === 'offline') {
+        console.log(chalk.cyan('\n[System] Initializing Offline Prompt Generator...'));
+        const { OfflinePromptGenerator } = await import('@girardelli/architect-agents/src/core/agent-runtime/offline-prompt-generator.js');
+        const generator = new OfflinePromptGenerator();
+        generator.generate(plan);
+        console.log(chalk.green(`\n✅ Offline Prompts exported successfully to packages/architect/prompts/!`));
+      } else {
+        await this.runAutonomousExecution(plan, executionMode);
+      }
 
     } catch (e: any) {
       console.error(chalk.red(`\n❌ Analysis Failed: ${e.message}`));
@@ -94,6 +157,39 @@ export class GenesisTerminal {
   }
 
   private async runAutonomousRefactor() {
+    console.log(chalk.cyan('\n[System] Running Quick Scan before Refactoring...'));
+    try {
+      const report = await this.architect.analyze('.');
+      const plan = this.architect.refactor(report, '.');
+      
+      const executionMode = await select({
+        message: 'Select AI Execution Mode:',
+        choices: [
+          { name: '🤖 Execute via Anthropic (Claude)', value: 'Anthropic' },
+          { name: '🤖 Execute via OpenAI (GPT)', value: 'OpenAI' },
+          { name: '🤖 Execute via Google (Gemini)', value: 'Gemini' },
+          { name: '📄 Export Offline Prompts (Manual Web UI Mode)', value: 'offline' },
+          { name: '🚪 Abort Refactoring', value: 'abort' }
+        ]
+      });
+
+      if (executionMode === 'abort') {
+        return;
+      } else if (executionMode === 'offline') {
+        const { OfflinePromptGenerator } = await import('@girardelli/architect-agents/src/core/agent-runtime/offline-prompt-generator.js');
+        const generator = new OfflinePromptGenerator();
+        generator.generate(plan);
+        console.log(chalk.green(`\n✅ Offline Prompts exported successfully to packages/architect/prompts/!`));
+        return;
+      }
+
+      await this.runAutonomousExecution(plan, executionMode);
+    } catch (e: any) {
+      console.error(chalk.red(`\n❌ Scan Failed: ${e.message}`));
+    }
+  }
+
+  private async runAutonomousExecution(plan: RefactoringPlan, providerType?: string) {
     console.log(chalk.blue('\n[System] Initializing AgentExecutor Runtime...'));
     
     // Confirm Action
@@ -111,11 +207,9 @@ export class GenesisTerminal {
 
     try {
       const executor = new AgentExecutor(isDangerous);
-      const report = await this.architect.analyze('.');
-      const plan = this.architect.refactor(report, '.');
 
-      spinner.succeed(chalk.green('Refactor Plan Successfully Created!'));
-      await executor.executePlan(plan);
+      spinner.succeed(chalk.green('Refactor Protocol Engaged!'));
+      await executor.executePlan(plan, providerType);
       
       console.log(chalk.gray('Check your `git diff` to review the Agent changes before committing.'));
       

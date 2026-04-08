@@ -45,6 +45,85 @@ jobs:
       - name: Execute Test Suite
         run: npm test
 
+      - name: Genesis Output Validation Gate
+        run: |
+          echo "=== Genesis CI Gate: Validating prompt output quality ==="
+
+          # Generate Genesis prompts against the test fixture
+          FIXTURE_DIR=$(mktemp -d)
+          node -e "
+            const { OfflinePromptGenerator } = require('./packages/architect-agents/dist/core/agent-runtime/offline-prompt-generator.js');
+
+            const plan = {
+              timestamp: new Date().toISOString(),
+              projectPath: '.',
+              currentScore: { overall: 70, components: [], breakdown: { modularity: 70, coupling: 65, cohesion: 75, layering: 70 } },
+              estimatedScoreAfter: { overall: 82, breakdown: { modularity: 80, coupling: 80, cohesion: 80, layering: 80 } },
+              steps: [
+                {
+                  id: 1, tier: 1, rule: 'hub-splitter', priority: 'HIGH',
+                  title: 'Split hub: database.ts',
+                  description: 'database.ts has 12 incoming connections.',
+                  rationale: 'High fan-in creates bottleneck.',
+                  operations: [
+                    { type: 'CREATE', path: 'src/core/db_query.ts', description: 'Query split', content: '// db_query.ts\nexport class QueryBuilder {}\n' },
+                    { type: 'MODIFY', path: 'src/core/database.ts', description: 'Refactor original' },
+                    { type: 'MODIFY', path: 'src/repos/user.repo.ts', description: 'Update imports' },
+                  ],
+                  scoreImpact: [{ metric: 'coupling', before: 65, after: 80 }],
+                  aiPrompt: 'Split database.ts into focused modules.',
+                },
+              ],
+              totalOperations: 3,
+              tier1Steps: 1,
+              tier2Steps: 0,
+            };
+
+            const gen = new OfflinePromptGenerator();
+            gen.generate(plan, '${FIXTURE_DIR}'.replace(/'/g, ''));
+            console.log('Genesis prompts generated to: ' + '${FIXTURE_DIR}'.replace(/'/g, ''));
+          " 2>&1 || { echo 'FAIL: Genesis prompt generation crashed'; exit 1; }
+
+          # Validation 1: Zero stdlib references in non-code sections
+          STDLIB_HITS=$(grep -rn "import .* from ['\"]\\(fs\\|path\\|os\\|sys\\|crypto\\)['\"]" "$FIXTURE_DIR" --include='*.md' | grep -v '^\`\`\`' | wc -l || true)
+          if [ "$STDLIB_HITS" -gt 0 ]; then
+            echo "FAIL: Found $STDLIB_HITS stdlib reference(s) in Genesis output"
+            grep -rn "import .* from ['\"]\\(fs\\|path\\|os\\|sys\\|crypto\\)['\"]" "$FIXTURE_DIR" --include='*.md'
+            exit 1
+          fi
+          echo "PASS: Zero stdlib references in prompt output"
+
+          # Validation 2: No prompt file exceeds 120KB
+          OVERSIZED=$(find "$FIXTURE_DIR" -name '*.md' -size +120k | wc -l || true)
+          if [ "$OVERSIZED" -gt 0 ]; then
+            echo "FAIL: $OVERSIZED prompt file(s) exceed 120KB limit"
+            find "$FIXTURE_DIR" -name '*.md' -size +120k -exec ls -lh {} \;
+            exit 1
+          fi
+          echo "PASS: All prompt files under 120KB"
+
+          # Validation 3: Every step prompt includes Response Format directive
+          for f in "$FIXTURE_DIR"/*-step-*.md; do
+            if [ -f "$f" ]; then
+              if ! grep -q "Response Format" "$f"; then
+                echo "FAIL: Missing Response Format directive in $(basename $f)"
+                exit 1
+              fi
+            fi
+          done
+          echo "PASS: All step prompts contain Response Format directive"
+
+          # Validation 4: Index file exists and lists all steps
+          if [ ! -f "$FIXTURE_DIR/00-index.md" ]; then
+            echo "FAIL: Missing 00-index.md"
+            exit 1
+          fi
+          echo "PASS: Index file present"
+
+          # Cleanup
+          rm -rf "$FIXTURE_DIR"
+          echo "=== Genesis CI Gate: ALL CHECKS PASSED ==="
+
       - name: Architect PR Review (Self-Host)
         if: matrix.node-version == '20.x' && github.event_name == 'pull_request'
         env:

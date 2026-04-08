@@ -349,7 +349,7 @@ export class ForecastEngine {
     if (patterns.length > 0) riskFactors.push(`${patterns.length} pre-anti-pattern(s)`);
 
     const topAction = patterns.length > 0
-      ? patterns[0].recommendation
+      ? patterns[0]!.recommendation
       : temporal.trend === 'degrading'
         ? 'Review recent changes and stabilize'
         : 'No action needed';

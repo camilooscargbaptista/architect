@@ -1,4 +1,16 @@
-import { ArchitectureScore, AnalysisReport } from './core.js';
+import { ArchitectureScore, AnalysisReport, DependencyIndex } from './core.js';
+
+export interface PlanValidation {
+  valid: boolean;
+  errorCount: number;
+  warningCount: number;
+  issues: Array<{
+    severity: 'ERROR' | 'WARNING' | 'INFO';
+    category: string;
+    stepId: number;
+    message: string;
+  }>;
+}
 
 export interface RefactoringPlan {
   timestamp: string;
@@ -9,6 +21,8 @@ export interface RefactoringPlan {
   totalOperations: number;
   tier1Steps: number;
   tier2Steps: number;
+  /** Fase 3.5: Structural consistency validation result */
+  validation?: PlanValidation;
 }
 
 export interface RefactorStep {
@@ -47,5 +61,5 @@ export interface CodeSymbol {
 export interface RefactorRule {
   name: string;
   tier: 1 | 2;
-  analyze(report: AnalysisReport, projectPath: string): RefactorStep[];
+  analyze(report: AnalysisReport, projectPath: string, index?: DependencyIndex): RefactorStep[];
 }

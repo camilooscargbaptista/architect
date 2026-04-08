@@ -1,4 +1,5 @@
 import { TemplateContext, EnrichedTemplateContext } from '@girardelli/architect-agents/src/core/agent-generator/types/template.js';
+import type { ComplianceRequirement, ModuleDetail, ExternalIntegration } from '@girardelli/architect-agents/src/core/agent-generator/types/domain.js';
 import {
     // @ts-ignore - Audit cleanup unused variable
   getEnriched,
@@ -364,7 +365,7 @@ function buildAgentDispatch(ctx: TemplateContext | EnrichedTemplateContext): str
   // Add module context if enriched
   const enriched = isEnriched(ctx) ? ctx : null;
   const moduleContext = enriched?.modules?.length
-    ? ` (${enriched.modules.slice(0, 3).map((m: any) => m.name).join(', ')})`
+    ? ` (${enriched.modules.slice(0, 3).map((m: ModuleDetail) => m.name).join(', ')})`
     : '';
 
   if (stack.hasBackend) {
@@ -431,12 +432,12 @@ function buildBusinessQuestions(ctx: TemplateContext | EnrichedTemplateContext):
     questions.push(`Q11: Como isso se alinha com o domínio ${domain.domain}?`);
 
     if (domain.compliance?.length) {
-      const complianceNames = domain.compliance.map((c: any) => c.name).join(', ');
+      const complianceNames = domain.compliance.map((c: ComplianceRequirement) => c.name).join(', ');
       questions.push(`Q12: Como garantir conformidade com ${complianceNames}?`);
     }
 
     if (domain.integrations?.length) {
-      const integrationNames = domain.integrations.slice(0, 3).map((i: any) => i.name).join(', ');
+      const integrationNames = domain.integrations.slice(0, 3).map((i: ExternalIntegration) => i.name).join(', ');
       questions.push(`Q13: Como essa mudança afeta as integrações com ${integrationNames}?`);
     }
   }

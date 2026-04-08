@@ -28,20 +28,20 @@ class I18nEngine {
    */
   t(path: string, params?: Record<string, string | number>): string {
     const keys = path.split('.');
-    let current: any = this.getDict();
+    let current: unknown = this.getDict();
 
     for (const key of keys) {
-      if (current[key] === undefined) {
+      if (typeof current !== 'object' || current === null || (current as Record<string, unknown>)[key] === undefined) {
         // Fallback to EN if missing in current dict
-        let fallback: any = en;
+        let fallback: unknown = en;
         for (const fKey of keys) {
-          if (fallback[fKey] === undefined) return `[Missing translation: ${path}]`;
-          fallback = fallback[fKey];
+          if (typeof fallback !== 'object' || fallback === null || (fallback as Record<string, unknown>)[fKey] === undefined) return `[Missing translation: ${path}]`;
+          fallback = (fallback as Record<string, unknown>)[fKey];
         }
         current = fallback;
         break;
       }
-      current = current[key];
+      current = (current as Record<string, unknown>)[key];
     }
 
     if (typeof current !== 'string') {

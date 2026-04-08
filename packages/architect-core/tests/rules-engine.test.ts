@@ -43,8 +43,8 @@ describe('RulesEngine', () => {
       const result = engine.validate(mockReport, rules);
       expect(result.success).toBe(false);
       expect(result.violations).toHaveLength(1);
-      expect(result.violations[0].rule).toBe('quality_gates.min_overall_score');
-      expect(result.violations[0].level).toBe('error');
+      expect(result.violations[0]!.rule).toBe('quality_gates.min_overall_score');
+      expect(result.violations[0]!.level).toBe('error');
     });
 
     it('should pass if overall score meets minimum', () => {
@@ -66,7 +66,7 @@ describe('RulesEngine', () => {
 
       const result = engine.validate(mockReport, rules);
       expect(result.success).toBe(false);
-      expect(result.violations[0].rule).toBe('quality_gates.max_critical_anti_patterns');
+      expect(result.violations[0]!.rule).toBe('quality_gates.max_critical_anti_patterns');
     });
 
     it('should issue warning if high anti-patterns exceed max', () => {
@@ -79,8 +79,8 @@ describe('RulesEngine', () => {
       // Warnings do not fail the build
       expect(result.success).toBe(true);
       expect(result.violations).toHaveLength(1);
-      expect(result.violations[0].level).toBe('warning');
-      expect(result.violations[0].rule).toBe('quality_gates.max_high_anti_patterns');
+      expect(result.violations[0]!.level).toBe('warning');
+      expect(result.violations[0]!.rule).toBe('quality_gates.max_high_anti_patterns');
     });
   });
 
@@ -93,7 +93,7 @@ describe('RulesEngine', () => {
 
       const result = engine.validate(mockReport, rules);
       expect(result.success).toBe(false);
-      expect(result.violations[0].rule).toBe('boundaries.allow_circular_dependencies');
+      expect(result.violations[0]!.rule).toBe('boundaries.allow_circular_dependencies');
     });
 
     it('should pass if circular dependencies are allowed', () => {
@@ -114,8 +114,8 @@ describe('RulesEngine', () => {
 
       const result = engine.validate(mockReport, rules);
       expect(result.success).toBe(false);
-      expect(result.violations[0].rule).toBe('boundaries.banned_imports');
-      expect(result.violations[0].message).toContain('lodash');
+      expect(result.violations[0]!.rule).toBe('boundaries.banned_imports');
+      expect(result.violations[0]!.message).toContain('lodash');
     });
 
     it('should pass if banned imports are not used', () => {

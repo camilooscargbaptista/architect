@@ -102,7 +102,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].staticScore).toBeGreaterThan(0);
+      expect(report.modules[0]!.staticScore).toBeGreaterThan(0);
     });
 
     it('should sort modules by temporal score ascending (worst first)', () => {
@@ -116,7 +116,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].temporalScore).toBeLessThanOrEqual(report.modules[1].temporalScore);
+      expect(report.modules[0]!.temporalScore).toBeLessThanOrEqual(report.modules[1]!.temporalScore);
     });
   });
 
@@ -129,7 +129,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].trend).toBe('degrading');
+      expect(report.modules[0]!.trend).toBe('degrading');
     });
 
     it('should classify degrading when commit acceleration is very high', () => {
@@ -140,7 +140,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].trend).toBe('degrading');
+      expect(report.modules[0]!.trend).toBe('degrading');
     });
 
     it('should classify improving when churn is decreasing', () => {
@@ -151,7 +151,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].trend).toBe('improving');
+      expect(report.modules[0]!.trend).toBe('improving');
     });
 
     it('should classify stable for moderate metrics', () => {
@@ -162,7 +162,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].trend).toBe('stable');
+      expect(report.modules[0]!.trend).toBe('stable');
     });
   });
 
@@ -175,7 +175,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].temporalScore).toBeLessThan(80);
+      expect(report.modules[0]!.temporalScore).toBeLessThan(80);
     });
 
     it('should give slight bonus for improving modules', () => {
@@ -187,7 +187,7 @@ describe('TemporalScorer', () => {
       const report = scorer.score(gitReport, staticScores);
 
       // The bonus comes from negative churn penalty
-      expect(report.modules[0].temporalScore).toBeGreaterThanOrEqual(70);
+      expect(report.modules[0]!.temporalScore).toBeGreaterThanOrEqual(70);
     });
 
     it('should clamp temporal score between 0 and 100', () => {
@@ -198,8 +198,8 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].temporalScore).toBeGreaterThanOrEqual(0);
-      expect(report.modules[0].temporalScore).toBeLessThanOrEqual(100);
+      expect(report.modules[0]!.temporalScore).toBeGreaterThanOrEqual(0);
+      expect(report.modules[0]!.temporalScore).toBeLessThanOrEqual(100);
     });
   });
 
@@ -212,7 +212,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].riskLevel).toBe('critical');
+      expect(report.modules[0]!.riskLevel).toBe('critical');
     });
 
     it('should classify low for healthy modules', () => {
@@ -223,7 +223,7 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].riskLevel).toBe('low');
+      expect(report.modules[0]!.riskLevel).toBe('low');
     });
   });
 
@@ -236,10 +236,10 @@ describe('TemporalScorer', () => {
 
       const report = scorer.score(gitReport, staticScores);
 
-      expect(report.modules[0].projectedScore).toBeDefined();
-      expect(report.modules[0].projectionWeeks).toBe(12);
-      expect(report.modules[0].projectionConfidence).toBeGreaterThan(0);
-      expect(report.modules[0].projectionConfidence).toBeLessThanOrEqual(1);
+      expect(report.modules[0]!.projectedScore).toBeDefined();
+      expect(report.modules[0]!.projectionWeeks).toBe(12);
+      expect(report.modules[0]!.projectionConfidence).toBeGreaterThan(0);
+      expect(report.modules[0]!.projectionConfidence).toBeLessThanOrEqual(1);
     });
   });
 

@@ -50,7 +50,7 @@ export class PathResolver {
       if (importPath.startsWith(cleanAlias)) {
         const targets = this.tsconfigPaths[alias];
         if (targets && targets.length > 0) {
-          const cleanTarget = targets[0].replace('/*', '');
+          const cleanTarget = targets[0]!.replace('/*', '');
           return importPath.replace(cleanAlias, cleanTarget);
         }
       }

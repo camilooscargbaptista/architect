@@ -60,8 +60,8 @@ export class DiagramGenerator {
     }
 
     for (let i = 0; i < layerOrder.length - 1; i++) {
-      const from = layerOrder[i].replace(/\s+/g, '_');
-      const to = layerOrder[i + 1].replace(/\s+/g, '_');
+      const from = layerOrder[i]!.replace(/\s+/g, '_');
+      const to = layerOrder[i + 1]!.replace(/\s+/g, '_');
       mermaid += `  ${from} --> ${to}\n`;
     }
 
@@ -85,8 +85,8 @@ export class DiagramGenerator {
     const nodes = new Set<string>();
     for (const [flow] of topFlows) {
       const [from, _, to] = flow.split(' ');
-      nodes.add(from);
-      nodes.add(to);
+      nodes.add(from!);
+      nodes.add(to!);
     }
 
     for (const node of nodes) {
@@ -99,7 +99,7 @@ export class DiagramGenerator {
     for (const [flow, weight] of topFlows) {
       const [from, _, to] = flow.split(' ');
       const label = weight > 1 ? ` | ${weight}` : '';
-      mermaid += `  ${this.sanitizeNodeName(from)} -->|${label}| ${this.sanitizeNodeName(to)}\n`;
+      mermaid += `  ${this.sanitizeNodeName(from!)} -->|${label}| ${this.sanitizeNodeName(to!)}\n`;
     }
 
     return mermaid; // specific diagram that doesn't use standard classDefs

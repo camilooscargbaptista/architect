@@ -16,6 +16,11 @@ import { architect, ProgressEvent } from '../core/architect.js';
 import { GenesisTerminal } from '../core/GenesisTerminal.js';
 import { c, ProgressReporter } from './progress-logger.js';
 import { AgentExecutor } from '@girardelli/architect-agents/src/core/agent-runtime/executor.js';
+import { InteractiveRefactor } from '../core/interactive-refactor.js';
+import { ForecastV2Engine } from '@girardelli/architect-core/src/core/analyzers/forecast-v2.js';
+import { GitHistoryAnalyzer } from '@girardelli/architect-core/src/infrastructure/git-history.js';
+import { TemporalScorer } from '@girardelli/architect-core/src/core/analyzers/temporal-scorer.js';
+import { PluginRegistry } from '@girardelli/architect-core/src/core/plugin-registry.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorReportGenerator } from './refactor-reporter.js';
@@ -37,11 +42,12 @@ interface CliOptions {
   command: string;
   path: string;
   format: OutputFormat;
-  output?: string;
+  output: string | undefined;
   verbose: boolean;
   locale: string;
   watch: boolean;
   auto: boolean;
+  interactive: boolean;
 }
 
 
@@ -60,12 +66,12 @@ function parseArgs(args: string[]): CliOptions {
   const verbose = args.includes('--verbose') || args.includes('-v');
 
   const localeIdx = args.indexOf('--locale');
-  let locale = 'en'; // default
+  let locale: string = 'en'; // default
   if (localeIdx >= 0 && args[localeIdx + 1]) {
-    locale = args[localeIdx + 1];
+    locale = args[localeIdx + 1]!;
   } else {
     // Attempt detect via ENV
-    const envLang = process.env.LANG || process.env.LANGUAGE || '';
+    const envLang = process.env['LANG'] || process.env['LANGUAGE'] || '';
     if (envLang.toLowerCase().includes('pt')) {
       locale = 'pt-BR';
     }
@@ -73,8 +79,9 @@ function parseArgs(args: string[]): CliOptions {
 
   const watch = args.includes('--watch') || args.includes('-w');
   const auto = args.includes('--auto');
+  const interactive = args.includes('--interactive') || args.includes('-i');
 
-  return { command, path: resolve(pathArg), format, output, verbose, locale, watch, auto };
+  return { command, path: resolve(pathArg), format, output: output || undefined, verbose, locale, watch, auto, interactive };
 }
 
 function printUsage(): void {
@@ -90,7 +97,9 @@ ${c.bold}Commands:${c.reset}
   ${c.cyan}execute${c.reset}         Autonomous Agent Runtime - auto-refactor project
   ${c.cyan}check${c.reset}           Run architecture-as-code validation against .architect.rules.yml
   ${c.cyan}pr-review${c.reset}       Run in GitHub Actions to comment on PRs with Score Delta
-  ${c.cyan}refactor${c.reset}        Generate refactoring plan with actionable steps
+  ${c.cyan}refactor${c.reset}        Generate refactoring plan (use --interactive for guided mode)
+  ${c.cyan}forecast${c.reset}        Predict architecture score decay using ML regression
+  ${c.cyan}plugin${c.reset}          Manage plugins (install, list, search, remove)
   ${c.cyan}agents${c.reset}          Generate/audit .agent/ directory with AI agents
   ${c.cyan}diagram${c.reset}         Generate architecture diagram only
   ${c.cyan}score${c.reset}           Calculate quality score only
@@ -104,11 +113,14 @@ ${c.bold}Options:${c.reset}
   --verbose, -v     Enable verbose debug logging
   --watch, -w       Watch mode (re-run check on file changes)
   --auto            Agent YOLO Mode - auto-approve structural changes
+  --interactive, -i Interactive refactoring: step-by-step with re-analysis
   --help            Show this help message
 
 ${c.bold}Examples:${c.reset}
   ${c.dim}$${c.reset} architect execute ./src
   ${c.dim}$${c.reset} architect execute ./src --auto
+  ${c.dim}$${c.reset} architect refactor ./src --interactive
+  ${c.dim}$${c.reset} architect forecast ./src
   ${c.dim}$${c.reset} architect analyze ./src --format html --output report.html
 
 ${c.dim}@girardelli/architect — Girardelli Tecnologia${c.reset}
@@ -127,7 +139,7 @@ async function main(): Promise<void> {
   logger.setup({ verbose: options.verbose, json: options.format === 'json' });
   
   // Set global locale
-  i18n.setLocale(options.locale as any);
+  i18n.setLocale(options.locale as 'en' | 'pt-BR');
 
   try {
     switch (options.command) {
@@ -194,6 +206,17 @@ async function main(): Promise<void> {
       }
 
       case 'refactor': {
+        // ── Interactive mode (Fase 3.3) ──
+        if (options.interactive) {
+          const interactive = new InteractiveRefactor({
+            projectPath: options.path,
+            autoMode: options.auto,
+          });
+          await interactive.run();
+          break;
+        }
+
+        // ── Standard refactor plan generation ──
         const progress = new ProgressReporter();
         progress.printHeader(options.path);
 
@@ -301,7 +324,7 @@ async function main(): Promise<void> {
       }
 
       case 'pr-review': {
-        const githubToken = process.env.GITHUB_TOKEN;
+        const githubToken = process.env['GITHUB_TOKEN'];
         if (!githubToken) {
           logger.error('GITHUB_TOKEN environment variable is required for pr-review');
           process.exit(1);
@@ -317,10 +340,10 @@ async function main(): Promise<void> {
         process.stderr.write(`\n  ${c.cyan}◉${c.reset} ${c.bold}PR REVIEWER${c.reset} ${c.dim}— Analyzing HEAD vs BASE...${c.reset}\n`);
 
         const headReport = await architect.analyze(options.path);
-        
+
         let baseReport = null;
         try {
-          const baseRef = github.context.payload.pull_request.base.ref;
+          const baseRef = github.context.payload.pull_request['base']['ref'];
           process.stderr.write(`  ${c.dim}↳ Fetching and checking out base branch: ${baseRef}${c.reset}\n`);
           
           execSync(`git fetch origin ${baseRef} || true`, { stdio: 'ignore', cwd: options.path });
@@ -362,6 +385,90 @@ async function main(): Promise<void> {
         break;
       }
 
+      case 'forecast': {
+        const progress = new ProgressReporter();
+        progress.printHeader(options.path);
+
+        // Phase 1: Analyze
+        const fReport = await architect.analyze(options.path, (e: ProgressEvent) => progress.onProgress(e));
+
+        // Phase 2: Git history
+        progress.printExtraPhase('GIT HISTORY', 'Analyzing commit timeline', c.magenta);
+        const gitAnalyzer = new GitHistoryAnalyzer();
+        const gitReport = await gitAnalyzer.analyze(options.path);
+        progress.printExtraComplete(
+          `${c.white}${gitReport.totalCommits}${c.reset}${c.dim} commits · ${c.reset}${c.white}${gitReport.modules.length}${c.reset}${c.dim} modules · ${c.reset}${c.white}${gitReport.periodWeeks}${c.reset}${c.dim} weeks${c.reset}`
+        );
+
+        // Phase 3: Temporal scoring
+        progress.printExtraPhase('TEMPORAL SCORER', 'Computing velocity-adjusted scores', c.orange);
+        const scorer = new TemporalScorer();
+        const staticScores = new Map<string, number>();
+        for (const mod of gitReport.modules) {
+          staticScores.set(mod.modulePath, fReport.score.overall);
+        }
+        const temporalReport = scorer.score(gitReport, staticScores);
+        progress.printExtraComplete(
+          `${c.white}${temporalReport.overallTrend}${c.reset}${c.dim} · temporal score: ${c.reset}${c.white}${temporalReport.overallTemporalScore}${c.reset}`
+        );
+
+        // Phase 4: Forecast V2
+        progress.printExtraPhase('FORECAST V2', 'Running ML-based decay prediction', c.cyan);
+        const forecastEngine = new ForecastV2Engine();
+        const forecastResult = forecastEngine.predict(fReport, gitReport, temporalReport);
+        progress.printExtraComplete(`${c.white}${forecastResult.overallRisk}${c.reset}${c.dim} risk · ${c.reset}${c.white}${forecastResult.atRiskModules.length}${c.reset}${c.dim} modules at risk${c.reset}`);
+
+        // Output
+        if (options.format === 'json') {
+          const projectName = String(fReport.projectInfo.name || basename(options.path)).replace(/[^a-zA-Z0-9-]/g, '-');
+          const outputPath = options.output || `forecast-${projectName}.json`;
+          writeFileSync(outputPath, JSON.stringify(forecastResult, null, 2));
+          process.stderr.write(`\n  ${c.green}✓${c.reset} Forecast saved: ${outputPath}\n\n`);
+        } else {
+          // Pretty print to terminal
+          const fc = forecastResult.projectForecast;
+          const riskColor = forecastResult.overallRisk === 'critical' ? c.red
+            : forecastResult.overallRisk === 'high' ? c.orange
+            : forecastResult.overallRisk === 'medium' ? c.yellow
+            : c.green;
+
+          process.stderr.write(`\n  ${c.bold}ARCHITECTURE FORECAST${c.reset}\n`);
+          process.stderr.write(`  ${riskColor}${c.bold}${forecastResult.overallRisk.toUpperCase()} RISK${c.reset}\n\n`);
+          process.stderr.write(`  ${forecastResult.headline}\n\n`);
+
+          process.stderr.write(`  ${c.dim}Score:${c.reset} ${c.white}${Math.round(fc.currentScore)}${c.reset} ${c.dim}→${c.reset} `);
+          const deltaColor = fc.scoreDelta < 0 ? c.red : fc.scoreDelta > 0 ? c.green : c.dim;
+          process.stderr.write(`${deltaColor}${Math.round(fc.predictedScore)}${c.reset} ${c.dim}(${fc.scoreDelta > 0 ? '+' : ''}${fc.scoreDelta.toFixed(1)})${c.reset}\n`);
+          process.stderr.write(`  ${c.dim}Weekly Δ:${c.reset} ${deltaColor}${fc.weeklyDelta > 0 ? '+' : ''}${fc.weeklyDelta.toFixed(2)}${c.reset}${c.dim}/week${c.reset}\n`);
+          process.stderr.write(`  ${c.dim}R²:${c.reset} ${c.white}${fc.regression.rSquared}${c.reset}  ${c.dim}Confidence:${c.reset} ${c.white}${Math.round(fc.confidence * 100)}%${c.reset}\n`);
+
+          if (fc.weeksToThreshold !== Infinity) {
+            process.stderr.write(`  ${c.red}⚠ Critical threshold (${fc.threshold}) in ~${fc.weeksToThreshold} weeks${c.reset}\n`);
+          }
+
+          if (forecastResult.atRiskModules.length > 0) {
+            process.stderr.write(`\n  ${c.bold}AT-RISK MODULES${c.reset}\n`);
+            for (const mod of forecastResult.atRiskModules.slice(0, 5)) {
+              const mColor = mod.riskLevel === 'critical' ? c.red : mod.riskLevel === 'high' ? c.orange : c.yellow;
+              process.stderr.write(`  ${mColor}[${mod.riskLevel}]${c.reset} ${c.bold}${mod.modulePath}${c.reset} ${c.dim}(${mod.currentScore} → ${mod.predictedScore}, Δ${mod.weeklyDelta.toFixed(2)}/w)${c.reset}\n`);
+              for (const driver of mod.drivers.slice(0, 2)) {
+                process.stderr.write(`    ${c.dim}↳ ${driver}${c.reset}\n`);
+              }
+            }
+          }
+
+          if (forecastResult.recommendations.length > 0) {
+            process.stderr.write(`\n  ${c.bold}RECOMMENDATIONS${c.reset}\n`);
+            for (const rec of forecastResult.recommendations) {
+              process.stderr.write(`  ${c.cyan}→${c.reset} ${rec}\n`);
+            }
+          }
+
+          process.stderr.write(`\n`);
+        }
+        break;
+      }
+
       case 'agents': {
         const progress = new ProgressReporter();
         progress.printHeader(options.path);
@@ -387,9 +494,9 @@ async function main(): Promise<void> {
         }
 
         if (result.audit.length > 0) {
-          const missing = result.audit.filter((f: any) => f.type === 'MISSING');
-          const improvements = result.audit.filter((f: any) => f.type === 'IMPROVEMENT');
-          const ok = result.audit.filter((f: any) => f.type === 'OK');
+          const missing = result.audit.filter(f => f.type === 'MISSING');
+          const improvements = result.audit.filter(f => f.type === 'IMPROVEMENT');
+          const ok = result.audit.filter(f => f.type === 'OK');
 
           if (ok.length > 0) process.stderr.write(`\n  ${c.green}✓ ${ok.length} checks passed${c.reset}\n`);
           if (missing.length > 0) {
@@ -475,6 +582,141 @@ async function main(): Promise<void> {
             process.stderr.write(`  ${c.cyan}${l.name}${c.reset}: ${c.white}${l.files.length}${c.reset} files\n`);
           }
           process.stderr.write('\n');
+        }
+        break;
+      }
+
+      case 'plugin': {
+        const registry = new PluginRegistry(options.path);
+        registry.load();
+
+        // Sub-commands: plugin install <spec>, plugin list, plugin search <query>, plugin remove <name>, plugin enable <name>, plugin disable <name>
+        const subCommand = args[1] ?? 'list';
+        const pluginArg = args[2] ?? '';
+
+        switch (subCommand) {
+          case 'install': {
+            if (!pluginArg) {
+              logger.error('Usage: architect plugin install <package-or-path>');
+              process.exit(1);
+              break;
+            }
+
+            process.stderr.write(`\n  ${c.cyan}◉${c.reset} ${c.bold}PLUGIN INSTALL${c.reset}\n`);
+
+            let entry;
+            if (pluginArg.startsWith('./') || pluginArg.startsWith('../') || pluginArg.startsWith('/')) {
+              process.stderr.write(`  ${c.dim}Installing local plugin: ${pluginArg}${c.reset}\n`);
+              entry = registry.installLocal(pluginArg);
+            } else {
+              process.stderr.write(`  ${c.dim}Installing from npm: ${pluginArg}${c.reset}\n`);
+              entry = registry.installNpm(pluginArg);
+            }
+
+            process.stderr.write(`  ${c.green}✓${c.reset} Installed ${c.bold}${entry.name}${c.reset}@${entry.version} (${entry.source})\n\n`);
+            break;
+          }
+
+          case 'list': {
+            const plugins = registry.list();
+            process.stderr.write(`\n  ${c.bold}INSTALLED PLUGINS${c.reset} — ${plugins.length} total\n\n`);
+
+            if (plugins.length === 0) {
+              process.stderr.write(`  ${c.dim}No plugins installed. Use 'architect plugin install <package>' to add one.${c.reset}\n\n`);
+            } else {
+              for (const p of plugins) {
+                const statusIcon = p.enabled ? `${c.green}●${c.reset}` : `${c.dim}○${c.reset}`;
+                const hooks: string[] = [];
+                if (p.manifest?.hooks.antiPatterns) hooks.push('anti-patterns');
+                if (p.manifest?.hooks.refactorRules) hooks.push('refactor-rules');
+                if (p.manifest?.hooks.scoreModifiers) hooks.push('score-modifiers');
+                const hooksStr = hooks.length > 0 ? ` ${c.dim}[${hooks.join(', ')}]${c.reset}` : '';
+                process.stderr.write(`  ${statusIcon} ${c.bold}${p.name}${c.reset}@${p.version} ${c.dim}(${p.source})${c.reset}${hooksStr}\n`);
+              }
+              process.stderr.write('\n');
+            }
+            break;
+          }
+
+          case 'search': {
+            if (!pluginArg) {
+              logger.error('Usage: architect plugin search <query>');
+              process.exit(1);
+              break;
+            }
+
+            process.stderr.write(`\n  ${c.bold}PLUGIN SEARCH${c.reset} — "${pluginArg}"\n\n`);
+            const results = registry.searchNpm(pluginArg);
+
+            if (results.length === 0) {
+              process.stderr.write(`  ${c.dim}No plugins found matching "${pluginArg}".${c.reset}\n\n`);
+            } else {
+              for (const r of results.slice(0, 10)) {
+                const installed = registry.has(r.name) ? ` ${c.green}[installed]${c.reset}` : '';
+                process.stderr.write(`  ${c.bold}${r.name}${c.reset}@${r.version}${installed}\n`);
+                if (r.description) {
+                  process.stderr.write(`    ${c.dim}${r.description}${c.reset}\n`);
+                }
+              }
+              process.stderr.write('\n');
+            }
+            break;
+          }
+
+          case 'remove': {
+            if (!pluginArg) {
+              logger.error('Usage: architect plugin remove <name>');
+              process.exit(1);
+              break;
+            }
+
+            const removed = registry.uninstall(pluginArg);
+            if (removed) {
+              process.stderr.write(`\n  ${c.green}✓${c.reset} Removed plugin: ${c.bold}${pluginArg}${c.reset}\n\n`);
+            } else {
+              process.stderr.write(`\n  ${c.red}✗${c.reset} Plugin not found: ${pluginArg}\n\n`);
+            }
+            break;
+          }
+
+          case 'enable': {
+            if (!pluginArg) {
+              logger.error('Usage: architect plugin enable <name>');
+              process.exit(1);
+              break;
+            }
+            const ok = registry.setEnabled(pluginArg, true);
+            if (ok) {
+              process.stderr.write(`\n  ${c.green}✓${c.reset} Enabled plugin: ${c.bold}${pluginArg}${c.reset}\n\n`);
+            } else {
+              process.stderr.write(`\n  ${c.red}✗${c.reset} Plugin not found: ${pluginArg}\n\n`);
+            }
+            break;
+          }
+
+          case 'disable': {
+            if (!pluginArg) {
+              logger.error('Usage: architect plugin disable <name>');
+              process.exit(1);
+              break;
+            }
+            const ok = registry.setEnabled(pluginArg, false);
+            if (ok) {
+              process.stderr.write(`\n  ${c.yellow}○${c.reset} Disabled plugin: ${c.bold}${pluginArg}${c.reset}\n\n`);
+            } else {
+              process.stderr.write(`\n  ${c.red}✗${c.reset} Plugin not found: ${pluginArg}\n\n`);
+            }
+            break;
+          }
+
+          default:
+            process.stderr.write(`\n  ${c.bold}Plugin Commands:${c.reset}\n`);
+            process.stderr.write(`  ${c.cyan}architect plugin install <package-or-path>${c.reset}  Install a plugin\n`);
+            process.stderr.write(`  ${c.cyan}architect plugin list${c.reset}                      List installed plugins\n`);
+            process.stderr.write(`  ${c.cyan}architect plugin search <query>${c.reset}             Search npm for plugins\n`);
+            process.stderr.write(`  ${c.cyan}architect plugin remove <name>${c.reset}              Remove a plugin\n`);
+            process.stderr.write(`  ${c.cyan}architect plugin enable <name>${c.reset}              Enable a plugin\n`);
+            process.stderr.write(`  ${c.cyan}architect plugin disable <name>${c.reset}             Disable a plugin\n\n`);
         }
         break;
       }

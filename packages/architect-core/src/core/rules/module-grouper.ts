@@ -1,39 +1,52 @@
 import { basename, dirname, join } from 'path';
-import { AnalysisReport } from '../types/core.js';
+import { AnalysisReport, DependencyIndex } from '../types/core.js';
 import { RefactorRule, RefactorStep, FileOperation } from '../types/rules.js';
+import { detectLanguage } from '../utils/stdlib-registry.js';
+import { getModuleInitFilename, getModuleInitContent } from '../utils/language-utils.js';
 
 /**
  * Module Grouper Rule (Tier 1)
+ *
  * Analyzes which files are frequently imported together and suggests
  * grouping them into cohesive modules/packages.
+ *
+ * v8.2.0 — External dependency filtering is now centralized in RefactorEngine.
+ * This rule receives a pre-cleaned graph with only internal project files.
  */
 export class ModuleGrouperRule implements RefactorRule {
   name = 'module-grouper';
   tier = 1 as const;
 
-  analyze(report: AnalysisReport, _projectPath: string): RefactorStep[] {
+  analyze(report: AnalysisReport, _projectPath: string, index?: DependencyIndex): RefactorStep[] {
     const steps: RefactorStep[] = [];
+    const language = detectLanguage(report.projectInfo);
 
-    // Build co-import matrix: which files are imported together?
+    // Build co-import matrix (graph is already cleaned by RefactorEngine)
     const coImportCount: Record<string, Record<string, number>> = {};
 
-    // For each source file, see what it imports
+    // ── Fase 2.6: Use pre-computed outgoingByFile for grouped iteration ──
     const importsBySource: Record<string, string[]> = {};
-    for (const edge of report.dependencyGraph.edges) {
-      if (!importsBySource[edge.from]) importsBySource[edge.from] = [];
-      importsBySource[edge.from].push(edge.to);
+    if (index) {
+      for (const [source, edges] of index.outgoingByFile) {
+        importsBySource[source] = edges.map(e => e.to);
+      }
+    } else {
+      for (const edge of report.dependencyGraph.edges) {
+        if (!importsBySource[edge.from]) importsBySource[edge.from] = [];
+        importsBySource[edge.from]!.push(edge.to);
+      }
     }
 
     // Count co-imports
     for (const [_source, targets] of Object.entries(importsBySource)) {
       for (let i = 0; i < targets.length; i++) {
         for (let j = i + 1; j < targets.length; j++) {
-          const a = targets[i];
-          const b = targets[j];
+          const a = targets[i]!;
+          const b = targets[j]!;
           if (!coImportCount[a]) coImportCount[a] = {};
           if (!coImportCount[b]) coImportCount[b] = {};
-          coImportCount[a][b] = (coImportCount[a][b] || 0) + 1;
-          coImportCount[b][a] = (coImportCount[b][a] || 0) + 1;
+          coImportCount[a]![b] = (coImportCount[a]![b] || 0) + 1;
+          coImportCount[b]![a] = (coImportCount[b]![a] || 0) + 1;
         }
       }
     }
@@ -52,12 +65,12 @@ export class ModuleGrouperRule implements RefactorRule {
       if (strongPartners.length >= 2) {
         const cluster = [fileA, ...strongPartners.map(([f]) => f)];
         const inSameDir = cluster.every(
-          (f) => dirname(f) === dirname(cluster[0])
+          (f) => dirname(f) === dirname(cluster[0]!),
         );
 
         // Only suggest if NOT already in the same directory
         if (!inSameDir) {
-          // Arquitetura Limpa: Impede arrastar Módulos Transversais (DTOs/Types) para se tornarem fechados em Pastas de Domínios
+          // Arquitetura Limpa: Impede arrastar tipos transversais para domínios
           const hasTypes = cluster.some(f => {
             const lowerF = f.toLowerCase();
             return lowerF.includes('types') || lowerF.includes('interface') || lowerF.includes('/types/');
@@ -71,18 +84,20 @@ export class ModuleGrouperRule implements RefactorRule {
       }
     }
 
-    // Generate steps for each cluster
+    // Generate steps for each cluster (max 3)
     for (const cluster of clusters.slice(0, 3)) {
       const operations: FileOperation[] = [];
       const clusterName = this.suggestModuleName(cluster.files);
-      const targetDir = `${dirname(cluster.files[0])}/${clusterName}`;
+      const targetDir = `${dirname(cluster.files[0]!)}/${clusterName}`;
 
-      // Create new module directory
+      const initFilename = getModuleInitFilename(language);
+      const initContent = getModuleInitContent(language, clusterName);
+
       operations.push({
         type: 'CREATE',
-        path: `${targetDir}/__init__.py`,
+        path: `${targetDir}/${initFilename}`,
         description: `Create new module \`${clusterName}/\` to group ${cluster.files.length} co-dependent files`,
-        content: `"""Module ${clusterName} — grouped by co-import pattern."""\n`,
+        content: initContent,
       });
 
       // Move files
@@ -121,13 +136,12 @@ export class ModuleGrouperRule implements RefactorRule {
   }
 
   private suggestModuleName(files: string[]): string {
-    // Try to infer a common theme from filenames
     const names = files.map((f) => basename(f).replace(/\.[^.]+$/, '').toLowerCase());
-    const commonParts = names[0].split(/[_-]/).filter((part) =>
-      names.every((n) => n.includes(part))
+    const commonParts = names[0]!.split(/[_-]/).filter((part) =>
+      names.every((n) => n.includes(part)),
     );
 
-    if (commonParts.length > 0) return commonParts[0];
+    if (commonParts.length > 0) return commonParts[0]!;
     return 'shared';
   }
 }
