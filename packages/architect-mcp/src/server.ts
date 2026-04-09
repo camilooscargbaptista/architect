@@ -15,8 +15,9 @@
  *   - suggest_refactoring: Get refactoring suggestions
  *   - suggest_rules: Get rule suggestions from KB history
  *   - get_kb_context: Generate LLM-ready architecture context
+ *   - create_from_document: Genesis from Scratch — create project from requirements
  *
- * @since v10.0.0 — Phase 2C
+ * @since v10.0.0 — Phase 2C + Phase 4
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -377,6 +378,84 @@ server.tool(
       }
     } catch (err: any) {
       return { content: [{ type: 'text' as const, text: `Error: ${err.message}` }], isError: true };
+    }
+  }
+);
+
+// Tool 9: create_from_document
+server.tool(
+  'create_from_document',
+  'Genesis from Scratch — create a complete project from a requirements document or text description. Parses requirements, generates architecture blueprint, and scaffolds the project on disk.',
+  {
+    requirements: z.string().describe('Requirements text (markdown, plain text, YAML, or JSON describing what the system should do)'),
+    outputDir: z.string().optional().describe('Directory to create the project in (default: current directory)'),
+    format: z.enum(['markdown', 'plaintext', 'yaml', 'json']).optional().describe('Format of the requirements text (auto-detected if omitted)'),
+  },
+  async ({ requirements, outputDir, format }) => {
+    try {
+      // Dynamic imports resolved at runtime via npm workspace symlinks
+      // Use variable to bypass TS module resolution (paths: {} override in tsconfig)
+      const genesisBase = '@girardelli/architect-core/src/core/genesis-from-scratch';
+      const { RequirementsParser } = await import(`${genesisBase}/requirements-parser.js`);
+      const { BlueprintGenerator } = await import(`${genesisBase}/blueprint-generator.js`);
+      const { ProjectBootstrapper } = await import(`${genesisBase}/project-bootstrapper.js`);
+
+      const detectedFormat = format ?? (
+        requirements.trim().startsWith('{') ? 'json'
+        : requirements.trim().startsWith('#') ? 'markdown'
+        : requirements.includes('---') ? 'yaml'
+        : 'plaintext'
+      );
+
+      const parser = new RequirementsParser();
+      const parsed = parser.parse({ rawText: requirements, format: detectedFormat as any });
+
+      const generator = new BlueprintGenerator();
+      const blueprint = generator.generate(parsed);
+
+      const bootstrapper = new ProjectBootstrapper();
+      const result = bootstrapper.bootstrap(blueprint, resolve(outputDir ?? '.'));
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            projectPath: result.projectPath,
+            projectName: blueprint.projectName,
+            filesCreated: result.filesCreated,
+            directories: result.directories.length,
+            architecture: {
+              style: blueprint.style,
+              styleRationale: blueprint.styleRationale,
+              stack: {
+                language: blueprint.stack.language,
+                framework: blueprint.stack.framework,
+                database: blueprint.stack.database,
+                orm: blueprint.stack.orm,
+              },
+              layers: blueprint.layers.map((l: any) => l.name),
+              modules: blueprint.modules.length,
+              rules: blueprint.rules.length,
+            },
+            requirements: {
+              domain: parsed.domain,
+              boundedContexts: parsed.boundedContexts.length,
+              entities: parsed.entities.length,
+              integrations: parsed.integrations.length,
+              workflows: parsed.workflows.length,
+            },
+            nextSteps: [
+              `cd ${result.projectPath}`,
+              'npm install',
+              'architect analyze .',
+              'architect check .',
+            ],
+          }, null, 2),
+        }],
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: 'text' as const, text: `Error: ${message}` }], isError: true };
     }
   }
 );

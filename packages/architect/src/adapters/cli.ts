@@ -982,6 +982,84 @@ async function main(): Promise<void> {
         break;
       }
 
+      case 'genesis-create': {
+        // Genesis from Scratch — create a project from a requirements document
+        const inputPath = args[1];
+        const outputDir = args.find(a => a.startsWith('--output='))?.split('=')[1]
+          ?? args[args.indexOf('--output') + 1]
+          ?? '.';
+
+        process.stderr.write(`\n  ${c.bold}${c.magenta}GENESIS FROM SCRATCH${c.reset}\n`);
+        process.stderr.write(`  ${c.dim}Document → Architecture → Project${c.reset}\n\n`);
+
+        let rawText: string;
+
+        if (inputPath && existsSync(inputPath)) {
+          rawText = readFileSync(inputPath, 'utf-8');
+          process.stderr.write(`  ${c.cyan}●${c.reset} Reading requirements from ${c.bold}${inputPath}${c.reset}\n`);
+        } else if (inputPath && !inputPath.startsWith('-')) {
+          // Treat it as inline text
+          rawText = inputPath;
+          process.stderr.write(`  ${c.cyan}●${c.reset} Using inline requirements text\n`);
+        } else {
+          process.stderr.write(`  ${c.red}✗${c.reset} Usage: architect genesis-create <requirements-file-or-text> [--output <dir>]\n\n`);
+          process.exit(1);
+          break;
+        }
+
+        const format = inputPath?.endsWith('.yml') || inputPath?.endsWith('.yaml') ? 'yaml'
+          : inputPath?.endsWith('.json') ? 'json'
+          : inputPath?.endsWith('.md') ? 'markdown'
+          : 'plaintext';
+
+        const { RequirementsParser } = await import('@girardelli/architect-core/src/core/genesis-from-scratch/requirements-parser.js');
+        const { BlueprintGenerator } = await import('@girardelli/architect-core/src/core/genesis-from-scratch/blueprint-generator.js');
+        const { ProjectBootstrapper } = await import('@girardelli/architect-core/src/core/genesis-from-scratch/project-bootstrapper.js');
+
+        // Step 1: Parse
+        process.stderr.write(`  ${c.cyan}●${c.reset} Parsing requirements...\n`);
+        const parser = new RequirementsParser();
+        const requirements = parser.parse({ rawText, format, sourcePath: inputPath });
+        process.stderr.write(`    ${c.green}✓${c.reset} Project: ${c.bold}${requirements.projectName}${c.reset} · ${requirements.domain} domain\n`);
+        process.stderr.write(`    ${c.dim}${requirements.boundedContexts.length} contexts · ${requirements.entities.length} entities · ${requirements.integrations.length} integrations${c.reset}\n`);
+
+        // Step 2: Blueprint
+        process.stderr.write(`  ${c.cyan}●${c.reset} Generating architecture blueprint...\n`);
+        const generator = new BlueprintGenerator();
+        const blueprint = generator.generate(requirements);
+        process.stderr.write(`    ${c.green}✓${c.reset} Style: ${c.bold}${blueprint.style}${c.reset} · ${blueprint.stack.language}/${blueprint.stack.framework}\n`);
+        process.stderr.write(`    ${c.dim}${blueprint.layers.length} layers · ${blueprint.modules.length} modules · ${blueprint.rules.length} rules${c.reset}\n`);
+
+        // Step 3: Scaffold
+        process.stderr.write(`  ${c.cyan}●${c.reset} Bootstrapping project...\n`);
+        const bootstrapper = new ProjectBootstrapper();
+        const result = bootstrapper.bootstrap(blueprint, resolve(outputDir));
+        process.stderr.write(`    ${c.green}✓${c.reset} Created ${c.bold}${result.filesCreated}${c.reset} files in ${c.bold}${result.projectPath}${c.reset}\n`);
+        process.stderr.write(`    ${c.dim}${result.directories.length} directories${c.reset}\n`);
+
+        // Summary
+        process.stderr.write(`\n  ${c.green}${c.bold}✓ Project scaffolded successfully!${c.reset}\n\n`);
+        process.stderr.write(`  ${c.dim}Next steps:${c.reset}\n`);
+        process.stderr.write(`    cd ${result.projectPath}\n`);
+        process.stderr.write(`    npm install\n`);
+        process.stderr.write(`    architect analyze .\n\n`);
+
+        // Also output JSON for programmatic use
+        if (options.format === 'json') {
+          console.log(JSON.stringify({
+            projectPath: result.projectPath,
+            filesCreated: result.filesCreated,
+            blueprint: {
+              style: blueprint.style,
+              stack: blueprint.stack,
+              layers: blueprint.layers.length,
+              modules: blueprint.modules.length,
+            },
+          }, null, 2));
+        }
+        break;
+      }
+
       default:
         logger.error(`Unknown command: ${options.command}`);
         process.exit(1);

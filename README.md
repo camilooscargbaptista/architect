@@ -9,7 +9,7 @@
 [![npm](https://img.shields.io/npm/v/@girardelli/architect?color=blue)](https://www.npmjs.com/package/@girardelli/architect)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
-[![Tests](https://img.shields.io/badge/Tests-1842%20passing-22c55e.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-1868%20passing-22c55e.svg)]()
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <p align="center">
@@ -176,9 +176,30 @@ Expose all architecture tools to any MCP-compatible LLM client:
 npx @girardelli/architect-mcp
 ```
 
-8 tools available: `analyze_project`, `get_score`, `get_anti_patterns`, `check_rules`, `query_kb`, `suggest_refactoring`, `suggest_rules`, `get_kb_context`.
+9 tools available: `analyze_project`, `get_score`, `get_anti_patterns`, `check_rules`, `query_kb`, `suggest_refactoring`, `suggest_rules`, `get_kb_context`, `create_from_document`.
 
 Works with Claude Code, Cursor, Windsurf, and any MCP client.
+
+### Genesis from Scratch
+
+`architect genesis-create` takes a requirements document and generates a complete project scaffold with architecture decisions baked in:
+
+```bash
+# From a requirements file
+architect genesis-create requirements.md --output ./projects
+
+# From inline text
+architect genesis-create "E-commerce platform with products, orders, payments via Stripe"
+```
+
+The pipeline: **Requirements Document → NLP Parser → Architecture Blueprint → Project Scaffold**
+
+- Parses entities, bounded contexts, integrations, workflows from natural language
+- Selects architecture style (clean architecture, hexagonal, modular monolith, etc.) based on project complexity
+- Infers stack decisions (language, framework, ORM, libraries)
+- Generates real source files: controllers, services, repositories, entities, DTOs
+- Creates `.architect.rules.yml` and `.architect.json` for governance from day one
+- Also available as MCP tool: `create_from_document`
 
 ### Architecture Forecast
 
@@ -255,6 +276,7 @@ Monorepo with npm workspaces. Use the full CLI or just the core engine:
 | `architect pr-review .` | GitHub Actions PR review |
 | `architect diagram .` | Generate architecture diagram |
 | `architect genesis .` | Interactive TUI terminal |
+| `architect genesis-create <file>` | Create project from requirements document |
 
 ---
 
