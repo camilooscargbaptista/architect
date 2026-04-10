@@ -16,8 +16,9 @@ import { architect, ProgressEvent } from './index.js';
 import { ReportGenerator } from './reporter.js';
 import { HtmlReportGenerator } from './html-reporter.js';
 import { RefactorReportGenerator } from './refactor-reporter.js';
-import { writeFileSync } from 'fs';
-import { resolve, basename } from 'path';
+import { writeFileSync, mkdirSync, existsSync, statSync } from 'fs';
+import { resolve, basename, dirname } from 'path';
+import { Command } from 'commander';
 
 type OutputFormat = 'json' | 'markdown' | 'html';
 
@@ -262,58 +263,39 @@ class ProgressReporter {
   }
 }
 
-// ── CLI Parsing ──
+// ── CLI Parsing (commander) ──
 
-function parseArgs(args: string[]): CliOptions {
-  const command = args[0] || 'analyze';
-  const pathArg = args.find((a) => !a.startsWith('--') && a !== command) || '.';
-  const formatIdx = args.indexOf('--format');
-  const format = (formatIdx >= 0 ? args[formatIdx + 1] : 'html') as OutputFormat;
-  const outputIdx = args.indexOf('--output');
-  const output = outputIdx >= 0 ? args[outputIdx + 1] : undefined;
+const VALID_FORMATS: OutputFormat[] = ['json', 'markdown', 'html'];
 
-  return { command, path: resolve(pathArg), format, output };
-}
-
-function printUsage(): void {
-  console.log(`
-${c.cyan}${c.bold}⚡ Architect v3.1${c.reset} — Enterprise Architecture Intelligence
-
-${c.bold}Usage:${c.reset}
-  architect <command> [path] [options]
-
-${c.bold}Commands:${c.reset}
-  ${c.cyan}analyze${c.reset}         Full architecture analysis (default)
-  ${c.cyan}refactor${c.reset}        Generate refactoring plan with actionable steps
-  ${c.cyan}agents${c.reset}          Generate/audit .agent/ directory with AI agents
-  ${c.cyan}diagram${c.reset}         Generate architecture diagram only
-  ${c.cyan}score${c.reset}           Calculate quality score only
-  ${c.cyan}anti-patterns${c.reset}   Detect anti-patterns only
-  ${c.cyan}layers${c.reset}          Analyze layer structure only
-
-${c.bold}Options:${c.reset}
-  --format <type>   Output format: html, json, markdown (default: html)
-  --output <file>   Output file path
-  --help            Show this help message
-
-${c.bold}Examples:${c.reset}
-  ${c.dim}$${c.reset} architect analyze ./src
-  ${c.dim}$${c.reset} architect analyze ./src --format html --output report.html
-  ${c.dim}$${c.reset} architect score ./src --format json
-
-${c.dim}@girardelli/architect — Girardelli Tecnologia${c.reset}
-  `);
-}
-
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-
-  if (args.includes('--help') || args.includes('-h') || args.length === 0) {
-    printUsage();
-    process.exit(0);
+function validateFormat(value: string, command: string, defaults: OutputFormat = 'html'): OutputFormat {
+  if (!value) return defaults;
+  if (!VALID_FORMATS.includes(value as OutputFormat)) {
+    throw new Error(`Invalid --format "${value}" for ${command}. Valid: ${VALID_FORMATS.join(', ')}`);
   }
+  return value as OutputFormat;
+}
 
-  const options = parseArgs(args);
+function resolveProjectPath(pathArg: string): string {
+  const abs = resolve(pathArg);
+  if (!existsSync(abs)) {
+    throw new Error(`Path does not exist: ${abs}`);
+  }
+  const stat = statSync(abs);
+  if (!stat.isDirectory()) {
+    throw new Error(`Path is not a directory: ${abs}`);
+  }
+  return abs;
+}
+
+function ensureOutputDir(outputPath: string): void {
+  const dir = dirname(outputPath);
+  if (dir && !existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+}
+
+async function runCommand(command: string, path: string, format: OutputFormat, output?: string): Promise<void> {
+  const options: CliOptions = { command, path, format, output };
 
   try {
     switch (options.command) {
@@ -345,6 +327,7 @@ async function main(): Promise<void> {
           const htmlGenerator = new HtmlReportGenerator();
           const html = htmlGenerator.generateHtml(report, plan, agentSuggestion);
           const outputPath = options.output || `architect-report-${projectName}.html`;
+          ensureOutputDir(outputPath);
           writeFileSync(outputPath, html);
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
         } else if (options.format === 'markdown') {
@@ -352,11 +335,13 @@ async function main(): Promise<void> {
           const mdGenerator = new ReportGenerator();
           const markdown = mdGenerator.generateMarkdownReport(report);
           const outputPath = options.output || `architect-report-${projectName}.md`;
+          ensureOutputDir(outputPath);
           writeFileSync(outputPath, markdown);
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
         } else {
           progress.printExtraPhase('REPORT BUILDER', 'Generating JSON report', c.cyan);
           const outputPath = options.output || `architect-report-${projectName}.json`;
+          ensureOutputDir(outputPath);
           writeFileSync(outputPath, JSON.stringify({ report, plan, agentSuggestion }, null, 2));
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
         }
@@ -385,12 +370,14 @@ async function main(): Promise<void> {
 
         if (options.format === 'json') {
           const outputPath = options.output || `refactor-plan-${projectName}.json`;
+          ensureOutputDir(outputPath);
           writeFileSync(outputPath, JSON.stringify(plan, null, 2));
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
         } else {
           const refactorReporter = new RefactorReportGenerator();
           const html = refactorReporter.generateHtml(plan);
           const outputPath = options.output || `refactor-plan-${projectName}.html`;
+          ensureOutputDir(outputPath);
           writeFileSync(outputPath, html);
           progress.printExtraComplete(`${c.green}${outputPath}${c.reset}`);
         }
@@ -450,6 +437,7 @@ async function main(): Promise<void> {
       case 'diagram': {
         const diagram = await architect.diagram(options.path);
         if (options.output) {
+          ensureOutputDir(options.output);
           writeFileSync(options.output, diagram);
           process.stderr.write(`  ${c.green}✓${c.reset} Diagram saved: ${options.output}\n`);
         } else {
@@ -504,9 +492,7 @@ async function main(): Promise<void> {
       }
 
       default:
-        console.error(`${c.red}✗${c.reset} Unknown command: ${options.command}`);
-        printUsage();
-        process.exit(1);
+        throw new Error(`Unknown command: ${options.command}`);
     }
   } catch (error) {
     process.stderr.write(`\n  ${c.red}${c.bold}✗ ERROR${c.reset}: ${error instanceof Error ? error.message : error}\n\n`);
@@ -514,4 +500,48 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+// ── commander wiring ──
+
+const program = new Command();
+
+program
+  .name('architect')
+  .description('⚡ Architect v3.1 — Enterprise Architecture Intelligence')
+  .version('3.1.0')
+  .showHelpAfterError(true);
+
+const registerCommand = (
+  name: string,
+  description: string,
+  defaultFormat: OutputFormat = 'html',
+): void => {
+  program
+    .command(name)
+    .description(description)
+    .argument('[path]', 'target project path', '.')
+    .option('-f, --format <type>', `output format (${VALID_FORMATS.join('|')})`, defaultFormat)
+    .option('-o, --output <file>', 'output file path')
+    .action(async (pathArg: string, opts: { format: string; output?: string }) => {
+      const path = resolveProjectPath(pathArg);
+      const format = validateFormat(opts.format, name, defaultFormat);
+      await runCommand(name, path, format, opts.output);
+    });
+};
+
+registerCommand('analyze', 'Full architecture analysis (scan + deps + layers + anti-patterns + scoring)', 'html');
+registerCommand('refactor', 'Generate refactoring plan with actionable steps', 'html');
+registerCommand('agents', 'Generate/audit .agent/ directory with AI agents', 'html');
+registerCommand('diagram', 'Generate Mermaid architecture diagram only', 'markdown');
+registerCommand('score', 'Calculate quality score only', 'markdown');
+registerCommand('anti-patterns', 'Detect anti-patterns only', 'markdown');
+registerCommand('layers', 'Analyze layer structure only', 'markdown');
+
+// Default to `analyze` when called with no subcommand
+if (process.argv.length === 2) {
+  process.argv.push('analyze');
+}
+
+program.parseAsync(process.argv).catch((err) => {
+  process.stderr.write(`\n  ${c.red}${c.bold}✗ ERROR${c.reset}: ${err instanceof Error ? err.message : err}\n\n`);
+  process.exit(1);
+});
