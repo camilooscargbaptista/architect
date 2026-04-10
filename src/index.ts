@@ -10,6 +10,7 @@ import { AgentGenerator, AgentSuggestion } from './agent-generator/index.js';
 import { ProjectSummarizer } from './project-summarizer.js';
 import { ConfigLoader } from './config.js';
 import { AnalysisReport, RefactoringPlan } from './types.js';
+import { clearAstCache } from './ast-parser.js';
 import { relative } from 'path';
 
 export type ProgressPhase =
@@ -25,8 +26,13 @@ export interface ProgressEvent {
 
 export type ProgressCallback = (event: ProgressEvent) => void;
 
+export interface AnalyzeOptions {
+  onProgress?: ProgressCallback;
+  signal?: AbortSignal;
+}
+
 export interface ArchitectCommand {
-  analyze: (path: string, onProgress?: ProgressCallback) => Promise<AnalysisReport>;
+  analyze: (path: string, options?: AnalyzeOptions | ProgressCallback) => Promise<AnalysisReport>;
   refactor: (report: AnalysisReport, projectPath: string) => RefactoringPlan;
   diagram: (path: string) => Promise<string>;
   score: (path: string) => Promise<{ overall: number; breakdown: Record<string, number> }>;
@@ -34,9 +40,76 @@ export interface ArchitectCommand {
   layers: (path: string) => Promise<Array<{ name: string; files: string[] }>>;
 }
 
+/** Thrown when analyze() is aborted via AbortSignal. */
+export class AnalysisAbortedError extends Error {
+  constructor() {
+    super('Analysis aborted');
+    this.name = 'AnalysisAbortedError';
+  }
+}
+
 class Architect implements ArchitectCommand {
-  async analyze(projectPath: string, onProgress?: ProgressCallback): Promise<AnalysisReport> {
-    const emit = onProgress || (() => {});
+  /**
+   * Memoize analyze() results by absolute project path.
+   * score()/antiPatterns()/layers() all go through analyze(), so without
+   * caching the entire pipeline runs 4x when a caller asks for all four.
+   */
+  private analyzeCache = new Map<string, Promise<AnalysisReport>>();
+
+  /** Clear cached analyses — useful after file changes or in tests. */
+  clearCache(): void {
+    this.analyzeCache.clear();
+    clearAstCache();
+  }
+
+  async analyze(
+    projectPath: string,
+    optionsOrCallback?: AnalyzeOptions | ProgressCallback,
+  ): Promise<AnalysisReport> {
+    // Accept the legacy signature `analyze(path, onProgress)` for
+    // backward compatibility with existing callers / tests.
+    const opts: AnalyzeOptions = typeof optionsOrCallback === 'function'
+      ? { onProgress: optionsOrCallback }
+      : (optionsOrCallback || {});
+
+    const { signal } = opts;
+    const rawEmit = opts.onProgress;
+    // Wrap emit in try/catch so a broken progress callback can never kill
+    // the analysis.
+    const emit: ProgressCallback = (event) => {
+      if (!rawEmit) return;
+      try {
+        rawEmit(event);
+      } catch {
+        // swallow — progress is advisory
+      }
+    };
+    const checkAborted = (): void => {
+      if (signal?.aborted) throw new AnalysisAbortedError();
+    };
+
+    // ── Cache hit ──
+    // Only cache when no signal is provided (otherwise a cancelled promise
+    // would poison the cache).
+    if (!signal) {
+      const cached = this.analyzeCache.get(projectPath);
+      if (cached) return cached;
+    }
+
+    const promise = this.runAnalysis(projectPath, emit, checkAborted);
+    if (!signal) {
+      this.analyzeCache.set(projectPath, promise);
+      promise.catch(() => this.analyzeCache.delete(projectPath));
+    }
+    return promise;
+  }
+
+  private async runAnalysis(
+    projectPath: string,
+    emit: ProgressCallback,
+    checkAborted: () => void,
+  ): Promise<AnalysisReport> {
+    checkAborted();
     const config = ConfigLoader.loadConfig(projectPath);
 
     // ── Phase 1: File Scanning ──
@@ -50,31 +123,29 @@ class Architect implements ArchitectCommand {
       phase: 'scan', status: 'complete',
       metrics: { files: projectInfo.totalFiles, lines: projectInfo.totalLines, languages: projectInfo.primaryLanguages.length },
     });
+    checkAborted();
 
     // ── Phase 2: Dependency Analysis ──
+    // Run the analyzer exactly once and derive both the edges list and the
+    // adjacency map from the same result. The previous implementation
+    // called analyzeDependencies twice, duplicating all file parsing.
     emit({ phase: 'dependencies', status: 'start' });
     const analyzer = new ArchitectureAnalyzer(projectPath);
-    const dependencies = new Map();
-    for (const [file, imports] of analyzer
-      .analyzeDependencies(projectInfo.fileTree)
-      .reduce(
-        (map, edge) => {
-          if (!map.has(edge.from)) {
-            map.set(edge.from, new Set());
-          }
-          map.get(edge.from)!.add(edge.to);
-          return map;
-        },
-        new Map<string, Set<string>>()
-      )
-      .entries()) {
-      dependencies.set(file, imports);
-    }
     const edges = analyzer.analyzeDependencies(projectInfo.fileTree);
+    const dependencies = new Map<string, Set<string>>();
+    for (const edge of edges) {
+      let set = dependencies.get(edge.from);
+      if (!set) {
+        set = new Set<string>();
+        dependencies.set(edge.from, set);
+      }
+      set.add(edge.to);
+    }
     emit({
       phase: 'dependencies', status: 'complete',
       metrics: { edges: edges.length, modules: dependencies.size },
     });
+    checkAborted();
 
     // ── Phase 3: Layer Detection ──
     emit({ phase: 'layers', status: 'start' });
@@ -83,6 +154,7 @@ class Architect implements ArchitectCommand {
       phase: 'layers', status: 'complete',
       metrics: { layers: layers.length, classified: layers.reduce((s, l) => s + l.files.length, 0) },
     });
+    checkAborted();
 
     // ── Phase 4: Anti-Pattern Detection ──
     emit({ phase: 'antipatterns', status: 'start' });
@@ -96,6 +168,7 @@ class Architect implements ArchitectCommand {
         high: antiPatterns.filter(p => p.severity === 'HIGH').length,
       },
     });
+    checkAborted();
 
     // ── Phase 5: Architecture Scoring ──
     emit({ phase: 'scoring', status: 'start' });
@@ -111,6 +184,7 @@ class Architect implements ArchitectCommand {
         layering: score.breakdown.layering,
       },
     });
+    checkAborted();
 
     const diagramGenerator = new DiagramGenerator();
     const layerDiagram = diagramGenerator.generateLayerDiagram(layers);
