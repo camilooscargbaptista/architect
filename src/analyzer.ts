@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'fs';
 import { extname, relative, dirname, resolve, join } from 'path';
 import { DependencyEdge, Layer, FileNode } from './types.js';
+import { analyzeFile } from './ast-parser.js';
 
 export class ArchitectureAnalyzer {
   private projectPath: string;
@@ -174,22 +175,22 @@ export class ArchitectureAnalyzer {
 
   private parseImports(filePath: string): string[] {
     try {
-      const content = readFileSync(filePath, 'utf-8');
       const ext = extname(filePath);
       const imports: string[] = [];
 
-      if (ext === '.ts' || ext === '.tsx' || ext === '.js' || ext === '.jsx') {
-        const importRegex =
-          /(?:import|require)\s*(?:\{[^}]+\}|[^\s]+)\s*from\s*['"]([^'"]+)['"]/g;
-        let match;
-        while ((match = importRegex.exec(content)) !== null) {
-          const importPath = match[1];
-          // Only count relative imports (./  ../) as internal dependencies
-          if (importPath.startsWith('.')) {
-            imports.push(importPath);
-          }
+      if (ext === '.ts' || ext === '.tsx' || ext === '.js' || ext === '.jsx' || ext === '.mjs' || ext === '.cjs') {
+        // Delegate to AST parser (cached). Filter to relative imports only
+        // so we stay consistent with the legacy behavior used by the
+        // dependency graph.
+        const parsed = analyzeFile(filePath);
+        for (const importPath of parsed.imports) {
+          if (importPath.startsWith('.')) imports.push(importPath);
         }
-      } else if (ext === '.py') {
+        return imports;
+      }
+
+      const content = readFileSync(filePath, 'utf-8');
+      if (ext === '.py') {
         // Parse "from X import Y" — capture X (the module source)
         const fromImportRegex = /^from\s+([\w.]+)\s+import\b/gm;
         let match;
