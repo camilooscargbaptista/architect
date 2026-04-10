@@ -33,22 +33,40 @@ export interface AntiPattern {
   metrics?: Record<string, number | string>;
 }
 
+/**
+ * Qualitative band for a dimension. Numeric scores are kept for
+ * backward compatibility but bands are the primary signal going forward.
+ * - solid    : healthy, no action needed
+ * - attention: worth watching, address opportunistically
+ * - critical : actively hurting the codebase, refactor now
+ */
+export type ScoreBand = 'solid' | 'attention' | 'critical';
+
 export interface ScoreComponent {
   name: string;
   score: number;
   maxScore: number;
   weight: number;
   explanation: string;
+  band: ScoreBand;
 }
 
 export interface ArchitectureScore {
   overall: number;
+  /** Overall band (worst-of components, so one critical dimension shows). */
+  overallBand: ScoreBand;
   components: ScoreComponent[];
   breakdown: {
     modularity: number;
     coupling: number;
     cohesion: number;
     layering: number;
+  };
+  bands: {
+    modularity: ScoreBand;
+    coupling: ScoreBand;
+    cohesion: ScoreBand;
+    layering: ScoreBand;
   };
 }
 
