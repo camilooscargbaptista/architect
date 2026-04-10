@@ -1,7 +1,11 @@
 import { globSync } from 'glob';
-import { readFileSync, lstatSync } from 'fs';
+import { readFileSync, lstatSync, existsSync, statSync } from 'fs';
 import { join, relative, extname } from 'path';
+import ignore, { Ignore } from 'ignore';
+import { isBinaryFileSync } from 'isbinaryfile';
 import { FileNode, ProjectInfo, ArchitectConfig } from './types.js';
+
+const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MiB — avoid reading monster files
 
 export class ProjectScanner {
   private projectPath: string;
@@ -79,21 +83,79 @@ export class ProjectScanner {
     return this.projectPath.split('/').pop() || 'project';
   }
 
-  private scanDirectory(): string[] {
-    const ignorePatterns = this.config.ignore || [];
-    const negatedPatterns = ignorePatterns.map((p) => `!**/${p}/**`);
+  /**
+   * Load .gitignore rules from the project root (and common nested dirs)
+   * and combine them with the user's config.ignore patterns.
+   */
+  private loadIgnoreRules(): Ignore {
+    const ig = ignore();
+    const configIgnore = this.config.ignore || [];
+    ig.add(configIgnore);
 
-    const files = globSync('**/*', {
+    // Walk up and collect .gitignore files up to the project root.
+    const gitignorePath = join(this.projectPath, '.gitignore');
+    if (existsSync(gitignorePath)) {
+      try {
+        const content = readFileSync(gitignorePath, 'utf-8');
+        ig.add(content);
+      } catch {
+        // ignore
+      }
+    }
+
+    // Also honor .architectignore if the user wants overrides
+    const architectIgnore = join(this.projectPath, '.architectignore');
+    if (existsSync(architectIgnore)) {
+      try {
+        ig.add(readFileSync(architectIgnore, 'utf-8'));
+      } catch {
+        // ignore
+      }
+    }
+
+    return ig;
+  }
+
+  private scanDirectory(): string[] {
+    const ig = this.loadIgnoreRules();
+
+    // Use glob only to enumerate; filter with `ignore` so .gitignore semantics
+    // (negations, globs, directory markers) are honored correctly.
+    const raw = globSync('**/*', {
       cwd: this.projectPath,
-      ignore: ignorePatterns,
       absolute: true,
       nodir: true,
+      dot: false,
     });
 
-    return files.filter(
-      (f) =>
-        !lstatSync(f).isDirectory() && this.isSourceFile(f)
-    );
+    const result: string[] = [];
+    for (const absPath of raw) {
+      const rel = relative(this.projectPath, absPath);
+      if (!rel || rel.startsWith('..')) continue;
+      if (ig.ignores(rel)) continue;
+
+      let stat;
+      try {
+        stat = lstatSync(absPath);
+      } catch {
+        continue;
+      }
+      if (stat.isDirectory()) continue;
+      if (stat.size > MAX_FILE_BYTES) continue;
+      if (!this.isSourceFile(absPath)) continue;
+
+      // Binary detection: even with text extensions, fail-safe against
+      // minified bundles or embedded blobs.
+      try {
+        if (isBinaryFileSync(absPath, stat.size)) continue;
+      } catch {
+        // if isBinaryFile fails, fall through and let downstream handle it
+      }
+
+      result.push(absPath);
+    }
+
+    return result;
   }
 
   private isSourceFile(filePath: string): boolean {
@@ -285,6 +347,9 @@ export class ProjectScanner {
 
   private countLines(filePath: string): number {
     try {
+      const stat = statSync(filePath);
+      if (stat.size > MAX_FILE_BYTES) return 0;
+      if (isBinaryFileSync(filePath, stat.size)) return 0;
       const content = readFileSync(filePath, 'utf-8');
       return content.split('\n').length;
     } catch {
