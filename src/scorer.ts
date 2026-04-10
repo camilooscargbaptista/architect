@@ -1,5 +1,26 @@
-import { ArchitectureScore, DependencyEdge, AntiPattern, ScoreComponent } from './types.js';
+import { ArchitectureScore, DependencyEdge, AntiPattern, ScoreComponent, ScoreBand } from './types.js';
 import { basename } from 'path';
+
+/**
+ * Convert a numeric score (0–100) into a qualitative band.
+ *
+ * These bands are deliberately coarse. The previous scorer baked magic
+ * breakpoints directly into each dimension which made the output look
+ * precise when it was really a rough heuristic. Bands encode that
+ * uncertainty honestly.
+ */
+export function scoreToBand(score: number): ScoreBand {
+  if (score >= 75) return 'solid';
+  if (score >= 50) return 'attention';
+  return 'critical';
+}
+
+/** Worst-of aggregation so one bad dimension can't hide behind good ones. */
+function worstBand(bands: ScoreBand[]): ScoreBand {
+  if (bands.includes('critical')) return 'critical';
+  if (bands.includes('attention')) return 'attention';
+  return 'solid';
+}
 
 export class ArchitectureScorer {
   private modularity: number = 0;
@@ -26,37 +47,46 @@ export class ArchitectureScorer {
     this.calculateCohesion(edges);
     this.calculateLayering(antiPatterns);
 
-    const components = [
+    const modScore = Math.round(this.modularity);
+    const coupScore = Math.round(this.coupling);
+    const cohScore = Math.round(this.cohesion);
+    const layScore = Math.round(this.layering);
+
+    const components: ScoreComponent[] = [
       {
         name: 'Modularity',
-        score: Math.round(this.modularity),
+        score: modScore,
         maxScore: 100,
         weight: 0.4,
         explanation:
           'Measures appropriate module boundaries and single responsibility principle adherence',
+        band: scoreToBand(modScore),
       },
       {
         name: 'Coupling',
-        score: Math.round(this.coupling),
+        score: coupScore,
         maxScore: 100,
         weight: 0.25,
         explanation:
           'Evaluates interdependencies between modules; lower coupling is better',
+        band: scoreToBand(coupScore),
       },
       {
         name: 'Cohesion',
-        score: Math.round(this.cohesion),
+        score: cohScore,
         maxScore: 100,
         weight: 0.2,
         explanation:
           'Assesses how closely related functionality is grouped together',
+        band: scoreToBand(cohScore),
       },
       {
         name: 'Layering',
-        score: Math.round(this.layering),
+        score: layScore,
         maxScore: 100,
         weight: 0.15,
         explanation: 'Checks adherence to architectural layer separation',
+        band: scoreToBand(layScore),
       },
     ];
 
@@ -69,12 +99,19 @@ export class ArchitectureScorer {
 
     return {
       overall: Math.min(100, Math.max(0, overall)),
+      overallBand: worstBand(components.map((c) => c.band)),
       components,
       breakdown: {
-        modularity: Math.round(this.modularity),
-        coupling: Math.round(this.coupling),
-        cohesion: Math.round(this.cohesion),
-        layering: Math.round(this.layering),
+        modularity: modScore,
+        coupling: coupScore,
+        cohesion: cohScore,
+        layering: layScore,
+      },
+      bands: {
+        modularity: components[0].band,
+        coupling: components[1].band,
+        cohesion: components[2].band,
+        layering: components[3].band,
       },
     };
   }
