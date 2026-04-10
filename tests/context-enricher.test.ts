@@ -18,8 +18,10 @@ function makeReport(overrides: Partial<AnalysisReport> = {}): AnalysisReport {
     },
     score: {
       overall: 72,
+      overallBand: 'attention',
       components: [],
       breakdown: { modularity: 80, coupling: 65, cohesion: 70, layering: 75 },
+      bands: { modularity: 'solid', coupling: 'attention', cohesion: 'attention', layering: 'solid' },
     },
     antiPatterns: [
       {
@@ -54,8 +56,10 @@ function makePlan(overrides: Partial<RefactoringPlan> = {}): RefactoringPlan {
     projectPath: '/test',
     currentScore: {
       overall: 72,
+      overallBand: 'attention',
       components: [],
       breakdown: { modularity: 80, coupling: 65, cohesion: 70, layering: 75 },
+      bands: { modularity: 'solid', coupling: 'attention', cohesion: 'attention', layering: 'solid' },
     },
     estimatedScoreAfter: { overall: 82, breakdown: { modularity: 85, coupling: 75, cohesion: 80, layering: 80 } },
     steps: [

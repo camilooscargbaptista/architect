@@ -21,8 +21,10 @@ function makeReport(overrides: Partial<AnalysisReport> = {}): AnalysisReport {
     },
     score: {
       overall: 72,
+      overallBand: 'attention',
       components: [],
       breakdown: { modularity: 80, coupling: 65, cohesion: 70, layering: 75 },
+      bands: { modularity: 'solid', coupling: 'attention', cohesion: 'attention', layering: 'solid' },
     },
     antiPatterns: [],
     layers: [],

@@ -47,8 +47,10 @@ function makeReport(overrides: Partial<AnalysisReport> = {}): AnalysisReport {
     },
     score: {
       overall: 75,
+      overallBand: 'attention',
       components: [],
       breakdown: { modularity: 80, coupling: 70, cohesion: 75, layering: 80 },
+      bands: { modularity: 'solid', coupling: 'attention', cohesion: 'solid', layering: 'solid' },
     },
     antiPatterns: [],
     layers: [],
@@ -66,7 +68,7 @@ function makePlan(overrides: Partial<RefactoringPlan> = {}): RefactoringPlan {
   return {
     timestamp: new Date().toISOString(),
     projectPath: '/test-project',
-    currentScore: { overall: 75, components: [], breakdown: { modularity: 80, coupling: 70, cohesion: 75, layering: 80 } },
+    currentScore: { overall: 75, overallBand: 'attention', components: [], breakdown: { modularity: 80, coupling: 70, cohesion: 75, layering: 80 }, bands: { modularity: 'solid', coupling: 'attention', cohesion: 'solid', layering: 'solid' } },
     estimatedScoreAfter: { overall: 85, breakdown: { modularity: 85, coupling: 80, cohesion: 85, layering: 85 } },
     steps: [],
     totalOperations: 0,
