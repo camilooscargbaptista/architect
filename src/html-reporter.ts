@@ -107,12 +107,22 @@ ${this.getScripts(report)}
     return 'Critical';
   }
 
-  private escapeHtml(text: string): string {
-    return text
+  /**
+   * HTML-escape untrusted text before embedding it in the report.
+   *
+   * Escapes all five characters that can break out of an attribute or
+   * element context: `&`, `<`, `>`, `"`, and `'`. Non-string inputs are
+   * coerced defensively so a stray `undefined` or `null` can't produce
+   * `"undefined"` in the DOM.
+   */
+  private escapeHtml(text: unknown): string {
+    if (text === null || text === undefined) return '';
+    return String(text)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private groupAntiPatterns(
@@ -173,22 +183,22 @@ ${this.getScripts(report)}
     const modulesHtml = summary.modules.length > 0
       ? summary.modules.map(m => `
         <div class="overview-module">
-          <div class="overview-module-name">${this.esc(m.name)}</div>
-          <div class="overview-module-desc">${this.esc(m.description)}</div>
+          <div class="overview-module-name">${this.escapeHtml(m.name)}</div>
+          <div class="overview-module-desc">${this.escapeHtml(m.description)}</div>
           <div class="overview-module-files">${m.files} file${m.files > 1 ? 's' : ''}</div>
         </div>`).join('')
       : '<div class="overview-empty">Nenhum módulo detectado</div>';
 
     const techHtml = summary.techStack
-      .map(t => `<span class="overview-tag tech-tag">${this.esc(t)}</span>`)
+      .map(t => `<span class="overview-tag tech-tag">${this.escapeHtml(t)}</span>`)
       .join('');
 
     const keywordsHtml = summary.keywords
-      .map(k => `<span class="overview-tag keyword-tag">${this.esc(k)}</span>`)
+      .map(k => `<span class="overview-tag keyword-tag">${this.escapeHtml(k)}</span>`)
       .join('');
 
     const entryHtml = summary.entryPoints.length > 0
-      ? summary.entryPoints.map(e => `<code class="overview-entry">${this.esc(e)}</code>`).join(' ')
+      ? summary.entryPoints.map(e => `<code class="overview-entry">${this.escapeHtml(e)}</code>`).join(' ')
       : '<span class="overview-empty">—</span>';
 
     return `
@@ -198,10 +208,10 @@ ${this.getScripts(report)}
         <div class="overview-grid">
           <div class="overview-card overview-main">
             <div class="overview-label">O que é</div>
-            <div class="overview-description">${this.esc(summary.description)}</div>
+            <div class="overview-description">${this.escapeHtml(summary.description)}</div>
             <div class="overview-purpose-row">
               <span class="overview-purpose-label">Tipo:</span>
-              <span class="overview-purpose-value">${this.esc(summary.purpose)}</span>
+              <span class="overview-purpose-value">${this.escapeHtml(summary.purpose)}</span>
             </div>
           </div>
           <div class="overview-card">
@@ -227,12 +237,9 @@ ${this.getScripts(report)}
     </details>`;
   }
 
-  private esc(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  /** @deprecated use escapeHtml */
+  private esc(text: unknown): string {
+    return this.escapeHtml(text);
   }
 
   private renderScoreHero(report: AnalysisReport): string {
@@ -326,7 +333,7 @@ ${this.getScripts(report)}
         return `
       <div class="layer-card" style="--layer-color: ${color}">
         <div class="count" style="color: ${color}">${l.files.length}</div>
-        <div class="name">${l.name}</div>
+        <div class="name">${this.escapeHtml(l.name)}</div>
         <div class="desc">${this.escapeHtml(l.description)}</div>
       </div>`;
       })
@@ -1106,14 +1113,14 @@ function animateCounter(el, target) {
     };
 
     const agentCards = s.suggestedAgents.map(a =>
-      `<label class="agent-toggle-card" data-category="agents" data-name="${a.name}">
-        <input type="checkbox" class="agent-check" ${a.status !== 'DELETE' ? 'checked' : ''} data-type="agents" data-item="${a.name}">
+      `<label class="agent-toggle-card" data-category="agents" data-name="${this.escapeHtml(a.name)}">
+        <input type="checkbox" class="agent-check" ${a.status !== 'DELETE' ? 'checked' : ''} data-type="agents" data-item="${this.escapeHtml(a.name)}">
         <div class="agent-toggle-inner" style="border-color:${statusBorder(a.status)}">
           <div class="agent-toggle-icon">${roleIcon(a.name)}</div>
           <div class="agent-toggle-info">
-            <span class="agent-toggle-name">${a.name}</span>
+            <span class="agent-toggle-name">${this.escapeHtml(a.name)}</span>
             <span class="agent-toggle-role" style="color:${roleColor(a.name)}">${roleLabel(a.name)}</span>
-            ${a.description ? `<span class="agent-toggle-desc">${a.description}</span>` : ''}
+            ${a.description ? `<span class="agent-toggle-desc">${this.escapeHtml(a.description)}</span>` : ''}
           </div>
           ${statusBadge(a.status)}
           <div class="agent-toggle-check">\u2713</div>
@@ -1122,13 +1129,13 @@ function animateCounter(el, target) {
     ).join('\n');
 
     const miniCard = (item: { name: string; status: string; description?: string }, icon: string, type: string): string =>
-      `<label class="agent-toggle-card mini" data-category="${type}">
-        <input type="checkbox" class="agent-check" ${item.status !== 'DELETE' ? 'checked' : ''} data-type="${type}" data-item="${item.name}">
+      `<label class="agent-toggle-card mini" data-category="${this.escapeHtml(type)}">
+        <input type="checkbox" class="agent-check" ${item.status !== 'DELETE' ? 'checked' : ''} data-type="${this.escapeHtml(type)}" data-item="${this.escapeHtml(item.name)}">
         <div class="agent-toggle-inner" style="border-color:${statusBorder(item.status)}">
           <span class="agent-toggle-icon">${icon}</span>
           <div class="agent-toggle-info">
-            <span class="agent-toggle-name">${item.name}.md</span>
-            ${item.description ? `<span class="agent-toggle-desc">${item.description}</span>` : ''}
+            <span class="agent-toggle-name">${this.escapeHtml(item.name)}.md</span>
+            ${item.description ? `<span class="agent-toggle-desc">${this.escapeHtml(item.description)}</span>` : ''}
           </div>
           ${statusBadge(item.status)}
           <div class="agent-toggle-check">\u2713</div>
@@ -1141,12 +1148,12 @@ function animateCounter(el, target) {
 
     const skillCards = s.suggestedSkills.map(sk =>
       `<label class="agent-toggle-card" data-category="skills">
-        <input type="checkbox" class="agent-check" checked data-type="skills" data-item="${sk.source}">
+        <input type="checkbox" class="agent-check" checked data-type="skills" data-item="${this.escapeHtml(sk.source)}">
         <div class="agent-toggle-inner" style="border-color:${statusBorder(sk.status)}">
           <span class="agent-toggle-icon">\u{1F9E0}</span>
           <div class="agent-toggle-info">
-            <span class="agent-toggle-name">${sk.name}</span>
-            <span class="agent-toggle-role" style="color:#34d399">${sk.description}</span>
+            <span class="agent-toggle-name">${this.escapeHtml(sk.name)}</span>
+            <span class="agent-toggle-role" style="color:#34d399">${this.escapeHtml(sk.description)}</span>
           </div>
           ${statusBadge(sk.status)}
           <div class="agent-toggle-check">\u2713</div>
@@ -1164,8 +1171,8 @@ function animateCounter(el, target) {
           return `<div class="agent-audit-item ${cls}">
             <span class="audit-icon">${icon}</span>
             <div class="audit-content">
-              <span class="audit-desc">${f.description}</span>
-              ${f.suggestion ? `<span class="audit-suggestion">\u2192 ${f.suggestion}</span>` : ''}
+              <span class="audit-desc">${this.escapeHtml(f.description)}</span>
+              ${f.suggestion ? `<span class="audit-suggestion">\u2192 ${this.escapeHtml(f.suggestion)}</span>` : ''}
             </div>
           </div>`;
         }).join('\n')}
