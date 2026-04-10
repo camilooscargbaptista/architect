@@ -1,5 +1,5 @@
-import { readFileSync } from 'fs';
 import { AntiPattern, FileNode, ArchitectConfig } from './types.js';
+import { analyzeFile } from './ast-parser.js';
 
 export class AntiPatternDetector {
   private config: ArchitectConfig;
@@ -214,40 +214,11 @@ export class AntiPatternDetector {
   }
 
   private countMethods(filePath: string): number {
-    try {
-      const content = readFileSync(filePath, 'utf-8');
-      const methodRegex = /(?:async\s+)?(?:function|public|private|protected|static)\s+\w+\s*\(/g;
-      const arrowMethodRegex = /(?:readonly\s+)?\w+\s*=\s*(?:async\s+)?\(/g;
-      const matches = content.match(methodRegex);
-      const arrowMatches = content.match(arrowMethodRegex);
-      return (matches ? matches.length : 0) + (arrowMatches ? arrowMatches.length : 0);
-    } catch {
-      return 0;
-    }
+    return analyzeFile(filePath).methods;
   }
 
   private countInternalExports(filePath: string): number {
-    try {
-      const content = readFileSync(filePath, 'utf-8');
-      const internalTypes = [
-        '_',
-        'Internal',
-        'Private',
-        'Impl',
-        'Detail',
-      ];
-      let count = 0;
-
-      for (const type of internalTypes) {
-        const regex = new RegExp(`export\\s+\\w*${type}\\w*`, 'g');
-        const matches = content.match(regex);
-        count += matches ? matches.length : 0;
-      }
-
-      return count;
-    } catch {
-      return 0;
-    }
+    return analyzeFile(filePath).internalExports;
   }
 
   private walkFileTree(
