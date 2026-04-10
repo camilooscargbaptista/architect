@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { AnalysisReport } from '../types.js';
-import { FrameworkInfo, DetectedToolchain } from './types.js';
+import { FrameworkInfo, DetectedToolchain, StackInfo } from './types.js';
 
 /**
  * FrameworkDetector — Detects actual frameworks and toolchain from dependency files.
@@ -144,6 +144,151 @@ export class FrameworkDetector {
     const projectStructure = this.detectProjectStructure(report);
 
     return { frameworks: unique, primaryFramework, toolchain, projectStructure };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STACK DETECTION — produces the compact StackInfo used by agent-generator
+  // (consolidated from the former stack-detector.ts so there is ONE source
+  // of truth for framework/language detection).
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Produce a compact {@link StackInfo} for agent-generator templates.
+   *
+   * Reuses the rich dependency-file detection from {@link detect} and adds
+   * derived flags (hasBackend/hasFrontend/hasMobile/hasDatabase) plus
+   * package-manager and test-framework fallbacks.
+   */
+  detectStack(report: AnalysisReport, projectPath: string): StackInfo {
+    const files = report.dependencyGraph.nodes;
+    const extensions = new Set<string>();
+    for (const file of files) {
+      const ext = file.split('.').pop()?.toLowerCase() || '';
+      if (ext) extensions.add(ext);
+    }
+
+    // ── Languages ──
+    // Prefer the primary languages already computed by the scanner.
+    const languages = new Set<string>();
+    for (const lang of report.projectInfo.primaryLanguages || []) {
+      // Canonicalise Kotlin/Java for downstream template matching.
+      if (lang === 'Kotlin' || lang === 'Java') languages.add('Java/Kotlin');
+      else languages.add(lang);
+    }
+
+    // ── Frameworks ──
+    // Defer to full detect() so we pick up real dependency-file frameworks.
+    const detection = this.detect(projectPath, report);
+    const frameworks = new Set(detection.frameworks.map((f) => f.name));
+
+    // File-tree fallbacks for cases where dependency files are missing or
+    // haven't been parsed yet. These are heuristics — {@link detect} is the
+    // authoritative source whenever dependency files are available.
+    const allFiles = files.join(' ');
+
+    // Language-agnostic file/extension hints
+    if (allFiles.includes('.vue')) frameworks.add('Vue');
+    if (allFiles.includes('.dart')) frameworks.add('Flutter');
+    if (allFiles.includes('go.mod')) frameworks.add('Go Modules');
+    if (allFiles.includes('Cargo.toml')) frameworks.add('Cargo');
+
+    // TypeScript/JavaScript path hints
+    if (files.some((f) => f.endsWith('.module.ts') || f.includes('nest-cli.json'))) {
+      frameworks.add('NestJS');
+    }
+    if (files.some((f) => f.endsWith('.component.ts') || f.endsWith('angular.json'))) {
+      frameworks.add('Angular');
+    }
+    if (
+      files.some(
+        (f) =>
+          f.endsWith('next.config.js') ||
+          f.endsWith('next.config.ts') ||
+          /\/pages\/.+\.(tsx|jsx|ts|js)$/.test(f),
+      )
+    ) {
+      frameworks.add('Next.js');
+    }
+    if (files.some((f) => /\.(tsx|jsx)$/.test(f))) {
+      frameworks.add('React');
+    }
+
+    // Python path hints
+    if (files.some((f) => f.endsWith('manage.py') || /\/views\.py$/.test(f) || /\/models\.py$/.test(f))) {
+      frameworks.add('Django');
+    }
+    if (files.some((f) => /\/app\.py$/.test(f) || /\/wsgi\.py$/.test(f))) {
+      frameworks.add('Flask');
+    }
+
+    // Java path hints
+    if (files.some((f) => f.endsWith('pom.xml'))) {
+      frameworks.add('Spring');
+    }
+
+    const primary = languages.size > 0 ? [...languages][0] : 'Unknown';
+
+    const hasBackend =
+      languages.has('Python') || languages.has('TypeScript') ||
+      languages.has('JavaScript') || languages.has('Go') ||
+      languages.has('Java/Kotlin') || languages.has('Ruby') ||
+      languages.has('PHP') || languages.has('C#') || languages.has('Rust');
+
+    const hasFrontend =
+      frameworks.has('Angular') || frameworks.has('Vue') ||
+      frameworks.has('Next.js') || frameworks.has('React') ||
+      frameworks.has('Nuxt') || extensions.has('tsx') ||
+      extensions.has('jsx') || extensions.has('html');
+
+    const hasMobile = languages.has('Dart') || frameworks.has('Flutter');
+
+    const hasDatabase =
+      detection.frameworks.some((f) => f.category === 'orm') ||
+      allFiles.includes('migration') || allFiles.includes('entity') ||
+      allFiles.includes('prisma') || allFiles.includes('typeorm') ||
+      allFiles.includes('schema');
+
+    const testFramework =
+      detection.frameworks.find((f) => f.category === 'test')?.name ||
+      this.fallbackTestFramework(languages, frameworks);
+
+    const packageManager = this.detectPackageManager(languages);
+
+    return {
+      primary,
+      languages: [...languages],
+      frameworks: [...frameworks],
+      hasBackend,
+      hasFrontend,
+      hasMobile,
+      hasDatabase,
+      testFramework,
+      packageManager,
+    };
+  }
+
+  private fallbackTestFramework(languages: Set<string>, frameworks: Set<string>): string {
+    if (languages.has('Dart')) return 'flutter_test';
+    if (languages.has('Python')) return 'pytest';
+    if (languages.has('Go')) return 'go test';
+    if (languages.has('Java/Kotlin')) return 'JUnit';
+    if (languages.has('Ruby')) return 'RSpec';
+    if (languages.has('C#')) return 'xUnit';
+    if (languages.has('Rust')) return 'cargo test';
+    if (frameworks.has('Angular')) return 'Jest + Jasmine';
+    return 'Jest';
+  }
+
+  private detectPackageManager(languages: Set<string>): string {
+    if (languages.has('Python')) return 'pip';
+    if (languages.has('Go')) return 'go mod';
+    if (languages.has('Dart')) return 'pub';
+    if (languages.has('Ruby')) return 'bundler';
+    if (languages.has('Java/Kotlin')) return 'gradle/maven';
+    if (languages.has('Rust')) return 'cargo';
+    if (languages.has('PHP')) return 'composer';
+    if (languages.has('C#')) return 'nuget';
+    return 'npm';
   }
 
   // ═══════════════════════════════════════════════════════════════════════

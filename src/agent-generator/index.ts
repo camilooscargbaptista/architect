@@ -17,7 +17,7 @@ import {
   AgentGeneratorConfig,
   DEFAULT_AGENT_CONFIG,
 } from './types.js';
-import { StackDetector } from './stack-detector.js';
+import { FrameworkDetector } from './framework-detector.js';
 import { ContextEnricher } from './context-enricher.js';
 
 // ── Core Templates (Enterprise-Grade) ──
@@ -68,7 +68,7 @@ export type { StackInfo, AgentAuditFinding, AgentItem, AgentItemStatus, AgentSug
  * stack-specific agents, and domain templates.
  */
 export class AgentGenerator {
-  private stackDetector = new StackDetector();
+  private frameworkDetector = new FrameworkDetector();
   private contextEnricher = new ContextEnricher();
 
   /**
@@ -79,7 +79,7 @@ export class AgentGenerator {
     plan: RefactoringPlan,
     projectPath: string,
   ): AgentSuggestion {
-    const stack = this.stackDetector.detect(report);
+    const stack = this.frameworkDetector.detectStack(report, projectPath);
     const agentDir = join(projectPath, '.agent');
     const isExisting = existsSync(agentDir);
 
@@ -225,7 +225,7 @@ export class AgentGenerator {
     projectPath: string,
     outputDir?: string
   ): { generated: string[]; audit: AgentAuditFinding[] } {
-    const stack = this.stackDetector.detect(report);
+    const stack = this.frameworkDetector.detectStack(report, projectPath);
     const agentDir = outputDir || join(projectPath, '.agent');
     const isExisting = existsSync(agentDir);
 
