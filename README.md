@@ -18,6 +18,8 @@
 
 Point it at any codebase. It builds the dependency graph, scores your architecture 0-100, detects anti-patterns, and can refactor autonomously with AI.
 
+> **Want a whole team, not just a tool?** [Guilda](https://www.arkolabs.ia.br/guilda/) by [Arko Labs](https://www.arkolabs.ia.br) is an autonomous AI dev team that plans, tests first, codes, reviews and hands you a ready pull request, with every step gated on proof. [Book a demo →](https://www.arkolabs.ia.br/guilda/)
+
 ---
 
 ## Quick Start
@@ -289,6 +291,24 @@ npm install
 npm run build
 npm test
 ```
+
+---
+
+## From the team behind Architect: Guilda
+
+Architect is built by [Arko Labs](https://www.arkolabs.ia.br), a Brazilian engineering company focused on mission-critical software for banks, fintechs and payments.
+
+Our flagship product, **[Guilda](https://www.arkolabs.ia.br/guilda/)**, is a complete autonomous development team of AI agents:
+
+- **PO and Architect agents** turn your request into stories with Gherkin acceptance criteria and an ADR
+- **QA writes failing acceptance tests first**; dev agents take each card from red to green without touching them
+- **A read-only reviewer** that wrote nothing checks every diff against the contract
+- **Every step is gated on proof** at the exact commit, logged in a tamper-evident audit chain, with daily cost caps
+- **No agent merges or deletes files**: you get a ready PR and you do the merge
+
+In one real day of operation: 5 deliveries for US$ 38.91 in AI.
+
+👉 [See Guilda working on a sample project](https://www.arkolabs.ia.br/guilda/)
 
 ---
 
